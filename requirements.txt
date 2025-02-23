@@ -3,3 +3,4 @@ scikit-learn
 mlflow
 opencv-python-headless
 streamlit-drawable-canvas
+seaborn
