@@ -422,7 +422,7 @@ if option == "MNIST":
                     if canvas_result.image_data is not None:
                         processed_canvas = preprocess_canvas_image(canvas_result.image_data)
 
-                        model, _ = train_model(model_name, X_train, X_val, y_train, y_val)
+                        model, _ = train_model(model_name, X_train, X_val, X_test, y_train, y_val, y_test)
                         prediction = model.predict(processed_canvas)[0]
                         probabilities = model.predict_proba(processed_canvas)[0]
 
