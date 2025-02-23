@@ -1,5 +1,5 @@
 plotly
 scikit-learn
 mlflow
-opencv-python
+opencv-python-headless
 streamlit-drawable-canvas
