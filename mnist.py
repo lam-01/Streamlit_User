@@ -439,14 +439,14 @@ elif option == "MNIST":
                         #     st.write(f"🔹 {num} ({prob*100:.2f}%)")
 
         with tab3:
-            st.write("### 📊 Tracking MLflow")
+            st.write("#### 📊 Tracking MLflow")
             
             try:
                 # Lấy danh sách thí nghiệm từ MLflow
                 experiments = mlflow.search_experiments()
                 
                 if experiments:
-                    st.write("#### Danh sách thí nghiệm")
+                    st.write("##### Danh sách thí nghiệm")
                     experiment_data = []
                     for exp in experiments:
                         experiment_data.append({
@@ -465,7 +465,7 @@ elif option == "MNIST":
                     # Lấy danh sách runs trong thí nghiệm đã chọn
                     runs = mlflow.search_runs(selected_exp_id)
                     if not runs.empty:
-                        st.write("#### Danh sách runs")
+                        st.write("##### Danh sách runs")
                         st.dataframe(runs)
                         
                         # Chọn run để xem chi tiết
