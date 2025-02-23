@@ -374,7 +374,7 @@ if option == "MNIST":
 
         with tab2:
             # Chọn phương thức nhập ảnh
-            option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
+            option = st.radio("**🖼️ Chọn phương thức nhập:**", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
 
             # 📂 Xử lý ảnh tải lên
             if option == "📂 Tải ảnh lên":
@@ -476,7 +476,7 @@ if option == "MNIST":
                         # st.write(f"**Run ID:** {run.info.run_id}")
                         # st.write(f"**Experiment ID:** {run.info.experiment_id}")
                         # st.write(f"**Start Time:** {run.info.start_time}")
-                        
+                        st.write("### Hiển thị thông tin"
                         # Hiển thị metrics
                         st.write("##### Metrics")
                         st.json(run.data.metrics)
