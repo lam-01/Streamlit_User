@@ -2,5 +2,4 @@ plotly
 scikit-learn
 mlflow
 opencv-python
-cv2
 streamlit-drawable-canvas
