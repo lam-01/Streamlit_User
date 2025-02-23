@@ -25,7 +25,11 @@ option = st.sidebar.selectbox(
 )
 
 # Hiển thị nội dung tương ứng với lựa chọn
-if option == "MNIST":
+if option == "Phân tích Titanic":
+    st.write("🚢 **Bạn đã chọn dự án: Phân tích dữ liệu Titanic!**")
+    # Thêm code phân tích dữ liệu Titanic tại đây
+
+elif option == "MNIST":
 # 📌 Tải và xử lý dữ liệu MNIST từ OpenML
     @st.cache_data
     def load_data():
@@ -115,7 +119,6 @@ if option == "MNIST":
             ax.axis('off')
         st.pyplot(fig)
 
-        
     # 📌 So sánh các số có tính tương đồng
     def show_similar_digits(X, y):
         st.write("**🔍 So sánh các số tương đồng và dễ gây nhầm lẫn**")
@@ -341,7 +344,6 @@ if option == "MNIST":
             X_train, X_val, X_test, y_train, y_val, y_test = split_data(
                 X, y, train_size=train_size/100, val_size=val_size/100, test_size=test_size/100)
 
-            
             st.write("**📊 Tỷ lệ dữ liệu**")
             data_ratios = pd.DataFrame({
             "Tập dữ liệu": ["Train", "Validation", "Test"],
@@ -349,7 +351,7 @@ if option == "MNIST":
             })
 
             # Hiển thị bảng
-           
+            
             st.table(data_ratios)
 
             # Hiển thị số lượng mẫu
@@ -376,7 +378,7 @@ if option == "MNIST":
 
         with tab2:
             # Chọn phương thức nhập ảnh
-            option = st.radio("**🖼️ Chọn phương thức nhập:**", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
+            option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
 
             # 📂 Xử lý ảnh tải lên
             if option == "📂 Tải ảnh lên":
@@ -391,7 +393,7 @@ if option == "MNIST":
 
                     # Dự đoán số
                     if st.button("🔮 Dự đoán"):
-                        model, _ = train_model(model_name, X_train, X_val, X_test, y_train, y_val, y_test)
+                        model, train_accuracy, val_accuracy, test_accuracy= train_model(model_name, X_train, X_val, X_test, y_train, y_val, y_test)
                         prediction = model.predict(processed_image)[0]
                         probabilities = model.predict_proba(processed_image)[0]
 
@@ -422,7 +424,7 @@ if option == "MNIST":
                     if canvas_result.image_data is not None:
                         processed_canvas = preprocess_canvas_image(canvas_result.image_data)
 
-                        model, _ = train_model(model_name, X_train, X_val, X_test, y_train, y_val, y_test)
+                        model, train_accuracy, val_accuracy, test_accuracy= train_model(model_name, X_train, X_val, X_test, y_train, y_val, y_test)
                         prediction = model.predict(processed_canvas)[0]
                         probabilities = model.predict_proba(processed_canvas)[0]
 
@@ -444,7 +446,7 @@ if option == "MNIST":
                 experiments = mlflow.search_experiments()
                 
                 if experiments:
-                    st.write("##### Danh sách thí nghiệm")
+                    st.write("#### Danh sách thí nghiệm")
                     experiment_data = []
                     for exp in experiments:
                         experiment_data.append({
@@ -463,7 +465,7 @@ if option == "MNIST":
                     # Lấy danh sách runs trong thí nghiệm đã chọn
                     runs = mlflow.search_runs(selected_exp_id)
                     if not runs.empty:
-                        st.write("##### Danh sách runs")
+                        st.write("#### Danh sách runs")
                         st.dataframe(runs)
                         
                         # Chọn run để xem chi tiết
@@ -474,11 +476,11 @@ if option == "MNIST":
                         
                         # Hiển thị chi tiết run
                         run = mlflow.get_run(selected_run_id)
-                        # st.write("##### Thông tin run")
+                        st.write("##### Hiển thị thông tin ")
                         # st.write(f"**Run ID:** {run.info.run_id}")
                         # st.write(f"**Experiment ID:** {run.info.experiment_id}")
                         # st.write(f"**Start Time:** {run.info.start_time}")
-                        st.write("##### Hiển thị thông tin")
+                        
                         # Hiển thị metrics
                         st.write("##### Metrics")
                         st.json(run.data.metrics)
@@ -500,9 +502,5 @@ if option == "MNIST":
             except Exception as e:
                 st.error(f"Đã xảy ra lỗi khi lấy danh sách thí nghiệm: {e}")
 
-
-elif option == "Phân tích Titanic":
-    st.write("🚢 **Bạn đã chọn dự án: Phân tích dữ liệu Titanic!**")
-    # Thêm code phân tích dữ liệu Titanic tại đây
 if __name__ == "__main__":
     main()
