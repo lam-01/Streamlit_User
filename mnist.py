@@ -472,10 +472,10 @@ if option == "MNIST":
                         
                         # Hiển thị chi tiết run
                         run = mlflow.get_run(selected_run_id)
-                        st.write("##### Thông tin run")
-                        st.write(f"**Run ID:** {run.info.run_id}")
-                        st.write(f"**Experiment ID:** {run.info.experiment_id}")
-                        st.write(f"**Start Time:** {run.info.start_time}")
+                        # st.write("##### Thông tin run")
+                        # st.write(f"**Run ID:** {run.info.run_id}")
+                        # st.write(f"**Experiment ID:** {run.info.experiment_id}")
+                        # st.write(f"**Start Time:** {run.info.start_time}")
                         
                         # Hiển thị metrics
                         st.write("##### Metrics")
