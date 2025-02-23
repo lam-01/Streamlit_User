@@ -25,11 +25,7 @@ option = st.sidebar.selectbox(
 )
 
 # Hiển thị nội dung tương ứng với lựa chọn
-if option == "Phân tích Titanic":
-    st.write("🚢 **Bạn đã chọn dự án: Phân tích dữ liệu Titanic!**")
-    # Thêm code phân tích dữ liệu Titanic tại đây
-
-elif option == "MNIST":
+if option == "MNIST":
 # 📌 Tải và xử lý dữ liệu MNIST từ OpenML
     @st.cache_data
     def load_data():
@@ -502,5 +498,9 @@ elif option == "MNIST":
             except Exception as e:
                 st.error(f"Đã xảy ra lỗi khi lấy danh sách thí nghiệm: {e}")
 
+
+elif option == "Phân tích Titanic":
+    st.write("🚢 **Bạn đã chọn dự án: Phân tích dữ liệu Titanic!**")
+    # Thêm code phân tích dữ liệu Titanic tại đây
 if __name__ == "__main__":
     main()
