@@ -402,10 +402,10 @@ elif option == "MNIST":
                         st.bar_chart(prob_df.set_index("Chữ số"))
 
                         # 📌 Hiển thị các số có thể bị nhầm lẫn
-                        top_similar_numbers = get_top_similar_numbers(probabilities, top_n=3)
-                        st.write("🤔 **Số có thể bị nhầm lẫn:**")
-                        for num, prob in top_similar_numbers:
-                            st.write(f"🔹 {num} ({prob*100:.2f}%)")
+                        # top_similar_numbers = get_top_similar_numbers(probabilities, top_n=3)
+                        # st.write("🤔 **Số có thể bị nhầm lẫn:**")
+                        # for num, prob in top_similar_numbers:
+                        #     st.write(f"🔹 {num} ({prob*100:.2f}%)")
 
             # ✏️ Vẽ số trên canvas
             elif option == "✏️ Vẽ số":
@@ -433,10 +433,10 @@ elif option == "MNIST":
                         st.bar_chart(prob_df.set_index("Chữ số"))
 
                         # 📌 Hiển thị các số có thể bị nhầm lẫn
-                        top_similar_numbers = get_top_similar_numbers(probabilities, top_n=3)
-                        st.write("🤔 **Số có thể bị nhầm lẫn:**")
-                        for num, prob in top_similar_numbers:
-                            st.write(f"🔹 {num} ({prob*100:.2f}%)")
+                        # top_similar_numbers = get_top_similar_numbers(probabilities, top_n=3)
+                        # st.write("🤔 **Số có thể bị nhầm lẫn:**")
+                        # for num, prob in top_similar_numbers:
+                        #     st.write(f"🔹 {num} ({prob*100:.2f}%)")
 
         with tab3:
             st.write("### 📊 Tracking MLflow")
