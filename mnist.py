@@ -323,7 +323,7 @@ elif option == "MNIST":
             with col2:
                 st.image(processed_image, width=50, caption="Ảnh sau xử lý", use_container_width=True, clamp=True)
             
-            
+            st.write("**📊 Tỷ lệ dữ liệu**")
                 # Chọn tỷ lệ dữ liệu huấn luyện, validation, và test
             train_size = st.slider("Tỷ lệ huấn luyện (%)", min_value=50, max_value=90, value=70, step=5)
             val_size = st.slider("Tỷ lệ validation (%)", min_value=5, max_value=30, value=15, step=5)
@@ -344,7 +344,7 @@ elif option == "MNIST":
             X_train, X_val, X_test, y_train, y_val, y_test = split_data(
                 X, y, train_size=train_size/100, val_size=val_size/100, test_size=test_size/100)
 
-            st.write("**📊 Tỷ lệ dữ liệu**")
+           
             data_ratios = pd.DataFrame({
             "Tập dữ liệu": ["Train", "Validation", "Test"],
             "Tỷ lệ (%)": [st.session_state.train_size, st.session_state.val_size, st.session_state.test_size]
