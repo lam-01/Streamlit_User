@@ -341,13 +341,15 @@ if option == "MNIST":
             X_train, X_val, X_test, y_train, y_val, y_test = split_data(
                 X, y, train_size=train_size/100, val_size=val_size/100, test_size=test_size/100)
 
+            
+            st.write("**📊 Tỷ lệ dữ liệu**")
             data_ratios = pd.DataFrame({
             "Tập dữ liệu": ["Train", "Validation", "Test"],
             "Tỷ lệ (%)": [st.session_state.train_size, st.session_state.val_size, st.session_state.test_size]
             })
 
             # Hiển thị bảng
-            st.write("**📊 Tỷ lệ dữ liệu**")
+           
             st.table(data_ratios)
 
             # Hiển thị số lượng mẫu
