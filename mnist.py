@@ -446,7 +446,7 @@ elif option == "MNIST":
                 experiments = mlflow.search_experiments()
                 
                 if experiments:
-                    st.write("#### Danh sách thí nghiệm")
+                    st.write("### Danh sách thí nghiệm")
                     experiment_data = []
                     for exp in experiments:
                         experiment_data.append({
