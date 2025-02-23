@@ -476,7 +476,7 @@ if option == "MNIST":
                         # st.write(f"**Run ID:** {run.info.run_id}")
                         # st.write(f"**Experiment ID:** {run.info.experiment_id}")
                         # st.write(f"**Start Time:** {run.info.start_time}")
-                        st.write("### Hiển thị thông tin"
+                        st.write("##### Hiển thị thông tin")
                         # Hiển thị metrics
                         st.write("##### Metrics")
                         st.json(run.data.metrics)
