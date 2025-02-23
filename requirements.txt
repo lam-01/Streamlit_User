@@ -1,4 +1,3 @@
 plotly
 scikit-learn
 mlflow
-cv2
