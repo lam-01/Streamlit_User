@@ -17,6 +17,7 @@ from streamlit_tags import st_tags
 import io
 import os
 import tempfile
+import runpy
 
 # Tạo selectbox để chọn dự án
 option = st.sidebar.selectbox(
@@ -499,7 +500,7 @@ if option == "MNIST":
             except Exception as e:
                 st.error(f"Đã xảy ra lỗi khi lấy danh sách thí nghiệm: {e}")
 elif option == "Phân tích Titanic":
-    st.write("🚢 **Bạn đã chọn dự án: Phân tích dữ liệu Titanic!**")
+    runpy.run_path("titanic_app.py") 
     # Thêm code phân tích dữ liệu Titanic tại đây
 if __name__ == "__main__":
     main()
