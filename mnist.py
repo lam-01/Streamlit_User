@@ -19,18 +19,6 @@ import os
 import tempfile
 import runpy
 
-# Tạo selectbox để chọn dự án
-# option = st.sidebar.selectbox(
-#     "📌 Chọn một dự án để thực hiện:",
-#     ["Phân tích Titanic", "MNIST"]
-# )
-
-# # Hiển thị nội dung tương ứng với lựa chọn
-# if option == "Phân tích Titanic":
-#     runpy.run_path("G:\Streamlit\titanic_app.py") 
-#     # Thêm code phân tích dữ liệu Titanic tại đây
-
-# elif option == "MNIST":
 # 📌 Tải và xử lý dữ liệu MNIST từ OpenML
 @st.cache_data
 def load_data():
@@ -41,10 +29,6 @@ def load_data():
 
 # 📌 Chia dữ liệu thành train, validation, và test
 def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state=42):
-    """
-    Chia dữ liệu thành 3 tập: train, validation, và test.
-
-    """
     # Chia tập train và tập tạm (temp)
     X_train, X_temp, y_train, y_temp = train_test_split(
         X, y, train_size=train_size, random_state=random_state
@@ -62,14 +46,17 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
 def train_model(model_name, X_train, X_val, X_test, y_train, y_val, y_test):
     if model_name == "Decision Tree":
         model = DecisionTreeClassifier(
-                max_depth=15,           
-                min_samples_split=5,    
-                min_samples_leaf=2,     
-                random_state=42
-            
+            max_depth=params["max_depth"],
+            min_samples_split=params["min_samples_split"],
+            min_samples_leaf=params["min_samples_leaf"],
+            random_state=42
         )
     elif model_name == "SVM":
-        model = SVC(kernel="linear", probability=True)
+        model = SVC(
+            kernel=params["kernel"],
+            C=params["C"],
+            probability=True
+        )
     else:
         raise ValueError("Invalid model selected!")
 
@@ -198,6 +185,7 @@ def create_streamlit_app():
         # Hiển thị mẫu dữ liệu và phân phối dữ liệu
         show_sample_images(X, y)
         
+        st.write("**📊 Tỷ lệ dữ liệu**")
         # Chọn tỷ lệ dữ liệu huấn luyện, validation, và test
         train_size = st.slider("Tỷ lệ huấn luyện (%)", min_value=50, max_value=90, value=70, step=5)
         val_size = st.slider("Tỷ lệ validation (%)", min_value=5, max_value=30, value=15, step=5)
@@ -223,8 +211,6 @@ def create_streamlit_app():
         "Tỷ lệ (%)": [st.session_state.train_size, st.session_state.val_size, st.session_state.test_size]
         })
 
-        # Hiển thị bảng
-        st.write("**📊 Tỷ lệ dữ liệu**")
         st.table(data_ratios)
 
         # Hiển thị số lượng mẫu
@@ -236,6 +222,17 @@ def create_streamlit_app():
 
         st.write("**🚀 Huấn luyện mô hình**")
         model_name = st.selectbox("🔍 Chọn mô hình", ["Decision Tree", "SVM"])
+        params = {}
+
+        if model_name == "Decision Tree":
+            params["criterion"] = st.selectbox("📏 Tiêu chí đánh giá", ["gini", "entropy", "log_loss"])
+            params["max_depth"] = st.slider("🌳 Độ sâu tối đa (max_depth)", 1, 30, 15)
+            params["min_samples_split"] = st.slider("🔄 Số mẫu tối thiểu để chia nhánh (min_samples_split)", 2, 10, 5)
+            params["min_samples_leaf"] = st.slider("🍃 Số mẫu tối thiểu ở lá (min_samples_leaf)", 1, 10, 2)
+
+        elif model_name == "SVM":
+            params["kernel"] = st.selectbox("⚙️ Kernel", ["linear", "rbf", "poly", "sigmoid"])
+            params["C"] = st.slider("🔧 Tham số C ", 0.1, 10.0, 1.0)
         # Huấn luyện mô hình
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang huấn luyện..."):
