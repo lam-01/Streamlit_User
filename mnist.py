@@ -133,30 +133,21 @@ def display_mlflow_experiments():
             
             # Lấy danh sách runs trong thí nghiệm đã chọn
             runs = mlflow.search_runs(selected_exp_id)
-            
             if not runs.empty:
                 st.write("#### Danh sách runs")
-
-                # Thêm Run Name nếu có
-                runs["Run Name"] = runs["tags.mlflow.runName"].fillna("Unnamed Run")
+                st.dataframe(runs)
                 
-                # Hiển thị danh sách runs
-                st.dataframe(runs[["run_id", "Run Name", "start_time"]])
-                
-                # Chọn run để xem chi tiết (Hiển thị cả Run Name)
-                selected_run_info = st.selectbox(
+                # Chọn run để xem chi tiết
+                selected_run_id = st.selectbox(
                     "🔍 Chọn run để xem chi tiết",
-                    options=runs[["run_id", "Run Name"]].values,
-                    format_func=lambda x: f"{x[1]} ({x[0]})"
+                    options=runs["run_id"]
                 )
-                selected_run_id = selected_run_info[0]
                 
                 # Hiển thị chi tiết run
                 run = mlflow.get_run(selected_run_id)
                 st.write("##### Thông tin run")
                 st.write(f"**Run ID:** {run.info.run_id}")
                 st.write(f"**Experiment ID:** {run.info.experiment_id}")
-                st.write(f"**Run Name:** {run.data.tags.get('mlflow.runName', 'Unnamed Run')}")
                 st.write(f"**Start Time:** {run.info.start_time}")
                 
                 # Hiển thị metrics
@@ -306,67 +297,67 @@ def create_streamlit_app():
 
     with tab3:
         st.write("### 📊 Tracking MLflow")
-        display_mlflow_experiments()
-        # try:
-        #     # Lấy danh sách thí nghiệm từ MLflow
-        #     experiments = mlflow.search_experiments()
+        
+        try:
+            # Lấy danh sách thí nghiệm từ MLflow
+            experiments = mlflow.search_experiments()
             
-        #     if experiments:
-        #         st.write("#### Danh sách thí nghiệm")
-        #         experiment_data = []
-        #         for exp in experiments:
-        #             experiment_data.append({
-        #                 "Experiment ID": exp.experiment_id,
-        #                 "Experiment Name": exp.name,
-        #                 "Artifact Location": exp.artifact_location
-        #             })
-        #         st.dataframe(pd.DataFrame(experiment_data))
+            if experiments:
+                st.write("#### Danh sách thí nghiệm")
+                experiment_data = []
+                for exp in experiments:
+                    experiment_data.append({
+                        "Experiment ID": exp.experiment_id,
+                        "Experiment Name": exp.name,
+                        "Artifact Location": exp.artifact_location
+                    })
+                st.dataframe(pd.DataFrame(experiment_data))
                 
-        #         # Chọn thí nghiệm để xem chi tiết
-        #         selected_exp_id = st.selectbox(
-        #             "🔍 Chọn thí nghiệm để xem chi tiết",
-        #             options=[exp.experiment_id for exp in experiments]
-        #         )
+                # Chọn thí nghiệm để xem chi tiết
+                selected_exp_id = st.selectbox(
+                    "🔍 Chọn thí nghiệm để xem chi tiết",
+                    options=[exp.experiment_id for exp in experiments]
+                )
                 
-        #         # Lấy danh sách runs trong thí nghiệm đã chọn
-        #         runs = mlflow.search_runs(selected_exp_id)
-        #         if not runs.empty:
-        #             st.write("#### Danh sách runs")
-        #             st.dataframe(runs)
+                # Lấy danh sách runs trong thí nghiệm đã chọn
+                runs = mlflow.search_runs(selected_exp_id)
+                if not runs.empty:
+                    st.write("#### Danh sách runs")
+                    st.dataframe(runs)
                     
-        #             # Chọn run để xem chi tiết
-        #             selected_run_id = st.selectbox(
-        #                 "🔍 Chọn run để xem chi tiết",
-        #                 options=runs["run_id"]
-        #             )
+                    # Chọn run để xem chi tiết
+                    selected_run_id = st.selectbox(
+                        "🔍 Chọn run để xem chi tiết",
+                        options=runs["run_id"]
+                    )
                     
-        #             # Hiển thị chi tiết run
-        #             run = mlflow.get_run(selected_run_id)
-        #             st.write("##### Thông tin run")
-        #             st.write(f"**Run ID:** {run.info.run_id}")
-        #             st.write(f"**Experiment ID:** {run.info.experiment_id}")
-        #             st.write(f"**Start Time:** {run.info.start_time}")
+                    # Hiển thị chi tiết run
+                    run = mlflow.get_run(selected_run_id)
+                    st.write("##### Thông tin run")
+                    st.write(f"**Run ID:** {run.info.run_id}")
+                    st.write(f"**Experiment ID:** {run.info.experiment_id}")
+                    st.write(f"**Start Time:** {run.info.start_time}")
                     
-        #             # Hiển thị metrics
-        #             st.write("##### Metrics")
-        #             st.json(run.data.metrics)
+                    # Hiển thị metrics
+                    st.write("##### Metrics")
+                    st.json(run.data.metrics)
                     
-        #             # Hiển thị params
-        #             st.write("##### Params")
-        #             st.json(run.data.params)
+                    # Hiển thị params
+                    st.write("##### Params")
+                    st.json(run.data.params)
                     
-        #             # Hiển thị artifacts
-        #             artifacts = mlflow.list_artifacts(selected_run_id)
-        #             if artifacts:
-        #                 st.write("##### Artifacts")
-        #                 for artifact in artifacts:
-        #                     st.write(f"- {artifact.path}")
-        #         else:
-        #             st.warning("Không có runs nào trong thí nghiệm này.")
-        #     else:
-        #         st.warning("Không có thí nghiệm nào được tìm thấy.")
-        # except Exception as e:
-        #     st.error(f"Đã xảy ra lỗi khi lấy danh sách thí nghiệm: {e}")
+                    # Hiển thị artifacts
+                    artifacts = mlflow.list_artifacts(selected_run_id)
+                    if artifacts:
+                        st.write("##### Artifacts")
+                        for artifact in artifacts:
+                            st.write(f"- {artifact.path}")
+                else:
+                    st.warning("Không có runs nào trong thí nghiệm này.")
+            else:
+                st.warning("Không có thí nghiệm nào được tìm thấy.")
+        except Exception as e:
+            st.error(f"Đã xảy ra lỗi khi lấy danh sách thí nghiệm: {e}")
 
 if __name__ == "__main__":
     create_streamlit_app()
