@@ -18,6 +18,7 @@ import io
 import os
 import tempfile
 import runpy
+import titanic_app
 
 # Tạo selectbox để chọn dự án
 option = st.sidebar.selectbox(
