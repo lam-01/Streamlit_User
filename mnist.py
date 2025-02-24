@@ -43,7 +43,7 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 # 📌 Huấn luyện mô hình
-def train_model(model_name, X_train, X_val, X_test, y_train, y_val, y_test):
+def train_model(model_name,params, X_train, X_val, X_test, y_train, y_val, y_test):
     if model_name == "Decision Tree":
         model = DecisionTreeClassifier(
             max_depth=params["max_depth"],
@@ -238,7 +238,7 @@ def create_streamlit_app():
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang huấn luyện..."):
                 model, train_accuracy, val_accuracy, test_accuracy = train_model(
-                model_name, X_train, X_val, X_test, y_train, y_val, y_test
+                model_name,params, X_train, X_val, X_test, y_train, y_val, y_test
             )
             st.success(f"✅ Huấn luyện xong!")
             
