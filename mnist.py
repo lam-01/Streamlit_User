@@ -49,6 +49,7 @@ def train_model(model_name, X_train, X_val, X_test, y_train, y_val, y_test):
             max_depth=params["max_depth"],
             min_samples_split=params["min_samples_split"],
             min_samples_leaf=params["min_samples_leaf"],
+            criterion=params["criterion"],
             random_state=42
         )
     elif model_name == "SVM":
