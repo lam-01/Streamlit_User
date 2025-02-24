@@ -21,7 +21,7 @@ import tempfile
 # Tạo selectbox để chọn dự án
 option = st.sidebar.selectbox(
     "📌 Chọn một dự án để thực hiện:",
-    ["Phân tích Titanic", "MNIST"]
+    ["MNIST","Phân tích Titanic"]
 )
 
 # Hiển thị nội dung tương ứng với lựa chọn
