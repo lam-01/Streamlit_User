@@ -381,10 +381,10 @@ def create_streamlit_app():
                     selected_run_id = st.selectbox("Chọn một phiên làm việc để xem chi tiết:", runs['run_id'].tolist())
                     if selected_run_id:
                         run_details = mlflow.get_run(selected_run_id)
-                        st.write("### Thông tin chi tiết cho phiên làm việc:", selected_run_id)
-                        st.write("**Trạng thái:**", run_details.info.status)
-                        st.write("**Thời gian bắt đầu:**", run_details.info.start_time)
-                        st.write("**Thời gian kết thúc:**", run_details.info.end_time)
+                        # st.write("### Thông tin chi tiết cho phiên làm việc:", selected_run_id)
+                        # st.write("**Trạng thái:**", run_details.info.status)
+                        # st.write("**Thời gian bắt đầu:**", run_details.info.start_time)
+                        # st.write("**Thời gian kết thúc:**", run_details.info.end_time)
                         st.write("**Tham số:**")
                         for key, value in run_details.data.params.items():
                             st.write(f"- **{key}**: {value}")
@@ -392,10 +392,10 @@ def create_streamlit_app():
                         for key, value in run_details.data.metrics.items():
                             st.write(f"- **{key}**: {value}")
                         st.write("**Artifacts:**")
-                        if run_details.info.artifact_uri:
-                            st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
-                        else:
-                            st.write("- Không có artifacts nào.")
+                        # if run_details.info.artifact_uri:
+                        #     st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
+                        # else:
+                        #     st.write("- Không có artifacts nào.")
 
                 else:
                     st.write("Không có phiên làm việc nào được ghi lại.")
