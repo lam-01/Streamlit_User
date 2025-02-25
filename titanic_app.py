@@ -169,7 +169,7 @@ def create_streamlit_app():
     analyzer = TitanicAnalyzer()
         
     with tab1:
-        data_path = "G:/ML/MLFlow/my_env/titanic.csv"  # Đường dẫn cố định
+        data_path = "titanic.csv"  # Đường dẫn cố định
         analyzer = TitanicAnalyzer()
         data = analyzer.load_and_preprocess(data_path)
         total_samples = len(data)
