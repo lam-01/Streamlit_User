@@ -169,34 +169,37 @@ def create_streamlit_app():
     analyzer = TitanicAnalyzer()
         
     with tab1:
-        data_path = "titanic.csv"  # Đường dẫn cố định
+        data_path = "G:/ML/MLFlow/my_env/titanic.csv"  # Đường dẫn cố định
         analyzer = TitanicAnalyzer()
         data = analyzer.load_and_preprocess(data_path)
-        total_samples = len(data) 
+        total_samples = len(data)
+
         # Cho phép người dùng chọn tỷ lệ chia dữ liệu
         st.write("##### 📊 Chọn tỷ lệ chia dữ liệu")
-        train_size = st.slider("Tập huấn luyện (Train)", 0.5, 0.8, 0.7)
-        valid_size = st.slider("Tập kiểm định (Validation)", 0.1, 0.3, 0.15)
-        test_size = 1 - train_size - valid_size
+        test_size = st.slider("Tập kiểm tra (Test)", 0.1, 0.3, 0.2)  # Chọn Test trước
+        train_valid_size = 1 - test_size  # Phần còn lại dành cho Train + Validation
 
-        if test_size < 0:
-            st.error("❌ Tổng tỷ lệ Train và Validation không được vượt quá 1.")
-        else:
-            # Tính số lượng mẫu
-            train_samples = int(train_size * total_samples)
-            valid_samples = int(valid_size * total_samples)
-            test_samples = total_samples - train_samples - valid_samples
+        valid_size = st.slider("Tỷ lệ Validation trong tập Train", 0.1, 0.4, 0.2)  # Tỉ lệ của Valid trong Train
+        train_size = 1 - valid_size  # Tập Train chính xác
 
-            # Tạo DataFrame hiển thị kết quả
-            split_df = pd.DataFrame({
-                "Tập dữ liệu": ["Train", "Validation", "Test"],
-                "Tỷ lệ (%)": [f"{train_size * 100:.2f}", f"{valid_size * 100:.2f}", f"{test_size * 100:.2f}"],
-                "Số lượng mẫu": [train_samples, valid_samples, test_samples]
-            })
+        # Tính số mẫu
+        test_samples = int(test_size * total_samples)
+        train_valid_samples = total_samples - test_samples  # Train + Valid
+        valid_samples = int(valid_size * train_valid_samples)
+        train_samples = train_valid_samples - valid_samples  # Phần còn lại cho Train
 
-            # Hiển thị bảng kết quả
-            st.write("📋 **Tỷ lệ chia dữ liệu và số lượng mẫu:**")
-            st.table(split_df)
+        # Tạo DataFrame hiển thị kết quả
+        split_df = pd.DataFrame({
+            "Tập dữ liệu": ["Train", "Validation", "Test"],
+            "Tỷ lệ (%)": [f"{train_samples / total_samples * 100:.2f}", 
+                        f"{valid_samples / total_samples * 100:.2f}", 
+                        f"{test_samples / total_samples * 100:.2f}"],
+            "Số lượng mẫu": [train_samples, valid_samples, test_samples]
+        })
+
+        # Hiển thị bảng kết quả
+        st.write("📋 **Tỷ lệ chia dữ liệu và số lượng mẫu:**")
+        st.table(split_df)
 
         # Hiển thị kết quả trong Streamlit
         st.write("##### 📊 **Huấn luyện mô hình hồi quy**")
@@ -399,7 +402,7 @@ def create_streamlit_app():
 
             # Hiển thị MLflow Tracking UI trong iframe
             mlflow_url = "http://localhost:5000"  # Thay đổi nếu chạy trên server khác
-            st.markdown(f'<iframe src="{mlflow_url}" width="800" height="400"></iframe>', unsafe_allow_html=True)
+            st.markdown(f"[Mở MLflow Tracking UI]({mlflow_url})", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
