@@ -220,14 +220,37 @@ def create_streamlit_app():
         params = {}
 
         if model_name == "Decision Tree":
-            params["criterion"] = st.selectbox("📏 Tiêu chí đánh giá", ["gini", "entropy", "log_loss"])
-            params["max_depth"] = st.slider("🌳 Độ sâu tối đa (max_depth)", 1, 30, 15)
-            params["min_samples_split"] = st.slider("🔄 Số mẫu tối thiểu để chia nhánh (min_samples_split)", 2, 10, 5)
-            params["min_samples_leaf"] = st.slider("🍃 Số mẫu tối thiểu ở lá (min_samples_leaf)", 1, 10, 2)
+            params["criterion"] = st.selectbox("📏 Tiêu chí đánh giá", ["gini", "entropy", "log_loss"],help="""- **Gini impurity** đo lường xác suất một mẫu được chọn ngẫu nhiên từ tập dữ liệu bị phân loại sai 
+            nếu nó được gán nhãn ngẫu nhiên theo phân phối của các lớp trong tập dữ liệu.
+            \n- **Entropy** đo lường mức độ hỗn loạn hoặc không chắc chắn trong tập dữ liệu. Nó dựa trên khái niệm entropy trong lý thuyết thông tin.
+            \n- **Log loss (hay cross-entropy)** đo lường sự khác biệt giữa phân phối xác suất thực tế và phân phối xác suất dự đoán. Nó thường được sử dụng trong các bài toán phân loại xác suất.
+            """)
+            params["max_depth"] = st.slider("🌳 Độ sâu tối đa (max_depth)", 1, 30, 15,help="""- **max_depth** là tham số giới hạn độ sâu tối đa của cây quyết định. Độ sâu của cây được tính 
+            từ nút gốc (root) đến nút lá (leaf) xa nhất.
+            \n Nếu (max_depth > 25) quá lớn, cây có thể trở nên phức tạp và dễ bị overfitting (học thuộc dữ liệu huấn luyện nhưng kém hiệu quả trên dữ liệu mới).
+            \n Nếu (max_depth < 10) quá nhỏ, cây có thể quá đơn giản và dẫn đến underfitting (không học được đủ thông tin từ dữ liệu).""")
+            params["min_samples_split"] = st.slider("🔄 Số mẫu tối thiểu để chia nhánh (min_samples_split)", 2, 10, 5,help="""
+            \n- **min_samples_split** là số lượng mẫu tối thiểu cần thiết để chia một nút (node) thành các nút con. Nếu số lượng mẫu tại một nút ít hơn giá trị này, nút đó sẽ không được chia tiếp.
+            \n Giá trị lớn hơn (5-10) giúp ngăn chặn việc chia nhánh quá mức, từ đó giảm nguy cơ overfitting.
+            \n Giá trị nhỏ hơn (2-4) cho phép cây chia nhánh nhiều hơn, nhưng có thể dẫn đến cây phức tạp hơn.
+            
+            """)
+            params["min_samples_leaf"] = st.slider("🍃 Số mẫu tối thiểu ở lá (min_samples_leaf)", 1, 10, 2,help="""
+            \n- **min_samples_leaf** là số lượng mẫu tối thiểu cần thiết tại mỗi nút lá (leaf node). Nếu một phân chia dẫn đến một lá có ít mẫu hơn giá trị này, phân chia đó sẽ không được thực hiện.
+            \n Giá trị lớn hơn (5-10) giúp ngăn chặn việc tạo ra các lá quá nhỏ, từ đó giảm nguy cơ overfitting.
+            \n Giá trị nhỏ hơn (1-4) cho phép cây tạo ra các lá nhỏ hơn, nhưng có thể dẫn đến cây phức tạp hơn.
+            """)
 
         elif model_name == "SVM":
-            params["kernel"] = st.selectbox("⚙️ Kernel", ["linear", "rbf", "poly", "sigmoid"])
-            params["C"] = st.slider("🔧 Tham số C ", 0.1, 10.0, 1.0)
+            params["kernel"] = st.selectbox("⚙️ Kernel", ["linear", "rbf", "poly", "sigmoid"],help="""**Kernel** là một hàm được sử dụng trong SVM để ánh xạ dữ liệu từ không gian đầu vào sang một không gian đặc trưng (feature space) có chiều cao hơn, giúp SVM có thể phân loại dữ liệu phi tuyến tính.
+            \n- **Linear Kernel**: một trong những loại kernel đơn giản nhất. Nó được sử dụng khi dữ liệu có thể được phân loại bằng một đường thẳng (hoặc mặt phẳng trong không gian nhiều chiều).
+            \n- **RBF Kernel (Radial Basis Function)**: một loại kernel phi tuyến tính, rất phổ biến trong SVM. Nó có khả năng xử lý các mối quan hệ phức tạp giữa các điểm dữ liệu.
+            \n- **Polynomial Kernel**: cho phép mô hình hóa các mối quan hệ phi tuyến tính bằng cách sử dụng các đa thức. Tham số bậc của đa thức có thể được điều chỉnh để thay đổi độ phức tạp của mô hình.
+            \n- **Sigmoid Kernel**: tương tự như hàm kích hoạt sigmoid trong mạng nơ-ron. Nó có thể được sử dụng để tạo ra các quyết định phi tuyến tính.
+            """)
+            params["C"] = st.slider("🔧 Tham số C ", 0.1, 10.0, 1.0,help="""\n- **C** là tham số điều chỉnh (regularization parameter) trong SVM, kiểm soát sự đánh đổi giữa việc tạo ra một biên (margin) rộng và việc phân loại chính xác các điểm dữ liệu huấn luyện.
+            \n C lớn: Mô hình cố gắng phân loại chính xác tất cả các điểm dữ liệu huấn luyện, có thể dẫn đến overfitting.
+            \n C nhỏ: Mô hình cho phép một số điểm dữ liệu bị phân loại sai để tạo ra biên rộng hơn, giúp giảm overfitting.""")
         # Huấn luyện mô hình
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang huấn luyện..."):
@@ -291,55 +314,56 @@ def create_streamlit_app():
 
     with tab3:
         st.write("### 📊 Tracking MLflow")
-        
+
         try:
             # Lấy danh sách thí nghiệm từ MLflow
             experiments = mlflow.search_experiments()
-            
+
             if experiments:
                 st.write("#### Danh sách thí nghiệm")
-                experiment_data = []
-                for exp in experiments:
-                    experiment_data.append({
-                        "Experiment ID": exp.experiment_id,
-                        "Experiment Name": exp.name,
-                        "Artifact Location": exp.artifact_location
-                    })
-                st.dataframe(pd.DataFrame(experiment_data))
-                
-                # Chọn thí nghiệm để xem chi tiết
-                selected_exp_id = st.selectbox(
+                experiment_data = [
+                    {"Experiment ID": exp.experiment_id, "Experiment Name": exp.name, "Artifact Location": exp.artifact_location}
+                    for exp in experiments
+                ]
+                df_experiments = pd.DataFrame(experiment_data)
+                st.dataframe(df_experiments)
+
+                # Chọn thí nghiệm dựa trên TÊN thay vì ID
+                selected_exp_name = st.selectbox(
                     "🔍 Chọn thí nghiệm để xem chi tiết",
-                    options=[exp.experiment_id for exp in experiments]
+                    options=[exp.name for exp in experiments]  # Chọn theo tên
                 )
-                
+
+                # Lấy ID tương ứng với tên được chọn
+                selected_exp_id = next(exp.experiment_id for exp in experiments if exp.name == selected_exp_name)
+
                 # Lấy danh sách runs trong thí nghiệm đã chọn
                 runs = mlflow.search_runs(selected_exp_id)
                 if not runs.empty:
                     st.write("#### Danh sách runs")
                     st.dataframe(runs)
-                    
+
                     # Chọn run để xem chi tiết
                     selected_run_id = st.selectbox(
                         "🔍 Chọn run để xem chi tiết",
                         options=runs["run_id"]
                     )
-                    
+
                     # Hiển thị chi tiết run
                     run = mlflow.get_run(selected_run_id)
                     st.write("##### Thông tin run")
                     st.write(f"**Run ID:** {run.info.run_id}")
                     st.write(f"**Experiment ID:** {run.info.experiment_id}")
                     st.write(f"**Start Time:** {run.info.start_time}")
-                    
+
                     # Hiển thị metrics
                     st.write("##### Metrics")
                     st.json(run.data.metrics)
-                    
+
                     # Hiển thị params
                     st.write("##### Params")
                     st.json(run.data.params)
-                    
+
                     # Hiển thị artifacts
                     artifacts = mlflow.list_artifacts(selected_run_id)
                     if artifacts:
