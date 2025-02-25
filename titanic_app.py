@@ -17,7 +17,7 @@ class TitanicAnalyzer:
         self.model = None
         self.scaler = None  # Sẽ khởi tạo sau khi có dữ liệu
         self.poly = None
-        self.feature_columns = ['Pclass', 'Age', 'SibSp', 'Parch', 'Fare']
+        self.feature_columns = ['Pclass', 'SibSp', 'Parch', 'Fare']
         self.is_fitted = False
         self.sex_male = 0  # Default value
         self.sex_female = 1  # Default value
@@ -44,10 +44,21 @@ class TitanicAnalyzer:
             st.write("Số lượng dữ liệu bị thiếu : ")
             st.dataframe(missing_values_before.to_frame().T)
 
+            # Chuyển đổi tên phương pháp xử lý về định dạng đơn giản
+            strategy_mapping = {
+                "Điền giá trị trung bình mean": "mean",
+                "Điền giá trị trung vị median": "median",
+                "Điền giá trị xuất hiện nhiều nhất mode": "mode",
+                "Xóa hàng chứa dữ liệu thiếu drop": "drop"
+            }
+
             # Chọn phương pháp xử lý giá trị bị thiếu
-            missing_value_strategy = st.selectbox(
-                "## Chọn phương pháp ", ["Điền giá trị trung bình mean", "Điền giá trị trung vị median", "Điền giá trị xuất hiện nhiều nhất mode", "Xóa hàng chứa dữ liệu thiếu drop"], index=0
+            selected_strategy = st.selectbox(
+                "## Chọn phương pháp xử lý dữ liệu bị thiếu", list(strategy_mapping.keys()), index=0
             )
+
+            # Chuyển về dạng chuẩn
+            missing_value_strategy = strategy_mapping[selected_strategy]
 
             # Hàm xử lý dữ liệu bị thiếu
             def preprocess_data(df, missing_value_strategy):
@@ -57,18 +68,21 @@ class TitanicAnalyzer:
                 num_cols = df.select_dtypes(include=['number']).columns
                 cat_cols = df.select_dtypes(exclude=['number']).columns
 
-                # Xử lý giá trị thiếu cho cột số
-                if missing_value_strategy == 'mean':
-                    df[num_cols] = df[num_cols].fillna(df[num_cols].mean())
-                elif missing_value_strategy == 'median':
-                    df[num_cols] = df[num_cols].fillna(df[num_cols].median())
-                elif missing_value_strategy == 'mode':
+                # Xử lý giá trị thiếu cho cột số từng cột để tránh lỗi
+                if missing_value_strategy in ['mean', 'median', 'mode']:
                     for col in num_cols:
-                        if not df[col].mode().dropna().empty:
-                            df[col] = df[col].fillna(df[col].mode()[0])
+                        if df[col].isnull().sum() > 0:  # Chỉ điền nếu có giá trị thiếu
+                            if missing_value_strategy == 'mean':
+                                df[col] = df[col].fillna(df[col].mean())
+                            elif missing_value_strategy == 'median':
+                                df[col] = df[col].fillna(df[col].median())
+                            elif missing_value_strategy == 'mode' and not df[col].mode().dropna().empty:
+                                df[col] = df[col].fillna(df[col].mode()[0])
+
                 # Luôn xử lý giá trị thiếu cho Cabin và Embarked
-                df['Cabin'] = df['Cabin'].fillna("Unknown")  # Điền "Unknown" cho Cabin
-                if not df['Embarked'].mode().dropna().empty:
+                if 'Cabin' in df.columns:
+                    df['Cabin'] = df['Cabin'].fillna("Unknown")  # Điền "Unknown" cho Cabin
+                if 'Embarked' in df.columns:
                     df['Embarked'] = df['Embarked'].fillna(df['Embarked'].mode()[0])  # Điền mode() cho Embarked
 
                 if missing_value_strategy == 'drop':
@@ -85,6 +99,7 @@ class TitanicAnalyzer:
             mlflow.log_metric("missing_values_after", missing_values_after)
             st.write("Số lượng giá trị bị thiếu sau xử lý:")
             st.dataframe(self.data.isnull().sum().to_frame().T)
+
 
 
             # Xóa các cột không cần thiết
@@ -381,10 +396,10 @@ def create_streamlit_app():
                     selected_run_id = st.selectbox("Chọn một phiên làm việc để xem chi tiết:", runs['run_id'].tolist())
                     if selected_run_id:
                         run_details = mlflow.get_run(selected_run_id)
-                        # st.write("### Thông tin chi tiết cho phiên làm việc:", selected_run_id)
-                        # st.write("**Trạng thái:**", run_details.info.status)
-                        # st.write("**Thời gian bắt đầu:**", run_details.info.start_time)
-                        # st.write("**Thời gian kết thúc:**", run_details.info.end_time)
+                        st.write("### Thông tin chi tiết cho phiên làm việc:", selected_run_id)
+                        st.write("**Trạng thái:**", run_details.info.status)
+                        st.write("**Thời gian bắt đầu:**", run_details.info.start_time)
+                        st.write("**Thời gian kết thúc:**", run_details.info.end_time)
                         st.write("**Tham số:**")
                         for key, value in run_details.data.params.items():
                             st.write(f"- **{key}**: {value}")
@@ -392,10 +407,10 @@ def create_streamlit_app():
                         for key, value in run_details.data.metrics.items():
                             st.write(f"- **{key}**: {value}")
                         st.write("**Artifacts:**")
-                        # if run_details.info.artifact_uri:
-                        #     st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
-                        # else:
-                        #     st.write("- Không có artifacts nào.")
+                        if run_details.info.artifact_uri:
+                            st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
+                        else:
+                            st.write("- Không có artifacts nào.")
 
                 else:
                     st.write("Không có phiên làm việc nào được ghi lại.")
