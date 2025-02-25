@@ -19,6 +19,11 @@ class TitanicAnalyzer:
         self.poly = None
         self.feature_columns = ['Pclass', 'Age', 'SibSp', 'Parch', 'Fare']
         self.is_fitted = False
+        self.sex_male = 0  # Default value
+        self.sex_female = 1  # Default value
+        self.embarked_C = 0  # Default value
+        self.embarked_Q = 1  # Default value
+        self.embarked_S = 2  # Default value
     
     def load_and_preprocess(self, data_path):
         """Đọc và tiền xử lý dữ liệu với MLflow"""
@@ -41,7 +46,7 @@ class TitanicAnalyzer:
 
             # Chọn phương pháp xử lý giá trị bị thiếu
             missing_value_strategy = st.selectbox(
-                "## Chọn phương pháp ", ["mean", "median", "mode", "drop"], index=0
+                "## Chọn phương pháp ", ["Điền giá trị trung bình mean", "Điền giá trị trung vị median", "Điền giá trị xuất hiện nhiều nhất mode", "Xóa hàng chứa dữ liệu thiếu drop"], index=0
             )
 
             # Hàm xử lý dữ liệu bị thiếu
@@ -108,30 +113,42 @@ class TitanicAnalyzer:
             st.dataframe(self.data.head())
 
             
-            st.write("**4. Mã hóa biến phân loại** ")
-            
-            st.write(""" -Cột Sex:
-                \n'male' → 0
-                \n'female' → 1""")
-            st.write(""" -Cột Embarked:
-                \n'C' → 0
-                \n'Q' → 1
-                \n'S' → 2 """)
-            # Mã hóa biến phân loại 'Sex'
-            if 'Sex' in self.data.columns:
-                self.data['Sex'] = self.data['Sex'].map({'male': 0, 'female': 1})
+            st.write("**4. Mã hóa biến phân loại**")
+            st.write("**Mã hóa cột Sex:**")
+            sex_male = st.number_input("Nhập giá trị mã hóa cho 'male':", value=0, key="sex_male")
+            sex_female = st.number_input("Nhập giá trị mã hóa cho 'female':", value=1, key="sex_female")
 
-            # Điền giá trị thiếu cho 'Embarked' và mã hóa
-            if 'Embarked' in self.data.columns:
-                self.data['Embarked'] = self.data['Embarked'].fillna('Unknown')
+            # Kiểm tra xem giá trị mã hóa có trùng nhau không
+            if sex_male == sex_female:
+                st.error("Giá trị mã hóa cho 'male' và 'female' không được trùng nhau!")
+            else:
+                # Mã hóa cột 'Sex'
+                if 'Sex' in self.data.columns:
+                    self.data['Sex'] = self.data['Sex'].map({'male': sex_male, 'female': sex_female})
+                    st.write(f"Đã mã hóa 'male' thành {sex_male} và 'female' thành {sex_female}.")
 
-                # Chỉ mã hóa các giá trị hợp lệ, tránh lỗi khi có giá trị ngoài danh sách
-                embarked_mapping = {'C': 0, 'Q': 1, 'S': 2}
-                self.data['Embarked'] = self.data['Embarked'].map(lambda x: embarked_mapping.get(x, -1))
+            # Cho phép người dùng nhập giá trị mã hóa cho 'Embarked'
+            st.write("**Mã hóa cột Embarked:**")
+            embarked_C = st.number_input("Nhập giá trị mã hóa cho 'C':", value=0, key="embarked_C")
+            embarked_Q = st.number_input("Nhập giá trị mã hóa cho 'Q':", value=1, key="embarked_Q")
+            embarked_S = st.number_input("Nhập giá trị mã hóa cho 'S':", value=2, key="embarked_S")
 
-            # Hiển thị dữ liệu sau khi mã hóa
-            st.write("Dữ liệu sau khi mã hóa:")
-            st.dataframe(self.data.head())
+            # Kiểm tra xem giá trị mã hóa có trùng nhau không
+            embarked_values = [embarked_C, embarked_Q, embarked_S]
+            if len(embarked_values) != len(set(embarked_values)):
+                st.error("Giá trị mã hóa cho 'C', 'Q', và 'S' không được trùng nhau!")
+            else:
+                # Điền giá trị thiếu cho 'Embarked' và mã hóa
+                if 'Embarked' in self.data.columns:
+                    self.data['Embarked'] = self.data['Embarked'].fillna('Unknown')
+
+                    # Mã hóa cột 'Embarked'
+                    embarked_mapping = {'C': embarked_C, 'Q': embarked_Q, 'S': embarked_S}
+                    self.data['Embarked'] = self.data['Embarked'].map(lambda x: embarked_mapping.get(x, -1))
+                    st.write(f"Đã mã hóa 'C' thành {embarked_C}, 'Q' thành {embarked_Q}, và 'S' thành {embarked_S}.")
+                    # Hiển thị dữ liệu sau khi mã hóa
+                    st.write("Dữ liệu sau khi mã hóa:")
+                    st.dataframe(self.data.head())
 
 
             
@@ -197,6 +214,11 @@ def create_streamlit_app():
 
         X_train, X_temp, y_train, y_temp = train_test_split(X, y, train_size=train_size, random_state=42)
         X_valid, X_test, y_valid, y_test = train_test_split(X_temp, y_temp, train_size=valid_size / (valid_size + test_size), random_state=42)
+        
+        imputer = SimpleImputer(strategy='mean')  # Điền giá trị thiếu bằng giá trị trung bình
+        X_train = imputer.fit_transform(X_train)
+        X_valid = imputer.transform(X_valid)
+        X_test = imputer.transform(X_test)
 
         # Chuẩn hóa dữ liệu
         scaler = StandardScaler()
@@ -245,7 +267,9 @@ def create_streamlit_app():
             r2_test = r2_score(y_test, y_pred_test)
 
             # Cross-validation
-            y_pred_cv = cross_val_predict(model, X_train_scaled, y_train, cv=5)
+            # Thêm thanh trượt để chọn số lượng folds cho cross-validation
+            cv_folds = st.slider("Chọn số lượng folds cho Cross-Validation:", min_value=2, max_value=10, value=5, step=1)
+            y_pred_cv = cross_val_predict(model, X_train_scaled, y_train, cv=cv_folds)
             mse_cv = mean_squared_error(y_train, y_pred_cv)
 
             # Ghi log vào MLflow
@@ -262,9 +286,9 @@ def create_streamlit_app():
                 "Metric": ["MSE (Train)", "MSE (Validation)", "MSE (Test)", "MSE (Cross-Validation)"],
                 "Value": [mse_train, mse_valid, mse_test, mse_cv]
             })
-
-            st.write("**📌 Kết quả đánh giá mô hình:**")
-            st.table(results_df)
+            if st.button("Huấn luyện mô hình"):
+                st.write("**📌 Kết quả đánh giá mô hình:**")
+                st.table(results_df)
     with tab2 :             
             # Prediction interface
             st.subheader("Giao diện dự đoán")
@@ -287,15 +311,12 @@ def create_streamlit_app():
                     sex = st.selectbox("Sex", ["male", "female"])
                 
                 with col2:
-                    sibsp = st.number_input("Siblings/Spouses", 0, 10, 0)
+                    sibsp = st.number_input("Siblings", 0, 10, 0)
                     parch = st.number_input("Parents/Children", 0, 10, 0)
                     fare = st.number_input("Fare", 0.0, 500.0, 32.0)
                     embarked = st.selectbox("Port of Embarkation", ['C', 'Q', 'S'])
                 
-                if st.button("Predict"):
-                    # Mã hóa dữ liệu đầu vào
-                    sex_encoded = 1 if sex == "female" else 0  # Mã hóa Sex: male -> 0, female -> 1
-                    embarked_encoded = {'C': 0, 'Q': 1, 'S': 2}.get(embarked, -1)  # Mã hóa Embarked
+                if st.button("Dự đoán"):
 
                     # Tạo DataFrame đầu vào
                     input_data = pd.DataFrame({
@@ -304,12 +325,26 @@ def create_streamlit_app():
                         'SibSp': [sibsp],
                         'Parch': [parch],
                         'Fare': [fare],
-                        'Sex': [sex],
-                        'Embarked': [embarked]
+                        'Sex': [analyzer.sex_male if sex == "male" else analyzer.sex_female],  # Sử dụng giá trị mã hóa do người dùng nhập
+                        'Embarked': [analyzer.embarked_C if embarked == "C" else 
+                                        analyzer.embarked_Q if embarked == "Q" else 
+                                        analyzer.embarked_S]  
                     })
+                    # Kiểm tra xem đối tượng có thuộc tập dữ liệu gốc hay không
+                    exists_in_data = False
+                    if analyzer.data is not None:
+                        exists_in_data = any((analyzer.data['Pclass'] == pclass) & 
+                                            (analyzer.data['Age'] == age) & 
+                                            (analyzer.data['SibSp'] == sibsp) & 
+                                            (analyzer.data['Parch'] == parch) & 
+                                            (analyzer.data['Fare'] == fare) & 
+                                            (analyzer.data['Sex'] == (analyzer.sex_male if sex == "male" else analyzer.sex_female)) & 
+                                            (analyzer.data['Embarked'] == (analyzer.embarked_C if embarked == "C" else 
+                                                                            analyzer.embarked_Q if embarked == "Q" else 
+                                                                            analyzer.embarked_S)))
 
                     # Scale dữ liệu đầu vào
-                    # input_scaled = st.session_state['scaler'].transform(input_data)
+                    input_scaled = st.session_state['scaler'].transform(input_data)
                     
                     # Kiểm tra xem mô hình có sử dụng PolynomialFeatures không
                     if regression_type == "Polynomial Regression":
@@ -322,11 +357,50 @@ def create_streamlit_app():
                     
                     # Hiển thị kết quả
                     st.success(f"Dự đoán : {'Survived' if prediction == 1 else 'Not Survived'}")
+                     # Hiển thị thông tin về việc đối tượng có thuộc tập dữ liệu gốc hay không
+                    if exists_in_data:
+                        st.info("Đối tượng này có tồn tại trong tập dữ liệu gốc.")
+                    else:
+                        st.warning("Đối tượng này không có trong tập dữ liệu gốc.")
 
     with tab3:
-        # Hiển thị MLflow Tracking UI trong iframe
-        mlflow_url = "http://localhost:5000"  # Thay đổi nếu chạy trên server khác
-        st.markdown(f'<iframe src="{mlflow_url}" width="800" height="400"></iframe>', unsafe_allow_html=True)
+            st.header("📊 MLflow Tracking")
+
+            # Hiển thị thông tin về các phiên làm việc
+            if st.button("Xem các phiên làm việc"):
+                # Lấy danh sách các phiên làm việc
+                runs = mlflow.search_runs(order_by=["start_time desc"])
+                if not runs.empty:
+                    st.write("### Danh sách các phiên làm việc:")
+                    st.dataframe(runs[["run_id", "experiment_id", "start_time", "status", "metrics.train_mse", "metrics.valid_mse", "metrics.test_mse"]])
+
+                    # Hiển thị thông tin chi tiết cho từng phiên làm việc
+                    selected_run_id = st.selectbox("Chọn một phiên làm việc để xem chi tiết:", runs['run_id'].tolist())
+                    if selected_run_id:
+                        run_details = mlflow.get_run(selected_run_id)
+                        st.write("### Thông tin chi tiết cho phiên làm việc:", selected_run_id)
+                        st.write("**Trạng thái:**", run_details.info.status)
+                        st.write("**Thời gian bắt đầu:**", run_details.info.start_time)
+                        st.write("**Thời gian kết thúc:**", run_details.info.end_time)
+                        st.write("**Tham số:**")
+                        for key, value in run_details.data.params.items():
+                            st.write(f"- **{key}**: {value}")
+                        st.write("**Metric:**")
+                        for key, value in run_details.data.metrics.items():
+                            st.write(f"- **{key}**: {value}")
+                        st.write("**Artifacts:**")
+                        if run_details.info.artifact_uri:
+                            st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
+                        else:
+                            st.write("- Không có artifacts nào.")
+
+                else:
+                    st.write("Không có phiên làm việc nào được ghi lại.")
+
+            # Hiển thị MLflow Tracking UI trong iframe
+            mlflow_url = "http://localhost:5000"  # Thay đổi nếu chạy trên server khác
+            st.markdown(f'<iframe src="{mlflow_url}" width="800" height="400"></iframe>', unsafe_allow_html=True)
+
 
 if __name__ == "__main__":
     create_streamlit_app()
