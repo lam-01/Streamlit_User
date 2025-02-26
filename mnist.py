@@ -70,13 +70,13 @@ def train_model(model_name,params, X_train, X_val, X_test, y_train, y_val, y_tes
     val_accuracy = accuracy_score(y_val, y_val_pred)
     test_accuracy = accuracy_score(y_test, y_test_pred)
     
-    # # Lưu mô hình vào MLFlow
-    # with mlflow.start_run():
-    #     mlflow.log_param("model_name", model_name)
-    #     mlflow.log_metric("train_accuracy", train_accuracy)
-    #     mlflow.log_metric("val_accuracy", val_accuracy)
-    #     mlflow.log_metric("test_accuracy", test_accuracy)
-    #     mlflow.sklearn.log_model(model, model_name)
+    # Lưu mô hình vào MLFlow
+    with mlflow.start_run(run_name="MNIST_Classification"):
+        mlflow.log_param("model_name", model_name)
+        mlflow.log_metric("train_accuracy", train_accuracy)
+        mlflow.log_metric("val_accuracy", val_accuracy)
+        mlflow.log_metric("test_accuracy", test_accuracy)
+        mlflow.sklearn.log_model(model, model_name)
     
     return model, train_accuracy, val_accuracy, test_accuracy
 
@@ -106,7 +106,6 @@ def show_sample_images(X, y):
         ax.set_title(f"{digit}")
         ax.axis('off')
     st.pyplot(fig)
-
 
 # 📌 Giao diện Streamlit
 def create_streamlit_app():
@@ -154,7 +153,6 @@ def create_streamlit_app():
         st.write("**🚀 Huấn luyện mô hình**")
         # Nhập tên mô hình
         model_custom_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")
-        mlflow.log_param("model_custom_name", model_custom_name)
         # Chọn mô hình
         model_name = st.selectbox("🔍 Chọn mô hình", ["Decision Tree", "SVM"])
         params = {}
@@ -197,16 +195,6 @@ def create_streamlit_app():
                 model, train_accuracy, val_accuracy, test_accuracy = train_model(
                 model_name,params, X_train, X_val, X_test, y_train, y_val, y_test
             )
-               # Lưu thông tin vào MLFlow
-            with mlflow.start_run():
-                mlflow.set_tag("model_name", model_custom_name)
-                mlflow.log_params(params)
-                mlflow.log_metrics({
-                    "train_accuracy": train_accuracy,
-                    "val_accuracy": val_accuracy,
-                    "test_accuracy": test_accuracy
-                })
-                mlflow.sklearn.log_model(model, "model", registered_model_name=model_custom_name)
             st.success(f"✅ Huấn luyện xong!")
             
             # Hiển thị độ chính xác trên cả 3 tập dữ liệu
@@ -292,6 +280,10 @@ def create_streamlit_app():
                 if selected_run_id:
                     run_details = mlflow.get_run(selected_run_id)
                     st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
+                    # st.write("**🟢 Trạng thái:**", run_details.info.status)
+                    # st.write("**⏳ Thời gian bắt đầu:**", run_details.info.start_time)
+                    # st.write("**🏁 Thời gian kết thúc:**", run_details.info.end_time)
+                    
                     st.write("📌 **Tham số:**")
                     for key, value in run_details.data.params.items():
                         st.write(f"- **{key}**: {value}")
@@ -299,6 +291,13 @@ def create_streamlit_app():
                     st.write("📊 **Metric:**")
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
+
+                    st.write("📂 **Artifacts:**")
+                    if run_details.info.artifact_uri:
+                        st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
+                    else:
+                        st.write("- Không có artifacts nào.")
+
             else:
                 st.write("❌ Không tìm thấy mô hình nào.")
 
