@@ -108,70 +108,6 @@ def show_sample_images(X, y):
     st.pyplot(fig)
 
 
-# def display_mlflow_experiments():
-#     try:
-#         # Lấy danh sách các thí nghiệm từ MLflow
-#         experiments = mlflow.list_experiments()
-        
-#         if experiments:
-#             st.write("#### Danh sách thí nghiệm")
-#             experiment_data = []
-#             for exp in experiments:
-#                 experiment_data.append({
-#                     "Experiment ID": exp.experiment_id,
-#                     "Experiment Name": exp.name,
-#                     "Artifact Location": exp.artifact_location
-#                 })
-#             st.dataframe(pd.DataFrame(experiment_data))
-            
-#             # Chọn thí nghiệm để xem chi tiết
-#             selected_exp_id = st.selectbox(
-#                 "🔍 Chọn thí nghiệm để xem chi tiết",
-#                 options=[exp.experiment_id for exp in experiments]
-#             )
-            
-#             # Lấy danh sách runs trong thí nghiệm đã chọn
-#             runs = mlflow.search_runs(selected_exp_id)
-#             if not runs.empty:
-#                 st.write("#### Danh sách runs")
-#                 st.dataframe(runs)
-                
-#                 # Chọn run để xem chi tiết
-#                 selected_run_id = st.selectbox(
-#                     "🔍 Chọn run để xem chi tiết",
-#                     options=runs["run_id"]
-#                 )
-                
-#                 # Hiển thị chi tiết run
-#                 run = mlflow.get_run(selected_run_id)
-#                 st.write("##### Thông tin run")
-#                 st.write(f"**Run ID:** {run.info.run_id}")
-#                 st.write(f"**Experiment ID:** {run.info.experiment_id}")
-#                 st.write(f"**Start Time:** {run.info.start_time}")
-                
-#                 # Hiển thị metrics
-#                 st.write("##### Metrics")
-#                 st.json(run.data.metrics)
-                
-#                 # Hiển thị params
-#                 st.write("##### Params")
-#                 st.json(run.data.params)
-                
-#                 # Hiển thị artifacts
-#                 artifacts = mlflow.list_artifacts(selected_run_id)
-#                 if artifacts:
-#                     st.write("##### Artifacts")
-#                     for artifact in artifacts:
-#                         st.write(f"- {artifact.path}")
-#                 else:
-#                     st.write("Không có artifacts nào.")
-#             else:
-#                 st.warning("Không có runs nào trong thí nghiệm này.")
-#         else:
-#             st.warning("Không có thí nghiệm nào được tìm thấy.")
-#     except Exception as e:
-#         st.error(f"Đã xảy ra lỗi khi lấy danh sách thí nghiệm: {e}")
-
 # 📌 Giao diện Streamlit
 def create_streamlit_app():
     st.title("🔢 Phân loại chữ số viết tay")
@@ -218,6 +154,7 @@ def create_streamlit_app():
         st.write("**🚀 Huấn luyện mô hình**")
         # Nhập tên mô hình
         model_custom_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")
+        mlflow.log_param("model_custom_name", model_custom_name)
         # Chọn mô hình
         model_name = st.selectbox("🔍 Chọn mô hình", ["Decision Tree", "SVM"])
         params = {}
