@@ -21,7 +21,7 @@ st.title("Phân cụm dữ liệu MNIST với K-means và DBSCAN")
 st.write("Ứng dụng này thực hiện phân cụm trên tập dữ liệu chữ số viết tay MNIST")
 
 # Tạo các tab
-tab1, tab2, tab3 = st.tabs(["Tiền xử lý dữ liệu", "Phân cụm và Đánh giá", "Theo dõi với MLFlow"])
+tab1, tab2, tab3 = st.tabs(["Tiền xử lý dữ liệu", "Phân cụm và Đánh giá", "MLFlow"])
 
 # Tab 1:  Tiền xử lý
 with tab1:
