@@ -72,7 +72,6 @@ def train_model(model_name,params, X_train, X_val, X_test, y_train, y_val, y_tes
     
     # Lưu mô hình vào MLFlow
     with mlflow.start_run(run_name="MNIST_Classification"):
-        mlflow.log_param("model_name", model_name)
         mlflow.log_metric("train_accuracy", train_accuracy)
         mlflow.log_metric("val_accuracy", val_accuracy)
         mlflow.log_metric("test_accuracy", test_accuracy)
