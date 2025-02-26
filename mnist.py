@@ -281,7 +281,7 @@ def create_streamlit_app():
 
                 # Dự đoán số
                 if st.button("🔮 Dự đoán"):
-                    model, train_accuracy, val_accuracy, test_accuracy= train_model(model_name, X_train, X_val, X_test, y_train, y_val, y_test)
+                    model, train_accuracy, val_accuracy, test_accuracy= train_model(model_name,params, X_train, X_val, X_test, y_train, y_val, y_test)
                     prediction = model.predict(processed_image)[0]
                     probabilities = model.predict_proba(processed_image)[0]
 
@@ -305,7 +305,7 @@ def create_streamlit_app():
                 if canvas_result.image_data is not None:
                     processed_canvas = preprocess_canvas_image(canvas_result.image_data)
 
-                    model, train_accuracy, val_accuracy, test_accuracy= train_model(model_name, X_train, X_val, X_test, y_train, y_val, y_test)
+                    model, train_accuracy, val_accuracy, test_accuracy= train_model(model_name,params, X_train, X_val, X_test, y_train, y_val, y_test)
                     prediction = model.predict(processed_canvas)[0]
                     probabilities = model.predict_proba(processed_canvas)[0]
 
