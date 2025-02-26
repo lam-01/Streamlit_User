@@ -203,6 +203,7 @@ def create_streamlit_app():
             mlflow.log_metric("train_accuracy", train_accuracy)
             mlflow.log_metric("val_accuracy", val_accuracy)
             mlflow.log_metric("test_accuracy", test_accuracy)
+            mlflow.sklearn.log_model(model, model_name)
             
             # Hiển thị độ chính xác trên cả 3 tập dữ liệu
             st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
