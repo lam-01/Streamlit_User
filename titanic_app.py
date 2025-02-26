@@ -248,7 +248,7 @@ def create_streamlit_app():
         st.session_state["scaler"] = scaler
 
         with mlflow.start_run():
-            # Chọn mô hình dựa trên loại hồi quy
+    # Chọn mô hình dựa trên loại hồi quy
             if regression_type == "Polynomial Regression":
                 poly = PolynomialFeatures(degree=degree)
                 X_train_poly = poly.fit_transform(X_train_scaled)
@@ -285,12 +285,16 @@ def create_streamlit_app():
             r2_test = r2_score(y_test, y_pred_test)
 
             # Cross-validation
-            # Thêm thanh trượt để chọn số lượng folds cho cross-validation
             cv_folds = st.slider("Chọn số lượng folds cho Cross-Validation:", min_value=2, max_value=10, value=5, step=1)
             y_pred_cv = cross_val_predict(model, X_train_scaled, y_train, cv=cv_folds)
             mse_cv = mean_squared_error(y_train, y_pred_cv)
 
-            # Ghi log vào MLflow
+            # 🔥 **Ghi log tên mô hình vào MLflow**
+            mlflow.log_param("regression_type", regression_type)
+            if regression_type == "Polynomial Regression":
+                mlflow.log_param("degree", degree)
+
+            # Ghi log metrics vào MLflow
             mlflow.log_metrics({
                 "train_mse": mse_train,
                 "valid_mse": mse_valid,
@@ -299,7 +303,7 @@ def create_streamlit_app():
             })
 
             st.write(f"**Loại hồi quy đang sử dụng:** {regression_type}")
-            
+
             results_df = pd.DataFrame({
                 "Metric": ["MSE (Train)", "MSE (Validation)", "MSE (Test)", "MSE (Cross-Validation)"],
                 "Value": [mse_train, mse_valid, mse_test, mse_cv]
@@ -307,6 +311,7 @@ def create_streamlit_app():
             if st.button("Huấn luyện mô hình"):
                 st.write("**📌 Kết quả đánh giá mô hình:**")
                 st.table(results_df)
+
     with tab2 :             
             # Prediction interface
             st.subheader("Giao diện dự đoán")
@@ -396,11 +401,8 @@ def create_streamlit_app():
                     selected_run_id = st.selectbox("Chọn một phiên làm việc để xem chi tiết:", runs['run_id'].tolist())
                     if selected_run_id:
                         run_details = mlflow.get_run(selected_run_id)
-                        st.write("### Thông tin chi tiết cho phiên làm việc:", selected_run_id)
-                        st.write("**Trạng thái:**", run_details.info.status)
-                        st.write("**Thời gian bắt đầu:**", run_details.info.start_time)
-                        st.write("**Thời gian kết thúc:**", run_details.info.end_time)
-                        st.write("**Tham số:**")
+                        # st.write("**Mô hình sử dụng:**", run_details.data.tags.get("mlflow.runName", "Không có thông tin"))
+                        st.write("**Mô hình sử dụng:**")
                         for key, value in run_details.data.params.items():
                             st.write(f"- **{key}**: {value}")
                         st.write("**Metric:**")
@@ -414,10 +416,6 @@ def create_streamlit_app():
 
                 else:
                     st.write("Không có phiên làm việc nào được ghi lại.")
-
-            # Hiển thị MLflow Tracking UI trong iframe
-            mlflow_url = "http://localhost:5000"  # Thay đổi nếu chạy trên server khác
-            st.markdown(f"[Mở MLflow Tracking UI]({mlflow_url})", unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
