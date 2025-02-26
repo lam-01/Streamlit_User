@@ -153,7 +153,7 @@ def create_streamlit_app():
         st.write("**🚀 Huấn luyện mô hình**")
         # Nhập tên mô hình
         model_custom_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")
-        # mlflow.log_param("model_custom_name", model_custom_name)
+        mlflow.log_param("model_custom_name", model_custom_name)
         # Chọn mô hình
         model_name = st.selectbox("🔍 Chọn mô hình", ["Decision Tree", "SVM"])
         params = {}
@@ -197,6 +197,12 @@ def create_streamlit_app():
                 model_name,params, X_train, X_val, X_test, y_train, y_val, y_test
             )
             st.success(f"✅ Huấn luyện xong!")
+             for param, value in params.items():
+                mlflow.log_param(param, value)
+            
+            mlflow.log_metric("train_accuracy", train_accuracy)
+            mlflow.log_metric("val_accuracy", val_accuracy)
+            mlflow.log_metric("test_accuracy", test_accuracy)
             
             # Hiển thị độ chính xác trên cả 3 tập dữ liệu
             st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
