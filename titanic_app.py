@@ -216,12 +216,16 @@ def create_streamlit_app():
         st.write("📋 **Tỷ lệ chia dữ liệu và số lượng mẫu:**")
         st.table(split_df)
 
-        # Hiển thị kết quả trong Streamlit
+            # Hiển thị giao diện huấn luyện mô hình
         st.write("##### 📊 **Huấn luyện mô hình hồi quy**")
+
+        # Nhập tên mô hình
+        model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")
+
         # Lựa chọn mô hình
         regression_type = st.radio("Chọn loại hồi quy:", ["Multiple Regression", "Polynomial Regression"])
+        cv_folds = st.slider("Chọn số lượng folds cho Cross-Validation:", min_value=2, max_value=10, value=5, step=1)
 
-        # Chọn bậc của Polynomial Regression (chỉ hiển thị nếu chọn Polynomial)
         degree = None
         if regression_type == "Polynomial Regression":
             degree = st.slider("Chọn bậc của hồi quy đa thức:", min_value=2, max_value=5, value=2)
@@ -230,10 +234,15 @@ def create_streamlit_app():
         X = data.drop(columns=["Survived"])
         y = data["Survived"]
 
+        train_size = 0.7  # Thay bằng giá trị mong muốn
+        valid_size = 0.15  # Thay bằng giá trị mong muốn
+        test_size = 0.15  # Thay bằng giá trị mong muốn
+
         X_train, X_temp, y_train, y_temp = train_test_split(X, y, train_size=train_size, random_state=42)
         X_valid, X_test, y_valid, y_test = train_test_split(X_temp, y_temp, train_size=valid_size / (valid_size + test_size), random_state=42)
-        
-        imputer = SimpleImputer(strategy='mean')  # Điền giá trị thiếu bằng giá trị trung bình
+
+        # Xử lý dữ liệu bị thiếu
+        imputer = SimpleImputer(strategy='mean')
         X_train = imputer.fit_transform(X_train)
         X_valid = imputer.transform(X_valid)
         X_test = imputer.transform(X_test)
@@ -247,70 +256,71 @@ def create_streamlit_app():
         # Lưu scaler vào session_state
         st.session_state["scaler"] = scaler
 
-        with mlflow.start_run():
-    # Chọn mô hình dựa trên loại hồi quy
-            if regression_type == "Polynomial Regression":
-                poly = PolynomialFeatures(degree=degree)
-                X_train_poly = poly.fit_transform(X_train_scaled)
-                X_valid_poly = poly.transform(X_valid_scaled)
-                X_test_poly = poly.transform(X_test_scaled)
+        if st.button("Huấn luyện mô hình"):
+            with mlflow.start_run(run_name=model_name):
+                if regression_type == "Polynomial Regression":
+                    poly = PolynomialFeatures(degree=degree)
+                    X_train_poly = poly.fit_transform(X_train_scaled)
+                    X_valid_poly = poly.transform(X_valid_scaled)
+                    X_test_poly = poly.transform(X_test_scaled)
 
-                model = LinearRegression()
-                model.fit(X_train_poly, y_train)
+                    model = LinearRegression()
+                    model.fit(X_train_poly, y_train)
 
-                y_pred_train = model.predict(X_train_poly)
-                y_pred_valid = model.predict(X_valid_poly)
-                y_pred_test = model.predict(X_test_poly)
+                    y_pred_train = model.predict(X_train_poly)
+                    y_pred_valid = model.predict(X_valid_poly)
+                    y_pred_test = model.predict(X_test_poly)
+                else:
+                    model = LinearRegression()
+                    model.fit(X_train_scaled, y_train)
 
-            else:  # Multiple Regression
-                model = LinearRegression()
-                model.fit(X_train_scaled, y_train)
+                    y_pred_train = model.predict(X_train_scaled)
+                    y_pred_valid = model.predict(X_valid_scaled)
+                    y_pred_test = model.predict(X_test_scaled)
 
-                y_pred_train = model.predict(X_train_scaled)
-                y_pred_valid = model.predict(X_valid_scaled)
-                y_pred_test = model.predict(X_test_scaled)
+                # Lưu mô hình vào session_state
+                st.session_state["model"] = model
+                if regression_type == "Polynomial Regression":
+                    st.session_state["poly"] = poly
 
-            # Lưu mô hình vào session_state
-            st.session_state["model"] = model
-            if regression_type == "Polynomial Regression":
-                st.session_state["poly"] = poly
+                # Tính toán metrics
+                mse_train = mean_squared_error(y_train, y_pred_train)
+                mse_valid = mean_squared_error(y_valid, y_pred_valid)
+                mse_test = mean_squared_error(y_test, y_pred_test)
 
-            # Tính toán metrics
-            mse_train = mean_squared_error(y_train, y_pred_train)
-            mse_valid = mean_squared_error(y_valid, y_pred_valid)
-            mse_test = mean_squared_error(y_test, y_pred_test)
+                r2_train = r2_score(y_train, y_pred_train)
+                r2_valid = r2_score(y_valid, y_pred_valid)
+                r2_test = r2_score(y_test, y_pred_test)
 
-            r2_train = r2_score(y_train, y_pred_train)
-            r2_valid = r2_score(y_valid, y_pred_valid)
-            r2_test = r2_score(y_test, y_pred_test)
+                # Cross-validation
+                # cv_folds = st.slider("Chọn số lượng folds cho Cross-Validation:", min_value=2, max_value=10, value=5, step=1)
+                y_pred_cv = cross_val_predict(model, X_train_scaled, y_train, cv=cv_folds)
+                mse_cv = mean_squared_error(y_train, y_pred_cv)
 
-            # Cross-validation
-            cv_folds = st.slider("Chọn số lượng folds cho Cross-Validation:", min_value=2, max_value=10, value=5, step=1)
-            y_pred_cv = cross_val_predict(model, X_train_scaled, y_train, cv=cv_folds)
-            mse_cv = mean_squared_error(y_train, y_pred_cv)
+                # Ghi log tên mô hình vào MLflow
+                mlflow.log_param("model_name", model_name)
+                mlflow.log_param("regression_type", regression_type)
+                if regression_type == "Polynomial Regression":
+                    mlflow.log_param("degree", degree)
 
-            # 🔥 **Ghi log tên mô hình vào MLflow**
-            mlflow.log_param("regression_type", regression_type)
-            if regression_type == "Polynomial Regression":
-                mlflow.log_param("degree", degree)
+                # Ghi log metrics vào MLflow
+                mlflow.log_metrics({
+                    "train_mse": mse_train,
+                    "valid_mse": mse_valid,
+                    "test_mse": mse_test,
+                    "cv_mse": mse_cv
+                })
 
-            # Ghi log metrics vào MLflow
-            mlflow.log_metrics({
-                "train_mse": mse_train,
-                "valid_mse": mse_valid,
-                "test_mse": mse_test,
-                "cv_mse": mse_cv
-            })
-
-            st.write(f"**Loại hồi quy đang sử dụng:** {regression_type}")
-
-            results_df = pd.DataFrame({
-                "Metric": ["MSE (Train)", "MSE (Validation)", "MSE (Test)", "MSE (Cross-Validation)"],
-                "Value": [mse_train, mse_valid, mse_test, mse_cv]
-            })
-            if st.button("Huấn luyện mô hình"):
+                st.write(f"**Loại hồi quy đang sử dụng:** {regression_type}")
+                
+                results_df = pd.DataFrame({
+                    "Metric": ["MSE (Train)", "MSE (Validation)", "MSE (Test)", "MSE (Cross-Validation)"],
+                    "Value": [mse_train, mse_valid, mse_test, mse_cv]
+                })
+                
                 st.write("**📌 Kết quả đánh giá mô hình:**")
                 st.table(results_df)
+
 
     with tab2 :             
             # Prediction interface
@@ -387,35 +397,59 @@ def create_streamlit_app():
                         st.warning("Đối tượng này không có trong tập dữ liệu gốc.")
 
     with tab3:
-            st.header("📊 MLflow Tracking")
+        st.header("📊 MLflow Tracking")
 
-            # Hiển thị thông tin về các phiên làm việc
-            if st.button("Xem các phiên làm việc"):
-                # Lấy danh sách các phiên làm việc
-                runs = mlflow.search_runs(order_by=["start_time desc"])
-                if not runs.empty:
-                    st.write("### Danh sách các phiên làm việc:")
-                    st.dataframe(runs[["run_id", "experiment_id", "start_time", "status", "metrics.train_mse", "metrics.valid_mse", "metrics.test_mse"]])
+        # Lấy danh sách các phiên làm việc từ MLflow
+        runs = mlflow.search_runs(order_by=["start_time desc"])
 
-                    # Hiển thị thông tin chi tiết cho từng phiên làm việc
-                    selected_run_id = st.selectbox("Chọn một phiên làm việc để xem chi tiết:", runs['run_id'].tolist())
-                    if selected_run_id:
-                        run_details = mlflow.get_run(selected_run_id)
-                        # st.write("**Mô hình sử dụng:**", run_details.data.tags.get("mlflow.runName", "Không có thông tin"))
-                        st.write("**Mô hình sử dụng:**")
-                        for key, value in run_details.data.params.items():
-                            st.write(f"- **{key}**: {value}")
-                        st.write("**Metric:**")
-                        for key, value in run_details.data.metrics.items():
-                            st.write(f"- **{key}**: {value}")
-                        st.write("**Artifacts:**")
-                        if run_details.info.artifact_uri:
-                            st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
-                        else:
-                            st.write("- Không có artifacts nào.")
+        if not runs.empty:
+            # Lấy danh sách tên mô hình
+            runs["model_name"] = runs["tags.mlflow.runName"]  # Giả sử tên mô hình lưu trong tag `mlflow.runName`
+            model_names = runs["model_name"].dropna().unique().tolist()
 
-                else:
-                    st.write("Không có phiên làm việc nào được ghi lại.")
+            # **Tìm kiếm mô hình**
+            search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
+
+            if search_model_name:
+                filtered_runs = runs[runs["model_name"].str.contains(search_model_name, case=False, na=False)]
+            else:
+                filtered_runs = runs
+
+            # **Hiển thị danh sách mô hình**
+            if not filtered_runs.empty:
+                st.write("### 📜 Danh sách mô hình đã lưu:")
+                st.dataframe(filtered_runs[["model_name", "run_id", "start_time", "metrics.train_mse", "metrics.valid_mse", "metrics.test_mse"]])
+
+                # **Chọn một mô hình để xem chi tiết**
+                selected_run_id = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["run_id"].tolist())
+
+                if selected_run_id:
+                    run_details = mlflow.get_run(selected_run_id)
+                    st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
+                    st.write("**🟢 Trạng thái:**", run_details.info.status)
+                    st.write("**⏳ Thời gian bắt đầu:**", run_details.info.start_time)
+                    st.write("**🏁 Thời gian kết thúc:**", run_details.info.end_time)
+                    
+                    st.write("📌 **Tham số:**")
+                    for key, value in run_details.data.params.items():
+                        st.write(f"- **{key}**: {value}")
+
+                    st.write("📊 **Metric:**")
+                    for key, value in run_details.data.metrics.items():
+                        st.write(f"- **{key}**: {value}")
+
+                    st.write("📂 **Artifacts:**")
+                    if run_details.info.artifact_uri:
+                        st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
+                    else:
+                        st.write("- Không có artifacts nào.")
+
+            else:
+                st.write("❌ Không tìm thấy mô hình nào.")
+
+        else:
+            st.write("⚠️ Không có phiên làm việc nào được ghi lại.")
+
 
 
 if __name__ == "__main__":
