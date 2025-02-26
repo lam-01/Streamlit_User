@@ -262,56 +262,36 @@ def create_streamlit_app():
                     st.write(f"🎯 **Dự đoán: {prediction}**")
                     st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
 
-    with tab3:
+  with tab3:
         st.header("📊 MLflow Tracking")
-
-        # Lấy danh sách các phiên làm việc từ MLflow
-        runs = mlflow.search_runs(order_by=["start_time desc"])
-
-        if not runs.empty:
-            # Lấy danh sách tên mô hình
-            runs["model_custom_name"] = runs["tags.mlflow.runName"]  # Giả sử tên mô hình lưu trong tag `mlflow.runName`
-            model_names = runs["model_custom_name"].dropna().unique().tolist()
-
-            # **Tìm kiếm mô hình**
-            search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
-
-            if search_model_name:
-                filtered_runs = runs[runs["model_custom_name"].str.contains(search_model_name, case=False, na=False)]
-            else:
-                filtered_runs = runs
-
-            # **Hiển thị danh sách mô hình**
-            if not filtered_runs.empty:
-                st.write("### 📜 Danh sách mô hình đã lưu:")
-                st.dataframe(filtered_runs[["model_custom_name", "run_id", "start_time", "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy"]])
-
-                # **Chọn một mô hình để xem chi tiết**
-                selected_run_id = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["run_id"].tolist())
-
-                if selected_run_id:
-                    run_details = mlflow.get_run(selected_run_id)
-                    st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
-                    st.write("📌 **Tham số:**")
-                    for key, value in run_details.data.params.items():
-                        st.write(f"- **{key}**: {value}")
-
-                    st.write("📊 **Metric:**")
-                    for key, value in run_details.data.metrics.items():
-                        st.write(f"- **{key}**: {value}")
-
-                    # st.write("📂 **Artifacts:**")
-                    # if run_details.info.artifact_uri:
-                    #     st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
-                    # else:
-                    #     st.write("- Không có artifacts nào.")
-
-            else:
-                st.write("❌ Không tìm thấy mô hình nào.")
-
-        else:
-            st.write("⚠️ Không có phiên làm việc nào được ghi lại.")
         
+        # Tìm kiếm mô hình theo tên
+        search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
+        if search_model_name:
+            runs = mlflow.search_runs(filter_string=f"tags.model_name ILIKE '%{search_model_name}%'")
+        else:
+            runs = mlflow.search_runs()
+        
+        if not runs.empty:
+            st.write("### 📜 Danh sách mô hình đã lưu:")
+            st.dataframe(runs[["tags.model_name", "run_id", "start_time", "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy"]])
+            
+            # Chọn một mô hình để xem chi tiết
+            selected_run_id = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", runs["run_id"].tolist())
+            
+            if selected_run_id:
+                run_details = mlflow.get_run(selected_run_id)
+                st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('model_name', 'Không có tên')}`")
+                
+                st.write("📌 **Tham số:**")
+                for key, value in run_details.data.params.items():
+                    st.write(f"- **{key}**: {value}")
+                
+                st.write("📊 **Metric:**")
+                for key, value in run_details.data.metrics.items():
+                    st.write(f"- **{key}**: {value}")
+        else:
+            st.write("❌ Không tìm thấy mô hình nào.")
 
 if __name__ == "__main__":
     create_streamlit_app()
