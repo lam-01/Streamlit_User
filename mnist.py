@@ -197,7 +197,7 @@ def create_streamlit_app():
                 model_name,params, X_train, X_val, X_test, y_train, y_val, y_test
             )
             st.success(f"✅ Huấn luyện xong!")
-             for param, value in params.items():
+            for param, value in params.items():
                 mlflow.log_param(param, value)
             
             mlflow.log_metric("train_accuracy", train_accuracy)
