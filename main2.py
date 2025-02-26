@@ -19,7 +19,7 @@ elif option == "MNIST":
     else:
         st.error("❌ Module MNIST không có hàm `create_streamlit_app()`")
 elif option=="Clustering Algorithms":
-    with open("save.py", "r", encoding="utf-8") as file:
+    with open("dbscan.py", "r", encoding="utf-8") as file:
         code = file.read()
         exec(code)
 
