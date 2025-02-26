@@ -207,7 +207,7 @@ def create_streamlit_app():
                     "test_accuracy": test_accuracy
                 })
                 mlflow.sklearn.log_model(model, "model", registered_model_name=model_custom_name)
-            st.success(f"✅ Huấn luyện xong!")
+            st.success(f"✅ Huấn luyện xong!{model_custom_name}")
             
             # Hiển thị độ chính xác trên cả 3 tập dữ liệu
             st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
@@ -299,13 +299,6 @@ def create_streamlit_app():
                     st.write("📊 **Metric:**")
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
-
-                    # st.write("📂 **Artifacts:**")
-                    # if run_details.info.artifact_uri:
-                    #     st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
-                    # else:
-                    #     st.write("- Không có artifacts nào.")
-
             else:
                 st.write("❌ Không tìm thấy mô hình nào.")
 
