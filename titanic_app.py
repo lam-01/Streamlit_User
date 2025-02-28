@@ -418,7 +418,7 @@ def create_streamlit_app():
             # **Hiển thị danh sách mô hình**
             if not filtered_runs.empty:
                 st.write("### 📜 Danh sách mô hình đã lưu:")
-                st.dataframe(filtered_runs[["model_name", "run_id", "start_time", "metrics.train_mse", "metrics.valid_mse", "metrics.test_mse"]])
+                st.dataframe(filtered_runs[["model_name", "run_id"]])
 
                 # **Chọn một mô hình để xem chi tiết**
                 selected_run_id = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["run_id"].tolist())
@@ -426,9 +426,9 @@ def create_streamlit_app():
                 if selected_run_id:
                     run_details = mlflow.get_run(selected_run_id)
                     st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
-                    # st.write("**🟢 Trạng thái:**", run_details.info.status)
-                    # st.write("**⏳ Thời gian bắt đầu:**", run_details.info.start_time)
-                    # st.write("**🏁 Thời gian kết thúc:**", run_details.info.end_time)
+                    st.write("**🟢 Trạng thái:**", run_details.info.status)
+                    st.write("**⏳ Thời gian bắt đầu:**", run_details.info.start_time)
+                    st.write("**🏁 Thời gian kết thúc:**", run_details.info.end_time)
                     
                     st.write("📌 **Tham số:**")
                     for key, value in run_details.data.params.items():
@@ -438,11 +438,11 @@ def create_streamlit_app():
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
 
-                    # st.write("📂 **Artifacts:**")
-                    # if run_details.info.artifact_uri:
-                    #     st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
-                    # else:
-                    #     st.write("- Không có artifacts nào.")
+                    st.write("📂 **Artifacts:**")
+                    if run_details.info.artifact_uri:
+                        st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
+                    else:
+                        st.write("- Không có artifacts nào.")
 
             else:
                 st.write("❌ Không tìm thấy mô hình nào.")
