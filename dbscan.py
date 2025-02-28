@@ -12,7 +12,6 @@ from sklearn.datasets import fetch_openml
 import time
 import logging
 
-# Thiết lập logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -21,10 +20,15 @@ st.title("Phân cụm dữ liệu MNIST với K-means và DBSCAN")
 st.write("Ứng dụng này thực hiện phân cụm trên tập dữ liệu chữ số viết tay MNIST")
 
 # Tạo các tab
-tab1, tab2, tab3 = st.tabs(["Tiền xử lý dữ liệu", "Phân cụm và Đánh giá", "MLFlow"])
+tab1, tab2, tab3 = st.tabs(["Tổng quan lý thuyết", "Phân cụm ", "MLFlow"])
 
 # Tab 1:  Tiền xử lý
 with tab1:
+    st.write("##### Lí thuyết")
+
+
+# Tab 2: Phân cụm và Đánh giá
+with tab2:
     st.write("##### Tùy chọn số lượng dữ liệu ")
     
     # Tùy chọn số lượng dữ liệu
@@ -77,41 +81,6 @@ with tab1:
     
     # Hiển thị ảnh
     display_random_images(X)
-
-    
-    # Tùy chọn PCA
-    st.write("##### Giảm chiều dữ liệu PCA")
-    use_pca = st.checkbox("Sử dụng PCA để giảm chiều", True, key="use_pca_tab1")
-    if use_pca:
-        n_components = st.slider("Số lượng thành phần PCA", 2, 50, 20, key="n_components_tab1")
-        
-        # Áp dụng PCA
-        def apply_pca(X, n_components):
-            logger.info(f"Áp dụng PCA với {n_components} thành phần")
-            
-            # Chuẩn hóa dữ liệu
-            scaler = StandardScaler()
-            X_scaled = scaler.fit_transform(X)
-            
-            # Áp dụng PCA
-            pca = PCA(n_components=n_components)
-            X_pca = pca.fit_transform(X_scaled)
-            
-            # Tính tỷ lệ phương sai được giải thích
-            variance_ratio = np.sum(pca.explained_variance_ratio_)
-            
-            logger.info(f"PCA hoàn thành. Giải thích {variance_ratio:.2f} phương sai")
-            st.text(f"PCA giảm chiều từ {X.shape[1]} xuống {n_components} thành phần")
-            st.text(f"Tỷ lệ phương sai : {variance_ratio:.2f}")
-            
-            return X_pca, pca
-        
-        X_processed, pca_model = apply_pca(X, n_components)
-    else:
-        X_processed = X
-
-# Tab 2: Phân cụm và Đánh giá
-with tab2:
     st.write("##### Phân cụm và Đánh giá")
     
     # Tùy chọn thuật toán
@@ -138,9 +107,12 @@ with tab2:
                 kmeans = KMeans(n_clusters=n_clusters, max_iter=max_iter, random_state=42, n_init=10)
                 clusters = kmeans.fit_predict(X)
                 
+                elapsed_time = time.time() - start_time
+                logger.info(f"K-means hoàn thành trong {elapsed_time:.2f} giây")
+                
                 return clusters, kmeans
             
-            clusters, model = run_kmeans(X_processed, n_clusters, max_iter)
+            clusters, model = run_kmeans(X, n_clusters, max_iter)
         
         elif algorithm == "DBSCAN":
             # Thực hiện DBSCAN
@@ -165,7 +137,7 @@ with tab2:
                 
                 return clusters, dbscan
             
-            clusters, model = run_dbscan(X_processed, eps, min_samples)
+            clusters, model = run_dbscan(X, eps, min_samples)
         
         # Đánh giá kết quả phân cụm
         def evaluate_clustering(X, clusters):
@@ -205,30 +177,20 @@ with tab2:
             return results
         
         # Tính toán kết quả đánh giá
-        evaluation_results = evaluate_clustering(X_processed, clusters)
+        evaluation_results = evaluate_clustering(X, clusters)
         
         # Hiển thị kết quả đánh giá
-        st.markdown("##### Kết quả đánh giá phân cụm",help="""**Calinski-Harabasz Index (CH Index)**, còn được gọi là **Variance Ratio Criterion**, là một chỉ số đánh giá chất lượng của các cụm trong phân cụm.
-        Nó đo lường sự phân tách giữa các cụm và sự đồng nhất bên trong các cụm .
-        \n- Giá trị của CH Index càng cao thì chất lượng phân cụm càng tốt. Điều này có nghĩa là các cụm được phân tách rõ ràng và các điểm trong cùng một cụm gần nhau hơn.
-        \n- Nếu CH Index thấp, điều này có thể chỉ ra rằng các cụm không được phân tách tốt hoặc có thể có quá ít cụm.
-        \n **Silhouette Score** là một chỉ số đánh giá chất lượng của các cụm trong phân cụm. Nó đo lường mức độ tương đồng của 
-        một điểm với các điểm trong cùng một cụm so với các điểm trong cụm khác.
-        \n- Gần 1: Điểm nằm gần các điểm trong cùng một cụm và xa các điểm trong cụm khác, cho thấy phân cụm tốt.
-        \n- Gần 0: Điểm nằm ở ranh giới giữa hai cụm, cho thấy phân cụm không rõ ràng.
-        \n- Gần -1: Điểm có thể đã được phân cụm sai, nằm gần các điểm trong cụm khác hơn là trong cụm của nó.
-        """)
+        st.markdown("##### Kết quả đánh giá phân cụm")
         if evaluation_results and isinstance(evaluation_results, dict):
             for metric, value in evaluation_results.items():
                 st.write(f"{metric}: {value:.4f}")
         else:
             st.warning("Không có kết quả đánh giá nào được tính toán.")
-        
-        # Trực quan hóa kết quả
+        # Hàm trực quan hóa kết quả phân cụm
         def visualize_clusters(X, clusters, y_true=None, algorithm_name=""):
             st.write(f"##### Kết quả phân cụm {algorithm_name}")
             
-            # Nếu dữ liệu có nhiều hơn 2 chiều, sử dụng PCA để trực quan hóa
+            # Sử dụng PCA để giảm chiều dữ liệu
             if X.shape[1] > 2:
                 st.text("Sử dụng PCA để hiển thị trong không gian 2D")
                 pca = PCA(n_components=2)
@@ -259,13 +221,47 @@ with tab2:
                 ax[1].axis('off')
             
             st.pyplot(fig)
-        
-        # Hiển thị kết quả
-        visualize_clusters(X_processed, clusters, y, algorithm)
-        
-        # Hiển thị một số ảnh từ mỗi cụm
+
+        # Hàm hiển thị thông tin chi tiết về từng cụm dưới dạng bảng
+        def display_cluster_info(X, clusters):
+            st.subheader("Thông tin chi tiết về từng cụm")
+            
+            # Lấy các cụm duy nhất
+            unique_clusters = np.unique(clusters)
+            
+            # Tạo một danh sách để lưu thông tin từng cụm
+            cluster_info = []
+            
+            for cluster_id in unique_clusters:
+                cluster_name = f"Cụm {cluster_id}" if cluster_id != -1 else "Điểm nhiễu (cụm -1)"
+                
+                # Lấy các chỉ số của các điểm trong cụm này
+                indices = np.where(clusters == cluster_id)[0]
+                
+                # Tính số lượng điểm dữ liệu trong cụm
+                n_samples = len(indices)
+                
+                # Thêm thông tin vào danh sách
+                cluster_info.append({
+                    "Tên cụm": cluster_name,
+                    "Số lượng điểm dữ liệu": n_samples
+                })
+            
+            # Tạo DataFrame từ danh sách thông tin
+            cluster_df = pd.DataFrame(cluster_info)
+            
+            # Hiển thị bảng thông tin
+            st.dataframe(cluster_df)
+
+        # Hàm hiển thị một số ảnh từ mỗi cụm
         def display_cluster_examples(X, clusters, n_clusters=10, n_samples=5):
             st.subheader("Hiển thị một số ảnh từ mỗi cụm")
+            
+            # Tùy chọn số lượng cụm hiển thị
+            n_clusters = st.slider("Chọn số lượng cụm hiển thị", 1, 20, 10, key="n_clusters_display")
+            
+            # Tùy chọn số lượng ảnh hiển thị từ mỗi cụm
+            n_samples = st.slider("Chọn số lượng ảnh hiển thị từ mỗi cụm", 1, 10, 5, key="n_samples_display")
             
             # Lấy các cụm duy nhất
             unique_clusters = np.unique(clusters)
@@ -307,10 +303,97 @@ with tab2:
                     st.pyplot(fig)
                 else:
                     st.write("Không có mẫu nào trong cụm này")
-        
-        # Hiển thị ảnh từ mỗi cụm
+
+        # Gọi các hàm để hiển thị kết quả
+        visualize_clusters(X, clusters, y, algorithm)
+        display_cluster_info(X, clusters)
         display_cluster_examples(X, clusters)
 
-# Tab 3: Theo dõi với MLFlow
+        st.write("##### Lưu kết quả phân cụm vào MLFlow")
+        user_name = st.text_input("Nhập tên của bạn để lưu kết quả phân cụm", key="user_name_tab2")
+        
+        if user_name:
+            if st.button("Lưu kết quả phân cụm vào MLFlow"):
+                if 'model' in locals() and 'clusters' in locals():
+                    with mlflow.start_run(run_name=f"Clustering_{user_name}"):
+                        # Log phương pháp phân cụm
+                        mlflow.log_param("Algorithm", algorithm)
+                        
+                        # Log thông tin cụ thể về phương pháp phân cụm
+                        if algorithm == "K-means":
+                            mlflow.log_param("n_clusters", n_clusters)
+                            mlflow.log_param("max_iter", max_iter)
+                        elif algorithm == "DBSCAN":
+                            mlflow.log_param("eps", eps)
+                            mlflow.log_param("min_samples", min_samples)
+                            mlflow.log_param("n_clusters", len(set(clusters)) - (1 if -1 in clusters else 0))
+                            mlflow.log_param("n_noise", list(clusters).count(-1))
+                        
+                        # Log chỉ số đánh giá
+                        if evaluation_results:
+                            for metric, value in evaluation_results.items():
+                                mlflow.log_metric(metric, value)
+                        
+                        # Log mô hình
+                        mlflow.sklearn.log_model(model, "model")
+                        
+                        st.success(f"Kết quả phân cụm đã được lưu vào MLFlow với tên {user_name}.")
+                else:
+                    st.warning("Vui lòng thực hiện phân cụm trước khi lưu kết quả.")
+            
+
 with tab3:
-    st.write("")
+    st.header("📊 MLflow Tracking")
+
+    # # Kết nối đến MLflow
+    # mlflow.set_tracking_uri("http://127.0.0.1:5000")  # Đảm bảo MLflow server đang chạy
+
+    # Tìm kiếm mô hình theo tên
+    search_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
+
+    # Lấy danh sách các phiên làm việc từ MLflow
+    if search_name:
+        runs = mlflow.search_runs(filter_string=f"tags.mlflow.runName LIKE '%{search_name}%'", order_by=["start_time desc"])
+    else:
+        runs = mlflow.search_runs(order_by=["start_time desc"])
+
+    if not runs.empty:
+        # Hiển thị danh sách các mô hình
+        st.write("### 📜 Danh sách mô hình đã lưu:")
+        st.dataframe(runs[["tags.mlflow.runName", "run_id"]])
+
+        # Chọn một mô hình để xem chi tiết
+        selected_run_id = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", runs["run_id"].tolist())
+
+        if selected_run_id:
+            # Lấy thông tin chi tiết về run được chọn
+            run_details = mlflow.get_run(selected_run_id)
+            st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
+            st.write("**🟢 Trạng thái:**", run_details.info.status)
+            st.write("**⏳ Thời gian bắt đầu:**", run_details.info.start_time)
+            st.write("**🏁 Thời gian kết thúc:**", run_details.info.end_time)
+
+            # Hiển thị tham số
+            st.write("📌 **Tham số:**")
+            for key, value in run_details.data.params.items():
+                st.write(f"- **{key}**: {value}")
+
+            # Hiển thị metric
+            st.write("📊 **Metric:**")
+            for key, value in run_details.data.metrics.items():
+                st.write(f"- **{key}**: {value}")
+
+            # Hiển thị artifacts (nếu có)
+            st.write("📂 **Artifacts:**")
+            if run_details.info.artifact_uri:
+                st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
+                # Tải mô hình từ artifact
+                if st.button("Tải mô hình", key=f"load_{selected_run_id}"):
+                    model = mlflow.sklearn.load_model(f"runs:/{selected_run_id}/model")
+                    st.success(f"Đã tải mô hình {run_details.data.tags.get('mlflow.runName', 'Không có tên')} thành công!")
+                    st.write(f"Thông tin mô hình: {model}")
+            else:
+                st.write("- Không có artifacts nào.")
+
+    else:
+        st.warning("⚠️ Không tìm thấy mô hình nào.")
