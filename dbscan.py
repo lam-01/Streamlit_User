@@ -523,7 +523,7 @@ def main():
                                 st.write("**Iterations:**", model.n_iter_)
                                 
                                 # Hiển thị cluster centers (trực quan hóa)
-                                st.subheader("Cluster Centers Visualization")
+                                st.subheader("Hình ảnh trực quan hóa")
                                 cols = st.columns(5)
                                 for i, col in enumerate(cols):
                                     if i < min(5, model.cluster_centers_.shape[0]):
