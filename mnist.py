@@ -258,7 +258,7 @@ def create_streamlit_app():
 
         if not runs.empty:
             # Lấy danh sách tên mô hình
-            runs["model_custom_name"] = runs["tags.custom_name"]  # Giả sử tên mô hình lưu trong tag `mlflow.runName`
+            runs["model_custom_name"] = runs["tags.mlflow.runName"]  # Giả sử tên mô hình lưu trong tag `mlflow.runName`
             model_names = runs["model_custom_name"].dropna().unique().tolist()
 
             # **Tìm kiếm mô hình**
@@ -279,7 +279,7 @@ def create_streamlit_app():
 
                 if selected_run_id:
                     run_details = mlflow.get_run(selected_run_id)
-                    st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('custom_name', 'Không có tên')}`")
+                    st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
                     # st.write("**🟢 Trạng thái:**", run_details.info.status)
                     # st.write("**⏳ Thời gian bắt đầu:**", run_details.info.start_time)
                     # st.write("**🏁 Thời gian kết thúc:**", run_details.info.end_time)
