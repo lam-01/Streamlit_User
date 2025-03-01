@@ -5,3 +5,10 @@ opencv-python-headless
 streamlit-drawable-canvas
 seaborn
 streamlit-tags
+streamlit
+numpy
+pandas
+matplotlib
+openml
+pillow
+
