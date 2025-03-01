@@ -2,398 +2,544 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import mlflow
+import mlflow.sklearn
+from mlflow.tracking import MlflowClient
 from sklearn.cluster import KMeans, DBSCAN
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score, calinski_harabasz_score
-import mlflow
-import mlflow.sklearn
+from openml import datasets
+import datetime
+import os
+import plotly.express as px
+import plotly.graph_objects as go
+from PIL import Image
+import io
 from sklearn.datasets import fetch_openml
-import time
-import logging
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-# Tiêu đề ứng dụng
-st.title("Phân cụm dữ liệu MNIST với K-means và DBSCAN")
-st.write("Ứng dụng này thực hiện phân cụm trên tập dữ liệu chữ số viết tay MNIST")
-
-# Tạo các tab
-tab1, tab2, tab3 = st.tabs(["Tổng quan lý thuyết", "Phân cụm ", "MLFlow"])
-
-# Tab 1:  Tiền xử lý
-with tab1:
-    st.write("##### Lí thuyết")
+# Set up MLflow
+def setup_mlflow():
+    # Đặt URI theo dõi MLFlow thành thư mục cục bộ
+    mlflow_tracking_uri = "./mlruns"
+    # mlflow.set_experiment("Clustering Algorithms")
+    if not os.path.exists(mlflow_tracking_uri):
+        os.makedirs(mlflow_tracking_uri)
+    mlflow.set_tracking_uri(mlflow_tracking_uri)
+    return MlflowClient()
+    # Modify your setup_mlflow function to ensure it sets the experiment
 
 
-# Tab 2: Phân cụm và Đánh giá
-with tab2:
-    st.write("##### Tùy chọn số lượng dữ liệu ")
+# Tải bộ dữ liệu MNIST từ OpenML
+@st.cache_data
+def load_mnist_data():
+    mnist = fetch_openml('mnist_784', version=1, parser='auto')
+    X = mnist.data.astype('float32').values  # Chuyển đổi thành mảng NumPy
+    y = mnist.target.astype('int')
+    return X, y
+# Preprocess data
+@st.cache_data
+def preprocess_data(X, sample_size=5000):
+    # Lấy mẫu để thực hiện xử lý nhanh hơn cho bản demo
+    np.random.seed(42)
+    indices = np.random.choice(X.shape[0], sample_size, replace=False)
+    X_sample = X[indices]
     
-    # Tùy chọn số lượng dữ liệu
-    sample_size = st.slider("Số lượng mẫu", 1000, 70000, 7000, key="sample_size_tab1")
+    # Lưu trữ các giá trị ban đầu của mẫu
+    X_original = X_sample.copy()
     
-    # Tải dữ liệu MNIST
-    @st.cache_data
-    def load_mnist(sample_size):
-        logger.info(f"Đang tải dữ liệu MNIST với kích thước mẫu {sample_size}")
-        
-        # Tải dữ liệu từ OpenML
-        mnist = fetch_openml('mnist_784', version=1, parser='auto')
-        X = mnist.data.astype('float32')
-        y = mnist.target.astype('int')
-        
-        # Lấy mẫu ngẫu nhiên
-        if sample_size < X.shape[0]:
-            indices = np.random.choice(X.shape[0], sample_size, replace=False)
-            X_sampled = X.iloc[indices] if hasattr(X, 'iloc') else X[indices]
-            y_sampled = y.iloc[indices] if hasattr(y, 'iloc') else y[indices]
-        else:
-            X_sampled = X
-            y_sampled = y
-        
-        logger.info(f"Đã tải xong dữ liệu MNIST: {X_sampled.shape}")
-        st.text(f"Số lượng mẫu : {X_sampled.shape[0]} mẫu với {X_sampled.shape[1]} chiều")
-        
-        return X_sampled, y_sampled
+    # Chuẩn hóa dữ liệu
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X_sample)
     
-    # Tải dữ liệu
-    X, y = load_mnist(sample_size)
+    # Áp dụng PCA để giảm chiều dữ liệu xuống 2 chiều
+    pca = PCA(n_components=2)
+    X_pca = pca.fit_transform(X_scaled)  # Huấn luyện PCA và biến đổi dữ liệu
     
-    # Hiển thị một số ảnh từ tập dữ liệu
-    def display_random_images(X, n_samples=10):
-        st.write("##### Hiển thị một số ảnh từ tập dữ liệu")
+    return X_sample, X_scaled, X_pca, indices, X_original, pca 
+# Thực hiện phân cụm K-Means
+def run_kmeans(X_scaled, n_clusters=10):
+    kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
+    kmeans.fit(X_scaled)
+    return kmeans
+
+# Thực hiện phân cụm DBSCAN
+def run_dbscan(X_scaled, eps=0.5, min_samples=5):
+    dbscan = DBSCAN(eps=eps, min_samples=min_samples)
+    dbscan.fit(X_scaled)
+    return dbscan
+# Hàm log mô hình vào MLFlow
+def log_model(model, model_name, params, metrics, cluster_images, experiment_name):
+    mlflow.set_experiment(experiment_name)
+    
+    with mlflow.start_run(run_name=model_name) as run:
+        # Log model name
+        mlflow.log_param("model_name", model_name)
         
-        # Tạo lưới để hiển thị ảnh
-        fig, axes = plt.subplots(1, n_samples, figsize=(15, 2))
+        # Log parameters
+        for param_name, param_value in params.items():
+            mlflow.log_param(param_name, param_value)
         
-        # Chọn ngẫu nhiên các chỉ số
-        indices = np.random.choice(X.shape[0], n_samples, replace=False)
+        # Log metrics
+        for metric_name, metric_value in metrics.items():
+            mlflow.log_metric(metric_name, metric_value)
         
-        # Hiển thị mỗi ảnh
-        for i, idx in enumerate(indices):
-            img = X.iloc[idx].values.reshape(28, 28)
-            axes[i].imshow(img, cmap='gray')
-            axes[i].axis('off')
+        # Log the model
+        mlflow.sklearn.log_model(model, "model")
         
-        st.pyplot(fig)
-    
-    # Hiển thị ảnh
-    display_random_images(X)
-    st.write("##### Phân cụm và Đánh giá")
-    
-    # Tùy chọn thuật toán
-    algorithm = st.selectbox("Thuật toán phân cụm", ["K-means", "DBSCAN"], key="algorithm_tab2")
-    
-    if algorithm == "K-means":
-        n_clusters = st.slider("Số lượng cụm (k)", 2, 20, 10, key="n_clusters_tab2")
-        max_iter = st.slider("Số lần lặp tối đa", 100, 1000, 300, key="max_iter_tab2")
-    elif algorithm == "DBSCAN":
-        eps = st.slider("Epsilon (bán kính vùng lân cận)", 0.1, 20.0, 5.0, key="eps_tab2")
-        min_samples = st.slider("Số lượng mẫu tối thiểu", 2, 100, 5, key="min_samples_tab2")
-    
-    # Nút "Phân cụm"
-    if st.button("Phân cụm"):
-        if algorithm == "K-means":
-            # Thực hiện K-means
-            def run_kmeans(X, n_clusters, max_iter):
-                logger.info(f"Thực hiện K-means với {n_clusters} cụm")
-                st.text(f"Số cụm : {n_clusters} cụm")
+        # Log sample images
+        for cluster_id, images in cluster_images.items():
+            if images is not None and len(images) > 0:
+                for i, img_data in enumerate(images[:5]):  # Chỉ đăng 5 ảnh mỗi cụm
+                    fig, ax = plt.subplots(figsize=(3, 3))
+                    ax.imshow(img_data.reshape(28, 28), cmap='gray')
+                    plt.axis('off')
+                    buf = io.BytesIO()
+                    plt.savefig(buf, format='png')
+                    buf.seek(0)
+                    mlflow.log_image(Image.open(buf), f"cluster_{cluster_id}_sample_{i}.png")
+                    plt.close(fig)
                 
-                start_time = time.time()
-                
-                # Khởi tạo và thực hiện K-means
-                kmeans = KMeans(n_clusters=n_clusters, max_iter=max_iter, random_state=42, n_init=10)
-                clusters = kmeans.fit_predict(X)
-                
-                elapsed_time = time.time() - start_time
-                logger.info(f"K-means hoàn thành trong {elapsed_time:.2f} giây")
-                
-                return clusters, kmeans
+        return run.info.run_id
+
+# Trực quan hóa kết quả phân cụm
+def visualize_clusters(X_pca, labels, model_type, centroids=None):
+    fig = px.scatter(
+        x=X_pca[:, 0], 
+        y=X_pca[:, 1], 
+        color=[str(label) for label in labels],
+        title=f"{model_type} Clustering Results (PCA Visualization)",
+        labels={"x": "PCA Component 1", "y": "PCA Component 2"},
+        color_discrete_sequence=px.colors.qualitative.G10
+    )
+    
+   # Thêm Centroids nếu có (K-Means)
+    if centroids is not None and model_type == 'K-means':
+        pca = PCA(n_components=2)
+        pca.fit(X_pca)  # Phù hợp với dữ liệu PCA hiện có
+        centroids_pca = pca.transform(centroids)  # Biến đổi Centroids
+        
+        fig.add_trace(
+            go.Scatter(
+                x=centroids_pca[:, 0],
+                y=centroids_pca[:, 1],
+                mode='markers',
+                marker=dict(
+                    symbol='x',
+                    color='black',
+                    size=10,
+                    line=dict(width=2)
+                ),
+                name='Centroids'
+            )
+        )
+    
+    return fig
+
+# Nhận các ví dụ về chữ số bằng cụm
+def get_digit_examples_by_cluster(X_original, cluster_labels):
+    examples_by_cluster = {}
+    unique_labels = np.unique(cluster_labels)
+    
+    for label in unique_labels:
+       # Bỏ qua điểm nhiễu (nhãn -1 trong DBSCAN)
+        if label == -1:
+            continue
             
-            clusters, model = run_kmeans(X, n_clusters, max_iter)
+        # Nhận các chỉ số của các mẫu trong cụm này
+        cluster_indices = np.where(cluster_labels == label)[0]
         
-        elif algorithm == "DBSCAN":
-            # Thực hiện DBSCAN
-            def run_dbscan(X, eps, min_samples):
-                logger.info(f"Thực hiện DBSCAN với eps={eps}, min_samples={min_samples}")
-                st.text(f"eps={eps}, min_samples={min_samples}")
-                
-                start_time = time.time()
-                
-                # Khởi tạo và thực hiện DBSCAN
-                dbscan = DBSCAN(eps=eps, min_samples=min_samples)
-                clusters = dbscan.fit_predict(X)
-                
-                elapsed_time = time.time() - start_time
-                
-                # Xác định số lượng cụm (không tính điểm nhiễu -1)
-                n_clusters = len(set(clusters)) - (1 if -1 in clusters else 0)
-                n_noise = list(clusters).count(-1)
-                
-                logger.info(f"DBSCAN hoàn thành trong {elapsed_time:.2f} giây. Tìm thấy {n_clusters} cụm và {n_noise} điểm nhiễu")
-                st.text(f"Tìm thấy {n_clusters} cụm và {n_noise} điểm nhiễu")
-                
-                return clusters, dbscan
-            
-            clusters, model = run_dbscan(X, eps, min_samples)
+        # Nhận dữ liệu mẫu cho các chỉ số này trực tiếp
+        cluster_samples = X_original[cluster_indices]
         
-        # Đánh giá kết quả phân cụm
-        def evaluate_clustering(X, clusters):
-            results = {}
+        examples_by_cluster[label] = cluster_samples
+        
+    return examples_by_cluster
+
+# Danh sách thí nghiệm
+def list_experiments(client):
+    return client.search_experiments()
+
+# Liệt kê tất cả các lần chạy cho một thử nghiệm
+def list_runs(client, experiment_id):
+    return client.search_runs(experiment_id)
+
+# Tìm kiếm các mô hình theo tên
+def search_models(client, query, experiment_id):
+    runs = client.search_runs(
+        experiment_id,
+        filter_string=f"params.model_name LIKE '%{query}%'"
+    )
+    return runs
+
+# Nhận chi tiết mô hình
+def get_model_details(client, run_id):
+    run = client.get_run(run_id)
+    return run
+
+# Ứng dụng Streamlit chính
+def main():
+    st.title("MNIST Clustering ")
+    
+    # Setup MLflow client
+    client = setup_mlflow()
+    
+    # Sidebar for app navigation
+    tab1, tab2, tab3 = st.tabs(["Tổng quan ", "Phân cụm ", "MLFlow"])
+
+    with tab1:
+        # Hiển thị các chữ số MNIST mẫu
+        try:
+            X, y = load_mnist_data()
+            st.subheader("🔹Các chữ số Mnist mẫu")
             
-            # Kiểm tra nếu có điểm nhiễu
-            if -1 in clusters:
-                st.warning("DBSCAN tìm thấy điểm nhiễu. Loại bỏ điểm nhiễu để tính toán chỉ số đánh giá.")
-                
-                # Loại bỏ điểm nhiễu
-                valid_indices = clusters != -1
-                X_valid = X[valid_indices]
-                clusters_valid = clusters[valid_indices]
-                
-                # Kiểm tra số lượng cụm hợp lệ
-                unique_clusters = set(clusters_valid)
-                if len(unique_clusters) > 1:
-                    # Silhouette Score
-                    results["Silhouette Score"] = silhouette_score(X_valid, clusters_valid)
-                    
-                    # Calinski-Harabasz Index
-                    results["Calinski-Harabasz Index"] = calinski_harabasz_score(X_valid, clusters_valid)
-                else:
-                    st.warning("Không thể tính chỉ số đánh giá do chỉ có một cụm sau khi loại bỏ điểm nhiễu.")
+            # Kiểm tra dữ liệu
+            if len(X) == 0 or len(y) == 0:
+                st.error("Dữ liệu MNIST trống. Vui lòng kiểm tra lại hàm tải dữ liệu.")
             else:
-                # Nếu không có điểm nhiễu, tính toán chỉ số bình thường
-                unique_clusters = set(clusters)
-                if len(unique_clusters) > 1:
-                    # Silhouette Score
-                    results["Silhouette Score"] = silhouette_score(X, clusters)
-                    
-                    # Calinski-Harabasz Index
-                    results["Calinski-Harabasz Index"] = calinski_harabasz_score(X, clusters)
-                else:
-                    st.warning("Không thể tính chỉ số đánh giá do chỉ có một cụm.")
-            
-            return results
+                # Hiển thị một lưới các chữ số ví dụ
+                cols = st.columns(5)
+                for i, col in enumerate(cols):
+                    idx = np.random.randint(0, len(X))
+                    with col:
+                        fig, ax = plt.subplots(figsize=(3, 3))
+                        ax.imshow(X[idx].reshape(28, 28), cmap='gray')
+                        ax.set_title(f"Digit: {y[idx]}")
+                        ax.axis('off')
+                        st.pyplot(fig)
+                        plt.close(fig)
+        except Exception as e:
+            st.error(f"Error loading MNIST data: {e}")
+            st.error(f"Chi tiết lỗi: {str(e)}")
         
-        # Tính toán kết quả đánh giá
-        evaluation_results = evaluate_clustering(X, clusters)
+        st.subheader("🔹Thuật toán phân cụm")
+        st.subheader("1. K-means")
+        st.image("1.png")
+        st.write("##### Các bước thực hiện :")
+        st.image("2.png")
+        st.write("")
+        st.subheader("2. DBSCAN")
+        st.image("3.png")
+        st.image("4.png")
+        st.write("##### Các bước thực hiện :")
+        st.image("5.png")
+    with tab2:
+        st.header("Run Clustering Algorithms")
         
-        # Hiển thị kết quả đánh giá
-        st.markdown("##### Kết quả đánh giá phân cụm")
-        if evaluation_results and isinstance(evaluation_results, dict):
-            for metric, value in evaluation_results.items():
-                st.write(f"{metric}: {value:.4f}")
-        else:
-            st.warning("Không có kết quả đánh giá nào được tính toán.")
-        # Hàm trực quan hóa kết quả phân cụm
-        def visualize_clusters(X, clusters, y_true=None, algorithm_name=""):
-            st.write(f"##### Kết quả phân cụm {algorithm_name}")
+        try:
+            X, y = load_mnist_data()
+            st.success(f"Bộ dữ liệu MNIST được tải thành công với {X.shape[0]} mẫu.")
             
-            # Sử dụng PCA để giảm chiều dữ liệu
-            if X.shape[1] > 2:
-                st.text("Sử dụng PCA để hiển thị trong không gian 2D")
-                pca = PCA(n_components=2)
-                X_2d = pca.fit_transform(X)
-            else:
-                X_2d = X
+            # Sample size selection
+            sample_size = st.slider("Chọn cỡ mẫu để phân cụm", 
+                                min_value=1000, 
+                                max_value=10000, 
+                                value=5000, 
+                                step=1000)
             
-            # Hiển thị biểu đồ phân cụm
-            fig, ax = plt.subplots(1, 2, figsize=(16, 6))
+            # Dữ liệu tiền xử lý
+            X_sample, X_scaled, X_pca, indices, X_original, pca = preprocess_data(X, sample_size)
+            st.success(f"Số lượng mẫu: {sample_size} mẫu.")
             
-            # Vẽ phân cụm theo nhóm
-            scatter = ax[0].scatter(X_2d[:, 0], X_2d[:, 1], c=clusters, cmap='viridis', alpha=0.5)
-            ax[0].set_title(f'Phân cụm {algorithm_name}')
+            # Sử dụng giá trị từ st.text_input để đặt model_name
+            model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")  # Tên chính cho experiment
+            if not model_name:  # Nếu người dùng không nhập gì, đặt mặc định
+                model_name = "Default_Model"
+            mlflow.set_experiment(model_name)  # Sử dụng model_name làm tên experiment
+            st.write(f"Tên mô hình hiện tại: {model_name}")
             
-            # Thêm legend nếu DBSCAN (để hiển thị điểm nhiễu)
-            if algorithm_name == "DBSCAN" and -1 in clusters:
-                unique_clusters = np.unique(clusters)
-                if len(unique_clusters) <= 20:  # Giới hạn số lượng nhãn hiển thị
-                    legend_labels = [f'Cụm {i}' for i in unique_clusters]
-                    legend_labels[0] = 'Nhiễu' if unique_clusters[0] == -1 else legend_labels[0]
-                    ax[0].legend(handles=scatter.legend_elements()[0], labels=legend_labels, loc="upper right")
-            
-            # Vẽ phân cụm theo số thật (nếu có)
-            if y_true is not None:
-                ax[1].scatter(X_2d[:, 0], X_2d[:, 1], c=y_true, cmap='tab10', alpha=0.5)
-                ax[1].set_title('Phân loại thực tế (digit)')
-            else:
-                ax[1].axis('off')
-            
-            st.pyplot(fig)
+            # Tạo selectbox để chọn thuật toán
+            selected_tab = st.selectbox("Chọn thuật toán phân cụm", ["K-means", "DBSCAN"])
 
-        # Hàm hiển thị thông tin chi tiết về từng cụm dưới dạng bảng
-        def display_cluster_info(X, clusters):
-            st.subheader("Thông tin chi tiết về từng cụm")
-            
-            # Lấy các cụm duy nhất
-            unique_clusters = np.unique(clusters)
-            
-            # Tạo một danh sách để lưu thông tin từng cụm
-            cluster_info = []
-            
-            for cluster_id in unique_clusters:
-                cluster_name = f"Cụm {cluster_id}" if cluster_id != -1 else "Điểm nhiễu (cụm -1)"
+            if selected_tab == "K-means":
+                st.subheader("K-means Clustering")
                 
-                # Lấy các chỉ số của các điểm trong cụm này
-                indices = np.where(clusters == cluster_id)[0]
+                # Số cụm
+                n_clusters = st.slider("Số cụm (k)", min_value=5, max_value=20, value=10)
                 
-                # Tính số lượng điểm dữ liệu trong cụm
-                n_samples = len(indices)
-                
-                # Thêm thông tin vào danh sách
-                cluster_info.append({
-                    "Tên cụm": cluster_name,
-                    "Số lượng điểm dữ liệu": n_samples
-                })
-            
-            # Tạo DataFrame từ danh sách thông tin
-            cluster_df = pd.DataFrame(cluster_info)
-            
-            # Hiển thị bảng thông tin
-            st.dataframe(cluster_df)
-
-        # Hàm hiển thị một số ảnh từ mỗi cụm
-        def display_cluster_examples(X, clusters, n_clusters=10, n_samples=5):
-            st.subheader("Hiển thị một số ảnh từ mỗi cụm")
-            
-            # Tùy chọn số lượng cụm hiển thị
-            n_clusters = st.slider("Chọn số lượng cụm hiển thị", 1, 20, 10, key="n_clusters_display")
-            
-            # Tùy chọn số lượng ảnh hiển thị từ mỗi cụm
-            n_samples = st.slider("Chọn số lượng ảnh hiển thị từ mỗi cụm", 1, 10, 5, key="n_samples_display")
-            
-            # Lấy các cụm duy nhất
-            unique_clusters = np.unique(clusters)
-            n_unique = min(len(unique_clusters), n_clusters)
-            
-            # Chỉ hiển thị n_clusters đầu tiên
-            display_clusters = unique_clusters[:n_clusters]
-            
-            # Đối với mỗi cụm, hiển thị một số ảnh mẫu
-            for cluster_id in display_clusters:
-                cluster_name = f"Cụm {cluster_id}" if cluster_id != -1 else "Điểm nhiễu (cụm -1)"
-                st.write(f"### {cluster_name}")
-                
-                # Lấy các chỉ số của các điểm trong cụm này
-                indices = np.where(clusters == cluster_id)[0]
-                
-                # Nếu không có đủ mẫu trong cụm, hiển thị tất cả
-                n_to_display = min(len(indices), n_samples)
-                
-                if n_to_display > 0:
-                    # Chọn ngẫu nhiên các mẫu để hiển thị
-                    display_indices = np.random.choice(indices, n_to_display, replace=False)
-                    
-                    # Tạo lưới để hiển thị ảnh
-                    fig, axes = plt.subplots(1, n_to_display, figsize=(15, 2))
-                    
-                    # Trường hợp chỉ có 1 ảnh
-                    if n_to_display == 1:
-                        img = X[display_indices[0]].reshape(28, 28)
-                        axes.imshow(img, cmap='gray')
-                        axes.axis('off')
-                    else:
-                        # Hiển thị mỗi ảnh
-                        for i, idx in enumerate(display_indices):
-                            img = X.iloc[idx].values.reshape(28, 28)
-                            axes[i].imshow(img, cmap='gray')
-                            axes[i].axis('off')
-                    
-                    st.pyplot(fig)
-                else:
-                    st.write("Không có mẫu nào trong cụm này")
-
-        # Gọi các hàm để hiển thị kết quả
-        visualize_clusters(X, clusters, y, algorithm)
-        display_cluster_info(X, clusters)
-        display_cluster_examples(X, clusters)
-
-        st.write("##### Lưu kết quả phân cụm vào MLFlow")
-        user_name = st.text_input("Nhập tên của bạn để lưu kết quả phân cụm", key="user_name_tab2")
-        
-        if user_name:
-            if st.button("Lưu kết quả phân cụm vào MLFlow"):
-                if 'model' in locals() and 'clusters' in locals():
-                    with mlflow.start_run(run_name=f"Clustering_{user_name}"):
-                        # Log phương pháp phân cụm
-                        mlflow.log_param("Algorithm", algorithm)
+                # Run K-means button
+                if st.button("Run K-means"):
+                    with st.spinner("Chạy phân cụm K-Means ..."):
+                        # Run K-means
+                        kmeans_model = run_kmeans(X_scaled, n_clusters)
+                        kmeans_labels = kmeans_model.labels_
                         
-                        # Log thông tin cụ thể về phương pháp phân cụm
-                        if algorithm == "K-means":
-                            mlflow.log_param("n_clusters", n_clusters)
-                            mlflow.log_param("max_iter", max_iter)
+                        # Calculate metrics
+                        if len(np.unique(kmeans_labels)) > 1:  # Cần ít nhất 2 cụm cho số liệu
+                            silhouette = silhouette_score(X_scaled, kmeans_labels)
+                            calinski = calinski_harabasz_score(X_scaled, kmeans_labels)
+                        else:
+                            silhouette = 0
+                            calinski = 0
+                        
+                        # Chuyển đổi các trung tâm cụm thành không gian PCA
+                        cluster_centers_pca = pca.transform(kmeans_model.cluster_centers_)
+                        
+                        # Trực quan hóa kết quả
+                        fig = visualize_clusters(X_pca, kmeans_labels, "K-means", cluster_centers_pca)
+                        st.plotly_chart(fig)
+                        # Hiển thị số liệu
+                        st.subheader("Các số liệu phân cụm")
+                        st.write(f"Silhouette Score: {silhouette:.4f}")
+                        st.write(f"Calinski-Harabasz Score: {calinski:.4f}")
+                        
+                        # Nhận các ví dụ về chữ số bằng cụm
+                        digit_examples = get_digit_examples_by_cluster(X_original, kmeans_labels)
+                        
+                        # Thông số và số liệu để lưu vào MLflow
+                        params = {
+                            "algorithm": "KMeans",
+                            "n_clusters": n_clusters,
+                            "sample_size": sample_size
+                        }
+                        metrics = {
+                            "silhouette_score": silhouette,
+                            "calinski_harabasz_score": calinski
+                        }
+                        
+                        # Tự động lưu mô hình vào MLflow
+                        run_id = log_model(kmeans_model, f"KMeans_k{n_clusters}", params, metrics, digit_examples, model_name)
+                        st.success(f"Mô hình K-means được lưu vào MLflow với run ID: {run_id}")
+                        
+                        # Hiển thị các chữ số mẫu từ mỗi cụm
+                        st.subheader("Các chữ số mẫu từ mỗi cụm")
+                        for cluster_idx in range(min(3, n_clusters)): # Hiển thị 3 cụm đầu tiên
+                            if cluster_idx in digit_examples:
+                                st.write(f"Cluster {cluster_idx}")
+                                cols = st.columns(5)
+                                for i, col in enumerate(cols):
+                                    if i < len(digit_examples[cluster_idx]):
+                                        with col:
+                                            fig, ax = plt.subplots(figsize=(2, 2))
+                                            ax.imshow(digit_examples[cluster_idx][i].reshape(28, 28), cmap='gray')
+                                            ax.axis('off')
+                                            st.pyplot(fig)
+                                            plt.close(fig)
+
+            elif selected_tab == "DBSCAN":
+                st.subheader("Phân cụm DBSCAN")
+                
+                # DBSCAN parameters
+                eps = st.slider("Epsilon", min_value=0.1, max_value=10.0, value=5.0, step=0.1)
+                min_samples = st.slider("Min Samples", min_value=2, max_value=50, value=10)
+                
+                # Run DBSCAN button
+                if st.button("Run DBSCAN"):
+                    with st.spinner("Chạy phân cụm DBSCAN ..."):
+                        # Run DBSCAN
+                        dbscan_model = run_dbscan(X_scaled, eps, min_samples)
+                        dbscan_labels = dbscan_model.labels_
+                        
+                        # Tính toán số liệu nếu có nhiều hơn một cụm
+                        n_clusters = len(set(dbscan_labels)) - (1 if -1 in dbscan_labels else 0)
+                        if n_clusters > 1: # Cần ít nhất 2 cụm cho số liệu
+                            silhouette = silhouette_score(X_scaled, dbscan_labels)
+                            calinski = calinski_harabasz_score(X_scaled, dbscan_labels)
+                        else:
+                            silhouette = 0
+                            calinski = 0
+                        
+                        # Trực quan hóa kết quả
+                        fig = visualize_clusters(X_pca, dbscan_labels, "DBSCAN")
+                        st.plotly_chart(fig)
+                        
+                        # Hiển thị số liệu và số liệu thống kê
+                        st.subheader("Kết quả phân cụm")
+                        st.write(f"Số lượng cụm được tìm thấy: {n_clusters}")
+                        noise_points = np.sum(dbscan_labels == -1)
+                        st.write(f"Số điểm nhiễu: {noise_points} ({noise_points / len(dbscan_labels) * 100:.2f}%)")
+                        
+                        st.subheader("Các số liệu phân cụm")
+                        st.write(f"Silhouette Score: {silhouette:.4f}")
+                        st.write(f"Calinski-Harabasz Score: {calinski:.4f}")
+                        
+                        # Nhận các ví dụ về chữ số bằng cụm
+                        digit_examples = get_digit_examples_by_cluster(X_original, dbscan_labels)
+                        
+                        # Thông số và số liệu để lưu vào MLflow
+                        params = {
+                            "algorithm": "DBSCAN",
+                            "eps": eps,
+                            "min_samples": min_samples,
+                            "sample_size": sample_size
+                        }
+                        metrics = {
+                            "silhouette_score": silhouette,
+                            "calinski_harabasz_score": calinski,
+                            "n_clusters": n_clusters,
+                            "noise_percentage": noise_points / len(dbscan_labels) * 100
+                        }
+                        
+                        # Tự động lưu mô hình vào MLflow
+                        run_id = log_model(dbscan_model, f"DBSCAN_eps{eps}_minSamples{min_samples}", params, metrics, digit_examples, model_name)
+                        st.success(f"Mô hình DBSCAN được lưu vào MLflow với ID chạy: {run_id}")
+                        
+                        # Hiển thị các chữ số mẫu từ mỗi cụm
+                        st.subheader("Các chữ số mẫu từ mỗi cụm")
+                        unique_labels = sorted(set(dbscan_labels))
+                        if -1 in unique_labels: # Xóa cụm nhiễu để trực quan hóa
+                            unique_labels.remove(-1)
+                            
+                        for cluster_idx in unique_labels[:3]:  # Hiển thị 3 cụm đầu tiên
+                            if cluster_idx in digit_examples:
+                                st.write(f"Cụm {cluster_idx}")
+                                cols = st.columns(5)
+                                for i, col in enumerate(cols):
+                                    if i < len(digit_examples[cluster_idx]):
+                                        with col:
+                                            fig, ax = plt.subplots(figsize=(2, 2))
+                                            ax.imshow(digit_examples[cluster_idx][i].reshape(28, 28), cmap='gray')
+                                            ax.axis('off')
+                                            st.pyplot(fig)
+                                            plt.close(fig)
+                        
+                        # Hiển thị điểm nhiễu nếu chúng tồn tại
+                        if -1 in dbscan_labels:
+                            noise_indices = np.where(dbscan_labels == -1)[0]
+                            if len(noise_indices) > 0:
+                                st.write("Điểm nhiễu mẫu")
+                                cols = st.columns(5)
+                                for i, col in enumerate(cols):
+                                    if i < min(5, len(noise_indices)):
+                                        idx = noise_indices[i]
+                                        with col:
+                                            fig, ax = plt.subplots(figsize=(2, 2))
+                                            ax.imshow(X_original[idx].reshape(28, 28), cmap='gray')
+                                            ax.axis('off')
+                                            st.pyplot(fig)
+                                            plt.close(fig)
+        
+        except Exception as e:
+            st.error(f"Error: {e}")
+            st.error(f"Error details: {str(e)}")
+    with tab3:
+        st.header("MLflow Tracking")
+        
+        # Setup MLflow client
+        client = setup_mlflow()
+        
+        # Nhận danh sách các thí nghiệm
+        experiments = list_experiments(client)
+        
+        if not experiments:
+            st.warning("Không tìm thấy thí nghiệm nào trong MLflow. Vui lòng chạy một số thuật toán phân cụm trước!")
+        else:
+            # Dropdown để chọn experiment
+            experiment_names = [exp.name for exp in experiments]
+            selected_exp_name = st.selectbox("Chọn một thí nghiệm", experiment_names)
+            
+            # Lấy thông tin thí nghiệm đã chọn
+            selected_exp = next((exp for exp in experiments if exp.name == selected_exp_name), None)
+            
+            if selected_exp:
+                # Lấy danh sách các run trong experiment
+                runs = list_runs(client, selected_exp.experiment_id)
+                
+                if not runs:
+                    st.warning("Không tìm thấy run nào trong thí nghiệm này!")
+                else:
+                    st.subheader("Danh sách các Run")
+                    
+                    # Chức năng tìm kiếm
+                    search_query = st.text_input("Tìm kiếm theo tên mô hình", "")
+                    
+                    # Tạo danh sách thông tin run
+                    run_data = []
+                    for run in runs:
+                        model_name = run.data.params.get("model_name", "Unknown")
+                        algorithm = run.data.params.get("algorithm", "Unknown")
+                        
+                        # Lấy tham số chính theo thuật toán
+                        if algorithm == "KMeans":
+                            main_param = f"n_clusters={run.data.params.get('n_clusters', 'N/A')}"
                         elif algorithm == "DBSCAN":
-                            mlflow.log_param("eps", eps)
-                            mlflow.log_param("min_samples", min_samples)
-                            mlflow.log_param("n_clusters", len(set(clusters)) - (1 if -1 in clusters else 0))
-                            mlflow.log_param("n_noise", list(clusters).count(-1))
+                            main_param = f"eps={run.data.params.get('eps', 'N/A')}, min_samples={run.data.params.get('min_samples', 'N/A')}"
+                        else:
+                            main_param = "N/A"
                         
-                        # Log chỉ số đánh giá
-                        if evaluation_results:
-                            for metric, value in evaluation_results.items():
-                                mlflow.log_metric(metric, value)
+                        # Lấy metrics
+                        silhouette = run.data.metrics.get("silhouette_score", "N/A")
+                        calinski = run.data.metrics.get("calinski_harabasz_score", "N/A")
                         
-                        # Log mô hình
-                        mlflow.sklearn.log_model(model, "model")
+                        run_data.append({
+                            "Model Name": model_name,
+                            "Algorithm": algorithm,
+                            "Main Parameters": main_param,
+                            "Silhouette Score": silhouette if silhouette != "N/A" else "N/A",
+                            "Calinski-Harabasz Score": calinski if calinski != "N/A" else "N/A",
+                            "Run ID": run.info.run_id,
+                            "Start Time": run.info.start_time
+                        })
+                    
+                    # Chuyển thành DataFrame để dễ hiển thị
+                    run_df = pd.DataFrame(run_data)
+                    run_df["Start Time"] = pd.to_datetime(run_df["Start Time"]).dt.strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    # Lọc theo tìm kiếm
+                    if search_query:
+                        filtered_df = run_df[run_df["Model Name"].str.contains(search_query, case=False, na=False)]
+                    else:
+                        filtered_df = run_df
+                    
+                    # Hiển thị danh sách run
+                    st.dataframe(
+                        filtered_df.drop("Run ID", axis=1),  # Ẩn Run ID trong bảng hiển thị
+                        use_container_width=True
+                    )
+                    
+                    # Hiển thị chi tiết run khi chọn
+                    selected_model = st.selectbox(
+                        "Chọn một mô hình để xem chi tiết",
+                        options=filtered_df["Model Name"].tolist()
+                    )
+                    
+                    if selected_model:
+                        selected_run_id = filtered_df[filtered_df["Model Name"] == selected_model]["Run ID"].iloc[0]
+                        run_details = get_model_details(client, selected_run_id)
                         
-                        st.success(f"Kết quả phân cụm đã được lưu vào MLFlow với tên {user_name}.")
-                else:
-                    st.warning("Vui lòng thực hiện phân cụm trước khi lưu kết quả.")
-            
+                        # Hiển thị parameters
+                        st.write("**Parameters:**")
+                        params_df = pd.DataFrame(
+                            list(run_details.data.params.items()),
+                            columns=["Parameter", "Value"]
+                        )
+                        st.dataframe(params_df)
+                        
+                        # Hiển thị metrics
+                        st.write("**Metrics:**")
+                        metrics_df = pd.DataFrame(
+                            list(run_details.data.metrics.items()),
+                            columns=["Metric", "Value"]
+                        )
+                        st.dataframe(metrics_df)
+                        
+                        # Tải và hiển thị thông tin mô hình
+                        try:
+                            model_uri = f"runs:/{selected_run_id}/model"
+                            model = mlflow.sklearn.load_model(model_uri)
+                            
+                            if run_details.data.params.get("algorithm") == "KMeans":
+                                st.write("**Cluster Centers Shape:**", model.cluster_centers_.shape)
+                                st.write("**Iterations:**", model.n_iter_)
+                                
+                                # Hiển thị cluster centers (trực quan hóa)
+                                st.subheader("Cluster Centers Visualization")
+                                cols = st.columns(5)
+                                for i, col in enumerate(cols):
+                                    if i < min(5, model.cluster_centers_.shape[0]):
+                                        with col:
+                                            fig, ax = plt.subplots(figsize=(3, 3))
+                                            ax.imshow(model.cluster_centers_[i].reshape(28, 28), cmap='gray')
+                                            ax.set_title(f"Cluster {i}")
+                                            ax.axis('off')
+                                            st.pyplot(fig)
+                                            plt.close(fig)
+                            
+                            elif run_details.data.params.get("algorithm") == "DBSCAN":
+                                st.write("**Core Samples:**", len(model.core_sample_indices_))
+                        
+                        except Exception as e:
+                            st.error(f"Không thể tải mô hình: {e}")
 
-with tab3:
-    st.header("📊 MLflow Tracking")
-
-    # # Kết nối đến MLflow
-    # mlflow.set_tracking_uri("http://127.0.0.1:5000")  # Đảm bảo MLflow server đang chạy
-
-    # Tìm kiếm mô hình theo tên
-    search_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
-
-    # Lấy danh sách các phiên làm việc từ MLflow
-    if search_name:
-        runs = mlflow.search_runs(filter_string=f"tags.mlflow.runName LIKE '%{search_name}%'", order_by=["start_time desc"])
-    else:
-        runs = mlflow.search_runs(order_by=["start_time desc"])
-
-    if not runs.empty:
-        # Hiển thị danh sách các mô hình
-        st.write("### 📜 Danh sách mô hình đã lưu:")
-        st.dataframe(runs[["tags.mlflow.runName", "run_id"]])
-
-        # Chọn một mô hình để xem chi tiết
-        selected_run_id = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", runs["run_id"].tolist())
-
-        if selected_run_id:
-            # Lấy thông tin chi tiết về run được chọn
-            run_details = mlflow.get_run(selected_run_id)
-            st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
-            st.write("**🟢 Trạng thái:**", run_details.info.status)
-            st.write("**⏳ Thời gian bắt đầu:**", run_details.info.start_time)
-            st.write("**🏁 Thời gian kết thúc:**", run_details.info.end_time)
-
-            # Hiển thị tham số
-            st.write("📌 **Tham số:**")
-            for key, value in run_details.data.params.items():
-                st.write(f"- **{key}**: {value}")
-
-            # Hiển thị metric
-            st.write("📊 **Metric:**")
-            for key, value in run_details.data.metrics.items():
-                st.write(f"- **{key}**: {value}")
-
-            # Hiển thị artifacts (nếu có)
-            st.write("📂 **Artifacts:**")
-            if run_details.info.artifact_uri:
-                st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
-                # Tải mô hình từ artifact
-                if st.button("Tải mô hình", key=f"load_{selected_run_id}"):
-                    model = mlflow.sklearn.load_model(f"runs:/{selected_run_id}/model")
-                    st.success(f"Đã tải mô hình {run_details.data.tags.get('mlflow.runName', 'Không có tên')} thành công!")
-                    st.write(f"Thông tin mô hình: {model}")
-            else:
-                st.write("- Không có artifacts nào.")
-
-    else:
-        st.warning("⚠️ Không tìm thấy mô hình nào.")
+if __name__ == "__main__":
+    main()
