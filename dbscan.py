@@ -303,7 +303,7 @@ def main():
                         
                         # Hiển thị các chữ số mẫu từ mỗi cụm
                         st.subheader("Các chữ số mẫu từ mỗi cụm")
-                        for cluster_idx in range(min(3, n_clusters)): # Hiển thị 3 cụm đầu tiên
+                        for cluster_idx in range(n_clusters): 
                             if cluster_idx in digit_examples:
                                 st.write(f"Cluster {cluster_idx}")
                                 cols = st.columns(5)
@@ -380,7 +380,7 @@ def main():
                         if -1 in unique_labels: # Xóa cụm nhiễu để trực quan hóa
                             unique_labels.remove(-1)
                             
-                        for cluster_idx in unique_labels[:3]:  # Hiển thị 3 cụm đầu tiên
+                        for cluster_idx in unique_labels:  # Hiển thị 3 cụm đầu tiên
                             if cluster_idx in digit_examples:
                                 st.write(f"Cụm {cluster_idx}")
                                 cols = st.columns(5)
