@@ -528,7 +528,7 @@ def main():
                                 for i, col in enumerate(cols):
                                     if i < min(5, model.cluster_centers_.shape[0]):
                                         with col:
-                                            fig, ax = plt.subplots(figsize=(3, 3))
+                                            fig, ax = plt.subplots(figsize=(5, 5),dpi=100)
                                             ax.imshow(model.cluster_centers_[i].reshape(28, 28), cmap='gray')
                                             ax.set_title(f"Cluster {i}")
                                             ax.axis('off')
