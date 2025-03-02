@@ -96,8 +96,6 @@ def main():
 
     # Tab 2: Phương pháp PCA và t-SNE
     with tab2:
-        st.header("Phương pháp PCA và t-SNE")
-
         # Tải dữ liệu
         X, y = load_mnist_data()
 
@@ -174,7 +172,7 @@ def main():
 
     # Tab 3: MLflow
     with tab3:
-        st.header("MLflow Tracking")
+        st.write("##### MLflow Tracking")
         st.write("Chọn một thí nghiệm và một kết quả để xem chi tiết.")
 
         # Lấy danh sách experiment
