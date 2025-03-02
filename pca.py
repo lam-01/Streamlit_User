@@ -172,7 +172,7 @@ def main():
 
     # Tab 3: MLflow
     with tab3:
-        st.write("##### MLflow Tracking")
+        st.subheader("MLflow Tracking")
         st.write("Chọn một thí nghiệm và một kết quả để xem chi tiết.")
 
         # Lấy danh sách experiment
@@ -213,7 +213,7 @@ def main():
                 
                 if selected_run_id:
                     selected_run = runs[runs['run_id'] == selected_run_id].iloc[0]
-                    st.subheader(f"Chi tiết của Run ID: {selected_run_id}")
+                    # st.subheader(f"Chi tiết của Run ID: {selected_run_id}")
                     
                     # Hiển thị thông tin chung
                     st.write("**Thông tin chung:**")
