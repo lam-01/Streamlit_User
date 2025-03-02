@@ -279,7 +279,15 @@ def main():
                         fig = visualize_clusters(X_pca, kmeans_labels, "K-means", cluster_centers_pca)
                         st.plotly_chart(fig)
                         # Hiển thị số liệu
-                        st.subheader("Các số liệu phân cụm")
+                        st.markdown("Các số liệu phân cụm",help="""**Silhouette Score** đo lường mức độ tương đồng của một điểm với các điểm trong cùng một cụm so với các điểm trong cụm khác.
+                        \n- Giá trị của Silhouette Score nằm trong khoảng từ -1 đến 1:
+                        \n +Gần 1: Điểm nằm gần các điểm trong cùng một cụm và xa các điểm trong cụm khác, cho thấy phân cụm tốt.
+                        \n +Gần 0: Điểm nằm ở ranh giới giữa hai cụm, cho thấy phân cụm không rõ ràng.
+                        \n +Gần -1: Điểm có thể đã được phân cụm sai, nằm gần các điểm trong cụm khác hơn là trong cụm của nó.
+                        \n
+                        \n **Calinski-Harabasz Score** đo lường sự phân tách giữa các cụm và sự đồng nhất bên trong các cụm.
+                        \n- Giá trị của Calinski-Harabasz Score càng cao thì chất lượng phân cụm càng tốt.
+                        """)
                         st.write(f"Silhouette Score: {silhouette:.4f}")
                         st.write(f"Calinski-Harabasz Score: {calinski:.4f}")
                         
@@ -349,7 +357,15 @@ def main():
                         noise_points = np.sum(dbscan_labels == -1)
                         st.write(f"Số điểm nhiễu: {noise_points} ({noise_points / len(dbscan_labels) * 100:.2f}%)")
                         
-                        st.subheader("Các số liệu phân cụm")
+                        st.markdown("Các số liệu phân cụm",help="""**Silhouette Score** đo lường mức độ tương đồng của một điểm với các điểm trong cùng một cụm so với các điểm trong cụm khác.
+                        \n- Giá trị của Silhouette Score nằm trong khoảng từ -1 đến 1:
+                        \n +Gần 1: Điểm nằm gần các điểm trong cùng một cụm và xa các điểm trong cụm khác, cho thấy phân cụm tốt.
+                        \n +Gần 0: Điểm nằm ở ranh giới giữa hai cụm, cho thấy phân cụm không rõ ràng.
+                        \n +Gần -1: Điểm có thể đã được phân cụm sai, nằm gần các điểm trong cụm khác hơn là trong cụm của nó.
+                        \n
+                        \n **Calinski-Harabasz Score** đo lường sự phân tách giữa các cụm và sự đồng nhất bên trong các cụm.
+                        \n- Giá trị của Calinski-Harabasz Score càng cao thì chất lượng phân cụm càng tốt.
+                        """)
                         st.write(f"Silhouette Score: {silhouette:.4f}")
                         st.write(f"Calinski-Harabasz Score: {calinski:.4f}")
                         
