@@ -108,9 +108,10 @@ def main():
         st.write(f"Kích thước dữ liệu sau khi lấy mẫu: {X_sample.shape}")
 
         # Nhập tên thí nghiệm
-        experiment_name = st.text_input("Nhập tên thí nghiệm", "MNIST_Dimensionality_Reduction", key="exp_name_tab2")
-        if experiment_name:
-            mlflow.set_experiment(experiment_name)
+        experiment_name = st.text_input("Nhập tên thí nghiệm")
+        if not experiment_name:
+            experiment_name="Default_Model"
+        mlflow.set_experiment(experiment_name)
 
         # Chọn phương pháp giảm chiều
         method = st.selectbox("Chọn phương pháp giảm chiều", ["PCA", "t-SNE"], key="method_tab2")
