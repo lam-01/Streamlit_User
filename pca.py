@@ -94,7 +94,7 @@ def main():
         st.write("""+ Bước 3: Nó đạt được bằng cách giảm thiểu sự phân kỳ giữa phân phối xác suất chiều cao ban đầu và chiều thấp ban đầu. Thuật toán sử dụng gradient descent để giảm thiểu sự 
         phân kỳ. Nhúng chiều thấp được tối ưu hóa đến trạng thái ổn định.""")
     # Tab 2: Phương pháp PCA và t-SNE
-    with tab2:
+     with tab2:
         st.header("Phương pháp PCA và t-SNE")
         st.write("Tùy chọn kích thước mẫu, giảm chiều dữ liệu và lưu tên thí nghiệm.")
 
@@ -110,7 +110,7 @@ def main():
         # Nhập tên thí nghiệm
         experiment_name = st.text_input("Nhập tên thí nghiệm")
         if not experiment_name:
-            experiment_name="Default_Model"
+            experiment_name = "Default_Model"
         mlflow.set_experiment(experiment_name)
 
         # Chọn phương pháp giảm chiều
@@ -122,10 +122,12 @@ def main():
         elif method == "t-SNE":
             n_components = 2
             perplexity = st.slider("Perplexity", 5, 50, 30, key="perplexity_tab2")
+            learning_rate = st.slider("Learning Rate", 10, 1000, 200, key="learning_rate_tsne")
 
         # Nút bấm giảm chiều
         if st.button("Giảm chiều", key="reduce_button_tab2"):
             with st.spinner("Đang thực hiện giảm chiều..."):
+                start_time = time.time()
                 if method == "PCA":
                     with mlflow.start_run(run_name=f"PCA_{n_components}_components"):
                         X_reduced, explained_variance = apply_pca(X_sample, n_components)
@@ -143,18 +145,24 @@ def main():
 
                 elif method == "t-SNE":
                     with mlflow.start_run(run_name=f"t-SNE_perplexity_{perplexity}"):
-                        X_reduced = apply_tsne(X_sample, n_components, perplexity)
+                        X_reduced = apply_tsne(X_sample, n_components, perplexity, learning_rate)
                         
                         # Logging với MLflow
                         mlflow.log_param("method", "t-SNE")
                         mlflow.log_param("n_components", n_components)
                         mlflow.log_param("perplexity", perplexity)
                         mlflow.log_param("sample_size", sample_size)
+                        mlflow.log_param("learning_rate", learning_rate)
                         
                         # Visual hóa
                         fig = plot_scatter(X_reduced, y_sample, f"t-SNE - Perplexity: {perplexity}")
                         st.plotly_chart(fig)
-            # Đợi một chút để MLflow ghi dữ liệu
+                
+                # Đo thời gian thực thi
+                execution_time = time.time() - start_time
+                st.write(f"Thời gian thực thi: {execution_time:.2f} giây")
+                mlflow.log_metric("execution_time", execution_time)
+            
             time.sleep(1)
             st.success(f"Đã hoàn thành giảm chiều và lưu vào thí nghiệm '{experiment_name}'!")
 
@@ -191,7 +199,8 @@ def main():
                 # Hiển thị danh sách run
                 available_columns = [col for col in ['run_id', 'experiment_name', 'start_time', 'params.method', 
                                                     'params.n_components', 'params.perplexity', 'params.sample_size', 
-                                                    'metrics.explained_variance'] if col in runs.columns]
+                                                    'metrics.explained_variance', 'params.learning_rate', 
+                                                    'metrics.execution_time'] if col in runs.columns]
                 st.dataframe(runs[available_columns])
 
                 # Chọn một run để xem chi tiết
@@ -211,7 +220,6 @@ def main():
             else:
                 st.write(f"Chưa có run nào trong thí nghiệm '{selected_experiment}'.")
         
-        st.write("Để xem chi tiết hơn, chạy `mlflow ui` trong terminal và truy cập `http://localhost:5000`.")
 
 if __name__ == "__main__":
     main()
