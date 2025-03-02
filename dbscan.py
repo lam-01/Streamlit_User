@@ -224,7 +224,7 @@ def main():
         st.write("##### Các bước thực hiện :")
         st.image("5.png")
     with tab2:
-        st.header("Run Clustering Algorithms")
+        st.subheader("Tùy chọn mẫu dữ liệu")
         
         try:
             X, y = load_mnist_data()
