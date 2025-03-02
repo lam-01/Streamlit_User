@@ -204,7 +204,7 @@ def main():
                     with col:
                         fig, ax = plt.subplots(figsize=(3, 3))
                         ax.imshow(X[idx].reshape(28, 28), cmap='gray')
-                        ax.set_title(f"Digit: {y[idx]}")
+                        ax.set_title(f"Chữ số : {y[idx]}")
                         ax.axis('off')
                         st.pyplot(fig)
                         plt.close(fig)
