@@ -328,7 +328,7 @@ def main():
                 st.subheader("Phân cụm DBSCAN")
                 
                 # DBSCAN parameters
-                eps = st.slider("Epsilon", min_value=0.1, max_value=10.0, value=5.0, step=0.1,help="""" **Epsilon** : Bán kính để xác định khu vực lân cận của một điểm.
+                eps = st.slider("Epsilon", min_value=0.1, max_value=10.0, value=5.0, step=0.1,help=""" **Epsilon** : Bán kính để xác định khu vực lân cận của một điểm.
                 \n- Nếu một điểm có đủ số lượng hàng xóm (≥ min_samples) trong phạm vi eps, nó sẽ trở thành core point và giúp tạo cụm.
                 \n- Giá trị eps càng lớn(6-10), thì cụm càng rộng và số lượng cụm giảm xuống.
                 \n- Nếu eps quá nhỏ(0.1-2), thuật toán có thể tạo quá nhiều cụm nhỏ hoặc không tìm thấy cụm nào.
