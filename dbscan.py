@@ -328,8 +328,15 @@ def main():
                 st.subheader("Phân cụm DBSCAN")
                 
                 # DBSCAN parameters
-                eps = st.slider("Epsilon", min_value=0.1, max_value=10.0, value=5.0, step=0.1)
-                min_samples = st.slider("Min Samples", min_value=2, max_value=50, value=10)
+                eps = st.slider("Epsilon", min_value=0.1, max_value=10.0, value=5.0, step=0.1,help="""" **Epsilon** : Bán kính để xác định khu vực lân cận của một điểm.
+                \n- Nếu một điểm có đủ số lượng hàng xóm (≥ min_samples) trong phạm vi eps, nó sẽ trở thành core point và giúp tạo cụm.
+                \n- Giá trị eps càng lớn(6-10), thì cụm càng rộng và số lượng cụm giảm xuống.
+                \n- Nếu eps quá nhỏ(0.1-2), thuật toán có thể tạo quá nhiều cụm nhỏ hoặc không tìm thấy cụm nào.
+                 """)
+                min_samples = st.slider("Min Samples", min_value=2, max_value=50, value=10,help=""" **MinPts** : Số lượng điểm tối thiểu cần thiết để một khu vực được coi là đủ mật độ.
+                \n- Nếu min_samples nhỏ(2-5), các cụm có thể dễ dàng hình thành, ngay cả với dữ liệu nhiễu.
+                \n- Nếu min_samples lớn(>30), thuật toán có thể khó nhận diện cụm nhỏ và có thể đánh dấu nhiều điểm là nhiễu.
+                """)
                 
                 # Run DBSCAN button
                 if st.button("Run DBSCAN"):
