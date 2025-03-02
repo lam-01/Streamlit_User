@@ -55,7 +55,7 @@ def main():
     st.title("Giảm Chiều Dữ Liệu MNIST với PCA và t-SNE")
     
     # Tạo các tab
-    tab1, tab2, tab3 = st.tabs(["Tổng quan", "PCA và t-SNE", "MLflow"])
+    tab1, tab2, tab3 = st.tabs(["Tổng quan", "PCA & t-SNE", "MLflow"])
 
     # Tab 1: Tổng quan
     with tab1:
