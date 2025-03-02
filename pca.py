@@ -35,8 +35,8 @@ def apply_pca(X, n_components):
     return X_reduced, explained_variance
 
 # Hàm giảm chiều bằng t-SNE
-def apply_tsne(X, n_components, perplexity):
-    tsne = TSNE(n_components=n_components, perplexity=perplexity, random_state=42)
+def apply_tsne(X, n_components, perplexity, learning_rate):
+    tsne = TSNE(n_components=n_components, perplexity=perplexity, learning_rate=learning_rate, random_state=42)
     X_reduced = tsne.fit_transform(X)
     return X_reduced
 
@@ -93,10 +93,10 @@ def main():
         st.write("+ Bước 2: Sau đó, thuật toán sẽ cố gắng ánh xạ các điểm dữ liệu có chiều cao hơn vào không gian có chiều thấp hơn trong khi vẫn bảo toàn các điểm tương đồng theo từng cặp.")  
         st.write("""+ Bước 3: Nó đạt được bằng cách giảm thiểu sự phân kỳ giữa phân phối xác suất chiều cao ban đầu và chiều thấp ban đầu. Thuật toán sử dụng gradient descent để giảm thiểu sự 
         phân kỳ. Nhúng chiều thấp được tối ưu hóa đến trạng thái ổn định.""")
+
     # Tab 2: Phương pháp PCA và t-SNE
     with tab2:
         st.header("Phương pháp PCA và t-SNE")
-        st.write("Tùy chọn kích thước mẫu, giảm chiều dữ liệu và lưu tên thí nghiệm.")
 
         # Tải dữ liệu
         X, y = load_mnist_data()
@@ -110,7 +110,7 @@ def main():
         # Nhập tên thí nghiệm
         experiment_name = st.text_input("Nhập tên thí nghiệm")
         if not experiment_name:
-            experiment_name="Default_Model"
+            experiment_name = "Default_Model"
         mlflow.set_experiment(experiment_name)
 
         # Chọn phương pháp giảm chiều
@@ -121,11 +121,19 @@ def main():
             n_components = st.slider("Số lượng thành phần PCA", 2, 50, 2, key="n_components_tab2")
         elif method == "t-SNE":
             n_components = 2
-            perplexity = st.slider("Perplexity", 5, 50, 30, key="perplexity_tab2")
+            perplexity = st.slider("Perplexity", 5, 50, 30, key="perplexity_tab2",help="""**Perplexity** : Tham số kiểm soát số lượng điểm lân cận mà t-SNE xem xét khi xây dựng phân phối xác suất trong không gian nhiều chiều. 
+            \n- Perplexity thấp (5-10), tập trung vào các điểm lân cận gần nhất, tạo ra các cụm nhỏ và chi tiết hơn , có thể dẫn đến việc phân tách quá mức.
+            \n- Perplexity cao (40-50), xem xét nhiều điểm lân cận hơn,tạo ra các cụm lớn hơn và tổng quát hơn, có thể làm mất đi các chi tiết nhỏ trong dữ liệu.
+            """)
+            learning_rate = st.slider("Learning Rate", 10, 1000, 200, key="learning_rate_tsne",help=""" **learning_rate** : Tốc độ học của thuật toán t-SNE, kiểm soát cách thuật toán cập nhật các điểm trong không gian chiều thấp.
+            \n- Learning rate thấp (10-100):Thuật toán học chậm hơn, có thể dẫn đến kết quả không ổn định hoặc không hội tụ.
+            \n- Learning rate cao (500-1000):Thuật toán học nhanh hơn, có thể dẫn đến việc các điểm "nhảy" quá mức, làm mất đi cấu trúc cụm.
+            """)
 
         # Nút bấm giảm chiều
         if st.button("Giảm chiều", key="reduce_button_tab2"):
             with st.spinner("Đang thực hiện giảm chiều..."):
+                start_time = time.time()
                 if method == "PCA":
                     with mlflow.start_run(run_name=f"PCA_{n_components}_components"):
                         X_reduced, explained_variance = apply_pca(X_sample, n_components)
@@ -143,24 +151,30 @@ def main():
 
                 elif method == "t-SNE":
                     with mlflow.start_run(run_name=f"t-SNE_perplexity_{perplexity}"):
-                        X_reduced = apply_tsne(X_sample, n_components, perplexity)
+                        X_reduced = apply_tsne(X_sample, n_components, perplexity, learning_rate)
                         
                         # Logging với MLflow
                         mlflow.log_param("method", "t-SNE")
                         mlflow.log_param("n_components", n_components)
                         mlflow.log_param("perplexity", perplexity)
                         mlflow.log_param("sample_size", sample_size)
+                        mlflow.log_param("learning_rate", learning_rate)
                         
                         # Visual hóa
                         fig = plot_scatter(X_reduced, y_sample, f"t-SNE - Perplexity: {perplexity}")
                         st.plotly_chart(fig)
-            # Đợi một chút để MLflow ghi dữ liệu
+                
+                # Đo thời gian thực thi
+                execution_time = time.time() - start_time
+                # st.write(f"Thời gian thực thi: {execution_time:.2f} giây")
+                mlflow.log_metric("execution_time", execution_time)
+            
             time.sleep(1)
             st.success(f"Đã hoàn thành giảm chiều và lưu vào thí nghiệm '{experiment_name}'!")
 
     # Tab 3: MLflow
     with tab3:
-        st.header("MLflow - Lịch sử thực nghiệm")
+        st.header("MLflow Tracking")
         st.write("Chọn một thí nghiệm và một kết quả để xem chi tiết.")
 
         # Lấy danh sách experiment
@@ -191,7 +205,8 @@ def main():
                 # Hiển thị danh sách run
                 available_columns = [col for col in ['run_id', 'experiment_name', 'start_time', 'params.method', 
                                                     'params.n_components', 'params.perplexity', 'params.sample_size', 
-                                                    'metrics.explained_variance'] if col in runs.columns]
+                                                    'metrics.explained_variance', 'params.learning_rate', 
+                                                    'metrics.execution_time'] if col in runs.columns]
                 st.dataframe(runs[available_columns])
 
                 # Chọn một run để xem chi tiết
@@ -202,16 +217,43 @@ def main():
                     selected_run = runs[runs['run_id'] == selected_run_id].iloc[0]
                     st.subheader(f"Chi tiết của Run ID: {selected_run_id}")
                     
-                    # Hiển thị tất cả thông tin của run
-                    st.write("**Thông tin chi tiết:**")
-                    for key, value in selected_run.items():
-                        if pd.notna(value):  # Chỉ hiển thị nếu giá trị không phải NaN
+                    # Hiển thị thông tin chung
+                    st.write("**Thông tin chung:**")
+                    general_info = {
+                        'Run ID': selected_run['run_id'],
+                        'Experiment Name': selected_run['experiment_name']
+                    }
+                    for key, value in general_info.items():
+                        if pd.notna(value):
+                            st.write(f"{key}: {value}")
+
+                    # Hiển thị thông tin liên quan đến phương pháp
+                    st.write("**Thông tin liên quan đến phương pháp:**")
+                    method = selected_run.get('params.method', 'N/A')
+                    if method == "PCA":
+                        method_info = {
+                            'Phương pháp': method,
+                            'Số lượng thành phần (n_components)': selected_run.get('params.n_components', 'N/A'),
+                            'Tỷ lệ phương sai giải thích (explained_variance)': selected_run.get('metrics.explained_variance', 'N/A'),
+                            'Kích thước mẫu (sample_size)': selected_run.get('params.sample_size', 'N/A'),
+                        }
+                    elif method == "t-SNE":
+                        method_info = {
+                            'Phương pháp': method,
+                            'Perplexity': selected_run.get('params.perplexity', 'N/A'),
+                            'Learning Rate': selected_run.get('params.learning_rate', 'N/A'),
+                            'Số lượng thành phần (n_components)': selected_run.get('params.n_components', 'N/A'),
+                            'Kích thước mẫu (sample_size)': selected_run.get('params.sample_size', 'N/A'),
+                        }
+                    else:
+                        method_info = {'Phương pháp': 'Không xác định'}
+
+                    for key, value in method_info.items():
+                        if pd.notna(value):
                             st.write(f"{key}: {value}")
 
             else:
                 st.write(f"Chưa có run nào trong thí nghiệm '{selected_experiment}'.")
-        
-        st.write("Để xem chi tiết hơn, chạy `mlflow ui` trong terminal và truy cập `http://localhost:5000`.")
 
 if __name__ == "__main__":
     main()
