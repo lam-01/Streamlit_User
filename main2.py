@@ -4,7 +4,7 @@ import streamlit as st
 # Tạo selectbox để chọn dự án
 option = st.sidebar.selectbox(
     "📌 Chọn một dự án để thực hiện:",
-    ["Phân tích Titanic", "MNIST","Clustering Algorithms"]
+    ["Phân tích Titanic", "MNIST","Clustering Algorithms","PCA & t-SNE"]
 )
 
 # Hiển thị nội dung tương ứng với lựa chọn
@@ -20,6 +20,10 @@ elif option == "MNIST":
         st.error("❌ Module MNIST không có hàm `create_streamlit_app()`")
 elif option=="Clustering Algorithms":
     with open("dbscan.py", "r", encoding="utf-8") as file:
+        code = file.read()
+        exec(code)
+elif option=="PCA & t-SNE":
+    with open("pca.py", "r", encoding="utf-8") as file:
         code = file.read()
         exec(code)
 
