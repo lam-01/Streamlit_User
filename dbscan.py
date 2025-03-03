@@ -191,7 +191,7 @@ def main():
         # Hiển thị các chữ số MNIST mẫu
         try:
             X, y = load_mnist_data()
-            st.subheader("🔹Các chữ số Mnist m")
+            st.subheader("🔹Một số ảnh mẫu từ tập dữ liệu MNIST")
             
             # Kiểm tra dữ liệu
             if len(X) == 0 or len(y) == 0:
