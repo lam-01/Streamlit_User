@@ -191,31 +191,40 @@ def create_streamlit_app():
 
         # Cho phép người dùng chọn tỷ lệ chia dữ liệu
         st.write("##### 📊 Chọn tỷ lệ chia dữ liệu")
-        test_size = st.slider("Tập kiểm tra (Test)", 0.1, 0.3, 0.2)  # Chọn Test trước
-        train_valid_size = 1 - test_size  # Phần còn lại dành cho Train + Validation
-
-        valid_size = st.slider("Tỷ lệ Validation trong tập Train", 0.1, 0.4, 0.2)  # Tỉ lệ của Valid trong Train
-        train_size = 1 - valid_size  # Tập Train chính xác
-
-        # Tính số mẫu
-        test_samples = int(test_size * total_samples)
-        train_valid_samples = total_samples - test_samples  # Train + Valid
-        valid_samples = int(valid_size * train_valid_samples)
-        train_samples = train_valid_samples - valid_samples  # Phần còn lại cho Train
-
-        # Tạo DataFrame hiển thị kết quả
-        split_df = pd.DataFrame({
-            "Tập dữ liệu": ["Train", "Validation", "Test"],
-            "Tỷ lệ (%)": [f"{train_samples / total_samples * 100:.2f}", 
-                        f"{valid_samples / total_samples * 100:.2f}", 
-                        f"{test_samples / total_samples * 100:.2f}"],
-            "Số lượng mẫu": [train_samples, valid_samples, test_samples]
-        })
-
-        # Hiển thị bảng kết quả
-        st.write("📋 **Tỷ lệ chia dữ liệu và số lượng mẫu:**")
-        st.table(split_df)
-
+        test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
+        val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
+        
+        # Tính toán tỷ lệ Train
+        train_size = 100 - test_size  # Tỷ lệ Train là phần còn lại sau khi trừ Test
+        val_ratio = val_size / train_size  # Tỷ lệ Validation trên tập Train
+        
+        # Kiểm tra tính hợp lệ
+        if val_ratio >= 1.0:
+            st.error("Tỷ lệ Validation quá lớn so với Train! Vui lòng điều chỉnh lại.")
+        else:
+            # Tính số lượng mẫu dựa trên tỷ lệ
+            test_samples = round(test_size * total_samples / 100)
+            train_val_samples = total_samples - test_samples
+            val_samples = round(val_ratio * train_val_samples)
+            train_samples = train_val_samples - val_samples
+        
+            # Tạo DataFrame hiển thị kết quả
+            split_df = pd.DataFrame({
+                "Tập dữ liệu": ["Train", "Validation", "Test"],
+                "Tỷ lệ (%)": [train_size - val_size, val_size, test_size],
+                "Số lượng mẫu": [train_samples, val_samples, test_samples]
+            })
+        
+            # Hiển thị bảng kết quả
+            st.write("📋 **Tỷ lệ chia dữ liệu và số lượng mẫu:**")
+            st.table(split_df)
+        
+            # Cập nhật phần chia dữ liệu cho mô hình
+            if 'X' in locals() and 'y' in locals():
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
+                X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=val_ratio, random_state=42)
+                
+                st.write(f"🧮 Số mẫu thực tế: Train ({len(X_train)}), Validation ({len(X_val)}), Test ({len(X_test)})")
             # Hiển thị giao diện huấn luyện mô hình
         st.write("##### 📊 **Huấn luyện mô hình hồi quy**")
 
