@@ -121,14 +121,15 @@ def create_streamlit_app():
         show_sample_images(X, y)
         
         st.write("**📊 Tỷ lệ dữ liệu**")
+
         # Chọn tỷ lệ dữ liệu Test và Validation
         test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
         val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
-
+        
         # Tính toán tỷ lệ Train
         train_size = 100 - test_size  # Tỷ lệ Train là phần còn lại sau khi trừ Test
         val_ratio = val_size / train_size  # Tỷ lệ Validation trên tập Train
-
+        
         # Kiểm tra tính hợp lệ
         if val_ratio >= 1.0:
             st.error("Tỷ lệ Validation quá lớn so với Train! Vui lòng điều chỉnh lại.")
@@ -136,18 +137,16 @@ def create_streamlit_app():
             # Chia dữ liệu
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
             X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=val_ratio, random_state=42)
-
-            # Hiển thị bảng tỷ lệ
+        
+            # Tạo bảng tỷ lệ dữ liệu
             data_ratios = pd.DataFrame({
                 "Tập dữ liệu": ["Train", "Validation", "Test"],
-                "Tỷ lệ (%)": [train_size - val_size, val_size, test_size]
+                "Tỷ lệ (%)": [train_size - val_size, val_size, test_size],
+                "Số lượng mẫu": [len(X_train), len(X_val), len(X_test)]
             })
+        
+            # Hiển thị bảng
             st.table(data_ratios)
-
-            # Hiển thị số lượng mẫu
-            st.write(f"🧮 Số lượng mẫu Train: {len(X_train)}")
-            st.write(f"🧮 Số lượng mẫu Validation: {len(X_val)}")
-            st.write(f"🧮 Số lượng mẫu Test: {len(X_test)}")
 
 
         st.write("**🚀 Huấn luyện mô hình**")
