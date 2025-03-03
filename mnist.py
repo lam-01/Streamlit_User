@@ -20,7 +20,6 @@ import tempfile
 import runpy
 
 # 📌 Tải và xử lý dữ liệu MNIST từ OpenML
-@st.cache_data
 def load_data():
     mnist = fetch_openml("mnist_784", version=1, as_frame=False)
     X, y = mnist.data, mnist.target.astype(int)  # Chuyển nhãn về kiểu số nguyên
