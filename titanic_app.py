@@ -25,15 +25,15 @@ class TitanicAnalyzer:
         self.embarked_Q = 1  # Default value
         self.embarked_S = 2  # Default value
     
-    def load_and_preprocess(self, data_path):
+    def load_and_preprocess(self, uploaded_file):
         """Đọc và tiền xử lý dữ liệu với MLflow"""
         try:
             mlflow.start_run()
             st.write("##### **📚Tiền xử lý dữ liệu**")
             
-            # Đọc dữ liệu
+            # Đọc dữ liệu từ file tải lên
             st.write("**1. Đọc dữ liệu**")
-            self.data = pd.read_csv(data_path)
+            self.data = pd.read_csv(uploaded_file)
             mlflow.log_param("initial_data_shape", self.data.shape)
             st.write("Dữ liệu ban đầu:", self.data.head())
             
@@ -165,7 +165,12 @@ class TitanicAnalyzer:
                     st.write("Dữ liệu sau khi mã hóa:")
                     st.dataframe(self.data.head())
 
-
+            # Lưu giá trị mã hóa để sử dụng cho dự đoán
+            self.sex_male = sex_male
+            self.sex_female = sex_female
+            self.embarked_C = embarked_C
+            self.embarked_Q = embarked_Q
+            self.embarked_S = embarked_S
             
             mlflow.end_run()
             return self.data
@@ -184,226 +189,246 @@ def create_streamlit_app():
     analyzer = TitanicAnalyzer()
         
     with tab1:
-        data_path = "titanic.csv"  # Đường dẫn cố định
-        analyzer = TitanicAnalyzer()
-        data = analyzer.load_and_preprocess(data_path)
-        total_samples = len(data)
-
-        # Cho phép người dùng chọn tỷ lệ chia dữ liệu
-        st.write("##### 📊 Chọn tỷ lệ chia dữ liệu")
-        test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
-        val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
+        # Thêm chức năng tải file lên
+        uploaded_file = st.file_uploader("Tải lên file dữ liệu CSV", type="csv")
         
-        # Tính toán tỷ lệ Train
-        train_size = 100 - test_size  # Tỷ lệ Train là phần còn lại sau khi trừ Test
-        val_ratio = val_size / train_size  # Tỷ lệ Validation trên tập Train
-        
-        # Kiểm tra tính hợp lệ
-        if val_ratio >= 1.0:
-            st.error("Tỷ lệ Validation quá lớn so với Train! Vui lòng điều chỉnh lại.")
-        else:
-            # Tính số lượng mẫu dựa trên tỷ lệ
-            test_samples = round(test_size * total_samples / 100)
-            train_val_samples = total_samples - test_samples
-            val_samples = round(val_ratio * train_val_samples)
-            train_samples = train_val_samples - val_samples
-        
-            # Tạo DataFrame hiển thị kết quả
-            split_df = pd.DataFrame({
-                "Tập dữ liệu": ["Train", "Validation", "Test"],
-                "Tỷ lệ (%)": [train_size - val_size, val_size, test_size],
-                "Số lượng mẫu": [train_samples, val_samples, test_samples]
-            })
-        
-            # Hiển thị bảng kết quả
-            st.write("📋 **Tỷ lệ chia dữ liệu và số lượng mẫu:**")
-            st.table(split_df)
-        
-            # Cập nhật phần chia dữ liệu cho mô hình
-            if 'X' in locals() and 'y' in locals():
-                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
-                X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=val_ratio, random_state=42)
-                
-                st.write(f"🧮 Số mẫu thực tế: Train ({len(X_train)}), Validation ({len(X_val)}), Test ({len(X_test)})")
-            # Hiển thị giao diện huấn luyện mô hình
-        st.write("##### 📊 **Huấn luyện mô hình hồi quy**")
+        if uploaded_file is not None:
+            # Xử lý dữ liệu khi file được tải lên
+            analyzer = TitanicAnalyzer()
+            data = analyzer.load_and_preprocess(uploaded_file)
+            
+            if data is not None:
+                total_samples = len(data)
 
-        # Nhập tên mô hình
-        model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")
+                # Cho phép người dùng chọn tỷ lệ chia dữ liệu
+                st.write("##### 📊 Chọn tỷ lệ chia dữ liệu")
+                test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
+                val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
 
-        # Lựa chọn mô hình
-        regression_type = st.radio("Chọn loại hồi quy:", ["Multiple Regression", "Polynomial Regression"])
-        cv_folds = st.slider("Chọn số lượng folds cho Cross-Validation:", min_value=2, max_value=10, value=5, step=1)
+                # Tính toán tỷ lệ Train
+                train_size = 100 - test_size  # Tỷ lệ Train là phần còn lại sau khi trừ Test
+                val_ratio = val_size / train_size  # Tỷ lệ Validation trên tập Train
 
-        degree = None
-        if regression_type == "Polynomial Regression":
-            degree = st.slider("Chọn bậc của hồi quy đa thức:", min_value=2, max_value=5, value=2)
-
-        # Load dữ liệu và chia train/valid/test
-        X = data.drop(columns=["Survived"])
-        y = data["Survived"]
-
-        train_size = 0.7  # Thay bằng giá trị mong muốn
-        valid_size = 0.15  # Thay bằng giá trị mong muốn
-        test_size = 0.15  # Thay bằng giá trị mong muốn
-
-        X_train, X_temp, y_train, y_temp = train_test_split(X, y, train_size=train_size, random_state=42)
-        X_valid, X_test, y_valid, y_test = train_test_split(X_temp, y_temp, train_size=valid_size / (valid_size + test_size), random_state=42)
-
-        # Xử lý dữ liệu bị thiếu
-        imputer = SimpleImputer(strategy='mean')
-        X_train = imputer.fit_transform(X_train)
-        X_valid = imputer.transform(X_valid)
-        X_test = imputer.transform(X_test)
-
-        # Chuẩn hóa dữ liệu
-        scaler = StandardScaler()
-        X_train_scaled = scaler.fit_transform(X_train)
-        X_valid_scaled = scaler.transform(X_valid)
-        X_test_scaled = scaler.transform(X_test)
-
-        # Lưu scaler vào session_state
-        st.session_state["scaler"] = scaler
-
-        if st.button("Huấn luyện mô hình"):
-            with mlflow.start_run(run_name=model_name):
-                if regression_type == "Polynomial Regression":
-                    poly = PolynomialFeatures(degree=degree)
-                    X_train_poly = poly.fit_transform(X_train_scaled)
-                    X_valid_poly = poly.transform(X_valid_scaled)
-                    X_test_poly = poly.transform(X_test_scaled)
-
-                    model = LinearRegression()
-                    model.fit(X_train_poly, y_train)
-
-                    y_pred_train = model.predict(X_train_poly)
-                    y_pred_valid = model.predict(X_valid_poly)
-                    y_pred_test = model.predict(X_test_poly)
+                # Kiểm tra tính hợp lệ
+                if val_ratio >= 1.0:
+                    st.error("Tỷ lệ Validation quá lớn so với Train! Vui lòng điều chỉnh lại.")
                 else:
-                    model = LinearRegression()
-                    model.fit(X_train_scaled, y_train)
+                    # Tính số lượng mẫu dựa trên tỷ lệ
+                    test_samples = round(test_size * total_samples / 100)
+                    train_val_samples = total_samples - test_samples
+                    val_samples = round(val_ratio * train_val_samples)
+                    train_samples = train_val_samples - val_samples
 
-                    y_pred_train = model.predict(X_train_scaled)
-                    y_pred_valid = model.predict(X_valid_scaled)
-                    y_pred_test = model.predict(X_test_scaled)
-
-                # Lưu mô hình vào session_state
-                st.session_state["model"] = model
-                if regression_type == "Polynomial Regression":
-                    st.session_state["poly"] = poly
-
-                # Tính toán metrics
-                mse_train = mean_squared_error(y_train, y_pred_train)
-                mse_valid = mean_squared_error(y_valid, y_pred_valid)
-                mse_test = mean_squared_error(y_test, y_pred_test)
-
-                r2_train = r2_score(y_train, y_pred_train)
-                r2_valid = r2_score(y_valid, y_pred_valid)
-                r2_test = r2_score(y_test, y_pred_test)
-
-                # Cross-validation
-                # cv_folds = st.slider("Chọn số lượng folds cho Cross-Validation:", min_value=2, max_value=10, value=5, step=1)
-                y_pred_cv = cross_val_predict(model, X_train_scaled, y_train, cv=cv_folds)
-                mse_cv = mean_squared_error(y_train, y_pred_cv)
-
-                # Ghi log tên mô hình vào MLflow
-                mlflow.log_param("model_name", model_name)
-                mlflow.log_param("regression_type", regression_type)
-                if regression_type == "Polynomial Regression":
-                    mlflow.log_param("degree", degree)
-
-                # Ghi log metrics vào MLflow
-                mlflow.log_metrics({
-                    "train_mse": mse_train,
-                    "valid_mse": mse_valid,
-                    "test_mse": mse_test,
-                    "cv_mse": mse_cv
-                })
-
-                st.write(f"**Loại hồi quy đang sử dụng:** {regression_type}")
-                
-                results_df = pd.DataFrame({
-                    "Metric": ["MSE (Train)", "MSE (Validation)", "MSE (Test)", "MSE (Cross-Validation)"],
-                    "Value": [mse_train, mse_valid, mse_test, mse_cv]
-                })
-                
-                st.write("**📌 Kết quả đánh giá mô hình:**")
-                st.table(results_df)
-
-
-    with tab2 :             
-            # Prediction interface
-            st.subheader("Giao diện dự đoán")
-# Kiểm tra nếu mô hình đã huấn luyện trước khi dự đoán
-            if 'model' in st.session_state and 'scaler' in st.session_state:
-                analyzer.model = st.session_state['model']
-                analyzer.scaler = st.session_state['scaler']
-                if regression_type == "Polynomial Regression":
-                    analyzer.poly = st.session_state['poly']
-                analyzer.is_fitted = True
-            else:
-                st.error("Vui lòng huấn luyện mô hình trước khi dự đoán!")
-
-            if analyzer.is_fitted:
-                col1, col2 = st.columns(2)
-
-                with col1:
-                    pclass = st.selectbox("Passenger Class", [1, 2, 3])
-                    age = st.number_input("Age", 0, 100, 30)
-                    sex = st.selectbox("Sex", ["male", "female"])
-                
-                with col2:
-                    sibsp = st.number_input("Siblings", 0, 10, 0)
-                    parch = st.number_input("Parents/Children", 0, 10, 0)
-                    fare = st.number_input("Fare", 0.0, 500.0, 32.0)
-                    embarked = st.selectbox("Port of Embarkation", ['C', 'Q', 'S'])
-                
-                if st.button("Dự đoán"):
-
-                    # Tạo DataFrame đầu vào
-                    input_data = pd.DataFrame({
-                        'Pclass': [pclass],
-                        'Age': [age],
-                        'SibSp': [sibsp],
-                        'Parch': [parch],
-                        'Fare': [fare],
-                        'Sex': [analyzer.sex_male if sex == "male" else analyzer.sex_female],  # Sử dụng giá trị mã hóa do người dùng nhập
-                        'Embarked': [analyzer.embarked_C if embarked == "C" else 
-                                        analyzer.embarked_Q if embarked == "Q" else 
-                                        analyzer.embarked_S]  
+                    # Tạo DataFrame hiển thị kết quả
+                    split_df = pd.DataFrame({
+                        "Tập dữ liệu": ["Train", "Validation", "Test"],
+                        "Tỷ lệ (%)": [train_size - val_size, val_size, test_size],
+                        "Số lượng mẫu": [train_samples, val_samples, test_samples]
                     })
-                    # Kiểm tra xem đối tượng có thuộc tập dữ liệu gốc hay không
-                    exists_in_data = False
-                    if analyzer.data is not None:
-                        exists_in_data = any((analyzer.data['Pclass'] == pclass) & 
-                                            (analyzer.data['Age'] == age) & 
-                                            (analyzer.data['SibSp'] == sibsp) & 
-                                            (analyzer.data['Parch'] == parch) & 
-                                            (analyzer.data['Fare'] == fare) & 
-                                            (analyzer.data['Sex'] == (analyzer.sex_male if sex == "male" else analyzer.sex_female)) & 
-                                            (analyzer.data['Embarked'] == (analyzer.embarked_C if embarked == "C" else 
-                                                                            analyzer.embarked_Q if embarked == "Q" else 
-                                                                            analyzer.embarked_S)))
 
-                    # Scale dữ liệu đầu vào
-                    input_scaled = st.session_state['scaler'].transform(input_data)
+                    # Hiển thị bảng kết quả
+                    st.write("📋 **Tỷ lệ chia dữ liệu và số lượng mẫu:**")
+                    st.table(split_df)
+
+                    # Chuẩn bị dữ liệu cho mô hình
+                    X = data.drop(columns=["Survived"])
+                    y = data["Survived"]
+
+                    # Chia dữ liệu
+                    X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=test_size/100, random_state=42)
+                    X_valid, X_test, y_valid, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
                     
-                    # Kiểm tra xem mô hình có sử dụng PolynomialFeatures không
+                    # st.write(f"🧮 Số mẫu thực tế: Train ({len(X_train)}), Validation ({len(X_valid)}), Test ({len(X_test)})")
+
+                    # Hiển thị giao diện huấn luyện mô hình
+                    st.write("##### 📊 **Huấn luyện mô hình hồi quy**")
+
+                    # Nhập tên mô hình
+                    model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")
+
+                    # Lựa chọn mô hình
+                    regression_type = st.radio("Chọn loại hồi quy:", ["Multiple Regression", "Polynomial Regression"])
+                    cv_folds = st.slider("Chọn số lượng folds cho Cross-Validation:", min_value=2, max_value=10, value=5, step=1)
+
+                    degree = None
                     if regression_type == "Polynomial Regression":
-                        input_transformed = st.session_state['poly'].transform(input_scaled)
-                    else:
-                        input_transformed = input_scaled
+                        degree = st.slider("Chọn bậc của hồi quy đa thức:", min_value=2, max_value=5, value=2)
 
-                    # Dự đoán
-                    prediction = st.session_state['model'].predict(input_transformed)[0]
-                    
-                    # Hiển thị kết quả
-                    st.success(f"Dự đoán : {'Survived' if prediction == 1 else 'Not Survived'}")
-                     # Hiển thị thông tin về việc đối tượng có thuộc tập dữ liệu gốc hay không
-                    if exists_in_data:
-                        st.info("Đối tượng này có tồn tại trong tập dữ liệu gốc.")
-                    else:
-                        st.warning("Đối tượng này không có trong tập dữ liệu gốc.")
+                    # Xử lý dữ liệu bị thiếu
+                    imputer = SimpleImputer(strategy='mean')
+                    X_train = imputer.fit_transform(X_train)
+                    X_valid = imputer.transform(X_valid)
+                    X_test = imputer.transform(X_test)
+
+                    # Chuẩn hóa dữ liệu
+                    scaler = StandardScaler()
+                    X_train_scaled = scaler.fit_transform(X_train)
+                    X_valid_scaled = scaler.transform(X_valid)
+                    X_test_scaled = scaler.transform(X_test)
+
+                    # Lưu scaler vào session_state
+                    st.session_state["scaler"] = scaler
+
+                    if st.button("Huấn luyện mô hình"):
+                        with mlflow.start_run(run_name=model_name):
+                            if regression_type == "Polynomial Regression":
+                                poly = PolynomialFeatures(degree=degree)
+                                X_train_poly = poly.fit_transform(X_train_scaled)
+                                X_valid_poly = poly.transform(X_valid_scaled)
+                                X_test_poly = poly.transform(X_test_scaled)
+
+                                model = LinearRegression()
+                                model.fit(X_train_poly, y_train)
+
+                                y_pred_train = model.predict(X_train_poly)
+                                y_pred_valid = model.predict(X_valid_poly)
+                                y_pred_test = model.predict(X_test_poly)
+                                
+                                # Lưu poly transformer
+                                st.session_state["poly"] = poly
+                            else:
+                                model = LinearRegression()
+                                model.fit(X_train_scaled, y_train)
+
+                                y_pred_train = model.predict(X_train_scaled)
+                                y_pred_valid = model.predict(X_valid_scaled)
+                                y_pred_test = model.predict(X_test_scaled)
+
+                            # Lưu mô hình vào session_state
+                            st.session_state["model"] = model
+                            st.session_state["regression_type"] = regression_type
+
+                            # Tính toán metrics
+                            mse_train = mean_squared_error(y_train, y_pred_train)
+                            mse_valid = mean_squared_error(y_valid, y_pred_valid)
+                            mse_test = mean_squared_error(y_test, y_pred_test)
+
+                            r2_train = r2_score(y_train, y_pred_train)
+                            r2_valid = r2_score(y_valid, y_pred_valid)
+                            r2_test = r2_score(y_test, y_pred_test)
+
+                            # Cross-validation
+                            if regression_type == "Polynomial Regression":
+                                y_pred_cv = cross_val_predict(model, X_train_poly, y_train, cv=cv_folds)
+                            else:
+                                y_pred_cv = cross_val_predict(model, X_train_scaled, y_train, cv=cv_folds)
+                            mse_cv = mean_squared_error(y_train, y_pred_cv)
+
+                            # Ghi log tên mô hình vào MLflow
+                            mlflow.log_param("model_name", model_name)
+                            mlflow.log_param("regression_type", regression_type)
+                            if regression_type == "Polynomial Regression":
+                                mlflow.log_param("degree", degree)
+
+                            # Ghi log metrics vào MLflow
+                            mlflow.log_metrics({
+                                "train_mse": mse_train,
+                                "valid_mse": mse_valid,
+                                "test_mse": mse_test,
+                                "cv_mse": mse_cv,
+                                "train_r2": r2_train,
+                                "valid_r2": r2_valid,
+                                "test_r2": r2_test
+                            })
+
+                            st.write(f"**Loại hồi quy đang sử dụng:** {regression_type}")
+                            
+                            results_df = pd.DataFrame({
+                                "Metric": ["MSE (Train)", "MSE (Validation)", "MSE (Test)", "MSE (Cross-Validation)",
+                                        "R² (Train)", "R² (Validation)", "R² (Test)"],
+                                "Value": [mse_train, mse_valid, mse_test, mse_cv,
+                                        r2_train, r2_valid, r2_test]
+                            })
+                            
+                            st.write("**📌 Kết quả đánh giá mô hình:**")
+                            st.table(results_df)
+        else:
+            st.info("Vui lòng tải lên file dữ liệu CSV để bắt đầu phân tích.")
+
+    with tab2:             
+        # Prediction interface
+        st.subheader("Giao diện dự đoán")
+        # Kiểm tra nếu mô hình đã huấn luyện trước khi dự đoán
+        if 'model' in st.session_state and 'scaler' in st.session_state:
+            analyzer.model = st.session_state['model']
+            analyzer.scaler = st.session_state['scaler']
+            regression_type = st.session_state.get('regression_type', 'Multiple Regression')
+            
+            if regression_type == "Polynomial Regression" and 'poly' in st.session_state:
+                analyzer.poly = st.session_state['poly']
+            
+            analyzer.is_fitted = True
+        else:
+            st.error("Vui lòng huấn luyện mô hình trước khi dự đoán!")
+
+        if analyzer.is_fitted:
+            col1, col2 = st.columns(2)
+
+            with col1:
+                pclass = st.selectbox("Passenger Class", [1, 2, 3])
+                age = st.number_input("Age", 0, 100, 30)
+                sex = st.selectbox("Sex", ["male", "female"])
+            
+            with col2:
+                sibsp = st.number_input("Siblings", 0, 10, 0)
+                parch = st.number_input("Parents/Children", 0, 10, 0)
+                fare = st.number_input("Fare", 0.0, 500.0, 32.0)
+                embarked = st.selectbox("Port of Embarkation", ['C', 'Q', 'S'])
+            
+            if st.button("Dự đoán"):
+                # Tạo DataFrame đầu vào
+                input_data = pd.DataFrame({
+                    'Pclass': [pclass],
+                    'Age': [age],
+                    'SibSp': [sibsp],
+                    'Parch': [parch],
+                    'Fare': [fare],
+                    'Sex': [analyzer.sex_male if sex == "male" else analyzer.sex_female],
+                    'Embarked': [analyzer.embarked_C if embarked == "C" else 
+                                analyzer.embarked_Q if embarked == "Q" else 
+                                analyzer.embarked_S]  
+                })
+                
+                # Kiểm tra xem đối tượng có thuộc tập dữ liệu gốc hay không
+                exists_in_data = False
+                if analyzer.data is not None:
+                    exists_in_data = any((analyzer.data['Pclass'] == pclass) & 
+                                        (analyzer.data['Age'] == age) & 
+                                        (analyzer.data['SibSp'] == sibsp) & 
+                                        (analyzer.data['Parch'] == parch) & 
+                                        (analyzer.data['Fare'] == fare) & 
+                                        (analyzer.data['Sex'] == (analyzer.sex_male if sex == "male" else analyzer.sex_female)) & 
+                                        (analyzer.data['Embarked'] == (analyzer.embarked_C if embarked == "C" else 
+                                                                        analyzer.embarked_Q if embarked == "Q" else 
+                                                                        analyzer.embarked_S)))
+
+                # Scale dữ liệu đầu vào
+                input_scaled = st.session_state['scaler'].transform(input_data)
+                
+                # Kiểm tra xem mô hình có sử dụng PolynomialFeatures không
+                regression_type = st.session_state.get('regression_type', 'Multiple Regression')
+                if regression_type == "Polynomial Regression" and 'poly' in st.session_state:
+                    input_transformed = st.session_state['poly'].transform(input_scaled)
+                else:
+                    input_transformed = input_scaled
+
+                # Dự đoán
+                prediction = st.session_state['model'].predict(input_transformed)[0]
+                
+                # Hiển thị kết quả
+                survival_probability = max(0, min(1, prediction))  # Clip giữa 0 và 1
+                survival_percentage = survival_probability * 100
+                
+                if survival_probability >= 0.5:
+                    st.success(f"Dự đoán: Survived")
+                else:
+                    st.error(f"Dự đoán: Not Survived")
+                
+                # Hiển thị thông tin về việc đối tượng có thuộc tập dữ liệu gốc hay không
+                if exists_in_data:
+                    st.info("Đối tượng này có tồn tại trong tập dữ liệu gốc.")
+                else:
+                    st.warning("Đối tượng này không có trong tập dữ liệu gốc.")
 
     with tab3:
         st.header("📊 MLflow Tracking")
