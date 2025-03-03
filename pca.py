@@ -60,18 +60,21 @@ def main():
     # Tab 1: Tổng quan
     with tab1:
         X, y = load_mnist_data()
-        # Hiển thị nhiều ảnh mẫu
         st.subheader("Một số ảnh mẫu từ tập dữ liệu MNIST")
-        
-        # Số lượng ảnh muốn hiển thị
-        num_samples = st.slider("Chọn số lượng ảnh mẫu", 1, 20, 5)
-        
+
+        # Số lượng ảnh hiển thị cố định (ví dụ: 10 ảnh)
+        num_samples = 5  
+
         # Tạo các cột để hiển thị ảnh
         cols = st.columns(5)  # Hiển thị tối đa 5 ảnh trên một hàng
-        
+
         for i in range(num_samples):
             with cols[i % 5]:  # Chia ảnh vào các cột
-                st.image(X[i].reshape(28, 28), caption=f"Chữ số {y[i]}", width=100)
+                fig, ax = plt.subplots()
+                ax.imshow(X[i].reshape(28, 28), cmap="gray")
+                ax.axis("off")
+                st.pyplot(fig)
+                st.caption(f"Chữ số {y[i]}")
 
         st.subheader("🔹Thuật toán giảm chiều dữ liệu")
         st.write("##### 1. PCA (Principal Component Analysis)")
