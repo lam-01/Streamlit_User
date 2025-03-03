@@ -246,7 +246,6 @@ def main():
             if not model_name:  # Nếu người dùng không nhập gì, đặt mặc định
                 model_name = "Default_Model"
             mlflow.set_experiment(model_name)  # Sử dụng model_name làm tên experiment
-            st.write(f"Tên mô hình hiện tại: {model_name}")
             
             # Tạo selectbox để chọn thuật toán
             selected_tab = st.selectbox("Chọn thuật toán phân cụm", ["K-means", "DBSCAN"])
