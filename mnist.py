@@ -42,7 +42,7 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 # 📌 Huấn luyện mô hình
-def train_model(custom_model_name,model_name,params, X_train, X_val, X_test, y_train, y_val, y_test):
+def train_model(model_name,params, X_train, X_val, X_test, y_train, y_val, y_test):
     if model_name == "Decision Tree":
         model = DecisionTreeClassifier(
             max_depth=params["max_depth"],
@@ -71,7 +71,7 @@ def train_model(custom_model_name,model_name,params, X_train, X_val, X_test, y_t
     test_accuracy = accuracy_score(y_test, y_test_pred)
     
     # Lưu mô hình vào MLFlow
-    with mlflow.start_run(run_name=custom_model_name):
+    with mlflow.start_run(run_name="MNIST"):
         mlflow.log_param("model_name", model_name)
         mlflow.log_metric("train_accuracy", train_accuracy)
         mlflow.log_metric("val_accuracy", val_accuracy)
@@ -151,7 +151,7 @@ def create_streamlit_app():
 
         st.write("**🚀 Huấn luyện mô hình**")
         # Nhập tên mô hình
-        custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")
+        model_custom_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")
         # Chọn mô hình
         model_name = st.selectbox("🔍 Chọn mô hình", ["Decision Tree", "SVM"])
         params = {}
@@ -192,7 +192,7 @@ def create_streamlit_app():
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang huấn luyện..."):
                 model, train_accuracy, val_accuracy, test_accuracy = train_model(
-                custom_model_name,model_name,params, X_train, X_val, X_test, y_train, y_val, y_test
+                model_name,params, X_train, X_val, X_test, y_train, y_val, y_test
             )
             st.success(f"✅ Huấn luyện xong!")
             
@@ -218,7 +218,7 @@ def create_streamlit_app():
 
                 # Dự đoán số
                 if st.button("🔮 Dự đoán"):
-                    model, train_accuracy, val_accuracy, test_accuracy= train_model(custom_model_name,model_name,params, X_train, X_val, X_test, y_train, y_val, y_test)
+                    model, train_accuracy, val_accuracy, test_accuracy= train_model(model_name,params, X_train, X_val, X_test, y_train, y_val, y_test)
                     prediction = model.predict(processed_image)[0]
                     probabilities = model.predict_proba(processed_image)[0]
 
@@ -242,7 +242,7 @@ def create_streamlit_app():
                 if canvas_result.image_data is not None:
                     processed_canvas = preprocess_canvas_image(canvas_result.image_data)
 
-                    model, train_accuracy, val_accuracy, test_accuracy= train_model(custom_model_name,model_name,params, X_train, X_val, X_test, y_train, y_val, y_test)
+                    model, train_accuracy, val_accuracy, test_accuracy= train_model(model_name,params, X_train, X_val, X_test, y_train, y_val, y_test)
                     prediction = model.predict(processed_canvas)[0]
                     probabilities = model.predict_proba(processed_canvas)[0]
 
