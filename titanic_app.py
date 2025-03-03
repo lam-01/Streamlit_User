@@ -461,8 +461,8 @@ def create_streamlit_app():
                     run_details = mlflow.get_run(selected_run_id)
                     st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
                     st.write("**🟢 Trạng thái:**", run_details.info.status)
-                    st.write("**⏳ Thời gian bắt đầu:**", run_details.info.start_time)
-                    st.write("**🏁 Thời gian kết thúc:**", run_details.info.end_time)
+                    # st.write("**⏳ Thời gian bắt đầu:**", run_details.info.start_time)
+                    # st.write("**🏁 Thời gian kết thúc:**", run_details.info.end_time)
                     
                     st.write("📌 **Tham số:**")
                     for key, value in run_details.data.params.items():
