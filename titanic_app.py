@@ -451,7 +451,6 @@ def create_streamlit_app():
 
             # **Hiển thị danh sách mô hình**
             if not filtered_runs.empty:
-                st.write("### 📜 Danh sách mô hình đã lưu:")
                 st.dataframe(filtered_runs[["model_name", "run_id"]])
 
                 # **Chọn một mô hình để xem chi tiết**
