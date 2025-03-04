@@ -203,7 +203,15 @@ def create_streamlit_app():
                 filtered_runs = runs
 
             if not filtered_runs.empty:
-                st.dataframe(filtered_runs[["model_custom_name","run_id", "start_time", "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy"]])
+                st.write("### 📜 Danh sách mô hình đã lưu:")
+                # Thêm cột params.model_name vào bảng và đổi tên thành "Model Type"
+                display_df = filtered_runs[["model_custom_name", "params.model_name", "run_id", "start_time", 
+                                           "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy"]]
+                display_df = display_df.rename(columns={
+                    "model_custom_name": "Custom Model Name",
+                    "params.model_name": "Model Type"
+                })
+                st.dataframe(display_df)
 
                 selected_run_id = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["run_id"].tolist())
                 if selected_run_id:
