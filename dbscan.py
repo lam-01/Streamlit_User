@@ -220,7 +220,7 @@ def main():
                         except Exception as e:
                             st.error(f"Lỗi khi lưu mô hình: {e}")
                         st.subheader("Các chữ số mẫu từ mỗi cụm")
-                        for cluster_idx in range(min(3, n_clusters)):
+                        for cluster_idx in range(min(n_clusters)):
                             if cluster_idx in digit_examples:
                                 st.write(f"Cluster {cluster_idx}")
                                 cols = st.columns(5)
@@ -263,7 +263,7 @@ def main():
                         unique_labels = sorted(set(dbscan_labels))
                         if -1 in unique_labels:
                             unique_labels.remove(-1)
-                        for cluster_idx in unique_labels[:3]:
+                        for cluster_idx in unique_labels:
                             if cluster_idx in digit_examples:
                                 st.write(f"Cụm {cluster_idx}")
                                 cols = st.columns(5)
