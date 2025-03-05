@@ -168,18 +168,6 @@ def main():
         except Exception as e:
             st.error(f"Error loading MNIST data: {e}")
             st.error(f"Chi tiết lỗi: {str(e)}")
-        
-        st.subheader("🔹Thuật toán phân cụm")
-        st.subheader("1. K-means")
-        st.image("1.png")
-        st.write("##### Các bước thực hiện :")
-        st.image("2.png")
-        st.write("")
-        st.subheader("2. DBSCAN")
-        st.image("3.png")
-        st.image("4.png")
-        st.write("##### Các bước thực hiện :")
-        st.image("5.png")
 
     with tab2:
         st.header("Run Clustering Algorithms")
