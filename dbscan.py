@@ -170,7 +170,7 @@ def main():
             st.error(f"Error loading MNIST data: {e}")
             st.error(f"Chi tiết lỗi: {str(e)}")
 # Tiêu đề chính
-        st.title("Lý thuyết về thuật toán phân cụm")
+        st.subheader("Lý thuyết về thuật toán phân cụm")
         
         # Tạo tab với radio button
         algorithm =st.selectbox("Chọn thuật toán:", ["K-Means", "DBSCAN"])
@@ -295,11 +295,22 @@ def main():
                 st.error("Không tìm thấy tệp dbscan.gif. Vui lòng kiểm tra đường dẫn.")
 
     with tab2:
-        st.header("Run Clustering Algorithms")
-        
         try:
             X, y = load_mnist_data()
-            st.success(f"Bộ dữ liệu MNIST được tải thành công với {X.shape[0]} mẫu.")
+            st.subheader("🔹 Một vài mẫu dữ liệu từ MNIST")
+            if len(X) == 0 or len(y) == 0:
+                st.error("Dữ liệu MNIST trống. Vui lòng kiểm tra lại hàm tải dữ liệu.")
+            else:
+                cols = st.columns(5)
+                for i, col in enumerate(cols):
+                    idx = np.random.randint(0, len(X))
+                    with col:
+                        fig, ax = plt.subplots(figsize=(3, 3))
+                        ax.imshow(X[idx].reshape(28, 28), cmap='gray')
+                        ax.set_title(f"Digit: {y[idx]}")
+                        ax.axis('off')
+                        st.pyplot(fig)
+                        plt.close(fig)
             
             sample_size = st.slider("Chọn cỡ mẫu để phân cụm", 
                                     min_value=1000, 
