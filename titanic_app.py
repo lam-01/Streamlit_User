@@ -124,16 +124,20 @@ class TitanicAnalyzer:
             # if st.button("Xóa cột dữ liệu"):
                 # Xóa các cột được chọn
             self.data.drop(columns=columns_to_drop, inplace=True, errors='ignore')
-            
+            if st.button("Xóa cột dữ liệu"): 
             # Hiển thị thông tin sau khi xóa cột
-            st.write("Dữ liệu sau khi xóa các cột không cần thiết:")
-            st.dataframe(self.data.head())
+                st.write("Dữ liệu sau khi xóa các cột không cần thiết:")
+                st.dataframe(self.data.head())
 
             
             st.write("**4. Mã hóa biến phân loại**")
+
             st.write("**Mã hóa cột Sex:**")
-            sex_male = st.number_input("Nhập giá trị mã hóa cho 'male':", value=0, key="sex_male")
-            sex_female = st.number_input("Nhập giá trị mã hóa cho 'female':", value=1, key="sex_female")
+            col1, col2 = st.columns(2)  # Tạo 2 cột để hiển thị 'male' và 'female' cạnh nhau
+            with col1:
+                sex_male = st.number_input("Nhập giá trị mã hóa cho 'male':", value=0, key="sex_male")
+            with col2:
+                sex_female = st.number_input("Nhập giá trị mã hóa cho 'female':", value=1, key="sex_female")
 
             # Kiểm tra xem giá trị mã hóa có trùng nhau không
             if sex_male == sex_female:
@@ -142,13 +146,17 @@ class TitanicAnalyzer:
                 # Mã hóa cột 'Sex'
                 if 'Sex' in self.data.columns:
                     self.data['Sex'] = self.data['Sex'].map({'male': sex_male, 'female': sex_female})
-                    st.write(f"Đã mã hóa 'male' thành {sex_male} và 'female' thành {sex_female}.")
+                    # st.write(f"Đã mã hóa 'male' thành {sex_male} và 'female' thành {sex_female}.")
 
-            # Cho phép người dùng nhập giá trị mã hóa cho 'Embarked'
+            # Mã hóa cột 'Embarked' với 3 cột trên cùng hàng
             st.write("**Mã hóa cột Embarked:**")
-            embarked_C = st.number_input("Nhập giá trị mã hóa cho 'C':", value=0, key="embarked_C")
-            embarked_Q = st.number_input("Nhập giá trị mã hóa cho 'Q':", value=1, key="embarked_Q")
-            embarked_S = st.number_input("Nhập giá trị mã hóa cho 'S':", value=2, key="embarked_S")
+            col3, col4, col5 = st.columns(3)  # Tạo 3 cột để hiển thị 'C', 'Q', 'S' cạnh nhau
+            with col3:
+                embarked_C = st.number_input("Nhập giá trị mã hóa cho 'C':", value=0, key="embarked_C")
+            with col4:
+                embarked_Q = st.number_input("Nhập giá trị mã hóa cho 'Q':", value=1, key="embarked_Q")
+            with col5:
+                embarked_S = st.number_input("Nhập giá trị mã hóa cho 'S':", value=2, key="embarked_S")
 
             # Kiểm tra xem giá trị mã hóa có trùng nhau không
             embarked_values = [embarked_C, embarked_Q, embarked_S]
@@ -162,10 +170,11 @@ class TitanicAnalyzer:
                     # Mã hóa cột 'Embarked'
                     embarked_mapping = {'C': embarked_C, 'Q': embarked_Q, 'S': embarked_S}
                     self.data['Embarked'] = self.data['Embarked'].map(lambda x: embarked_mapping.get(x, -1))
-                    st.write(f"Đã mã hóa 'C' thành {embarked_C}, 'Q' thành {embarked_Q}, và 'S' thành {embarked_S}.")
+                    # st.write(f"Đã mã hóa 'C' thành {embarked_C}, 'Q' thành {embarked_Q}, và 'S' thành {embarked_S}.")
                     # Hiển thị dữ liệu sau khi mã hóa
-                    st.write("Dữ liệu sau khi mã hóa:")
-                    st.dataframe(self.data.head())
+                    if st.button ("Mã hóa cột") :
+                        st.write("Dữ liệu sau khi mã hóa:")
+                        st.dataframe(self.data.head())
 
             # Lưu giá trị mã hóa để sử dụng cho dự đoán
             self.sex_male = sex_male
@@ -227,10 +236,10 @@ def create_streamlit_app():
                         "Tỷ lệ (%)": [train_size - val_size, val_size, test_size],
                         "Số lượng mẫu": [train_samples, val_samples, test_samples]
                     })
-
-                    # Hiển thị bảng kết quả
-                    st.write("📋 **Tỷ lệ chia dữ liệu và số lượng mẫu:**")
-                    st.table(split_df)
+                    if st.button ("Chia dữ liệu"):
+                        # Hiển thị bảng kết quả
+                        st.write("📋 **Tỷ lệ chia dữ liệu và số lượng mẫu:**")
+                        st.table(split_df)
 
                     # Chuẩn bị dữ liệu cho mô hình
                     X = data.drop(columns=["Survived"])
@@ -418,15 +427,14 @@ def create_streamlit_app():
                 prediction = st.session_state['model'].predict(input_transformed)[0]
                 
                 # Hiển thị kết quả
-                survival_probability = max(0, min(1, prediction))  # Clip giữa 0 và 1
+                survival_probability = max(0, min(1, prediction))  
                 survival_percentage = survival_probability * 100
                 
                 if survival_probability >= 0.5:
                     st.success(f"Dự đoán: Survived")
                 else:
                     st.error(f"Dự đoán: Not Survived")
-                
-                # Hiển thị thông tin về việc đối tượng có thuộc tập dữ liệu gốc hay không
+
                 if exists_in_data:
                     st.info("Đối tượng này có tồn tại trong tập dữ liệu gốc.")
                 else:
@@ -461,10 +469,6 @@ def create_streamlit_app():
                 if selected_run_id:
                     run_details = mlflow.get_run(selected_run_id)
                     st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
-                    # st.write("**🟢 Trạng thái:**", run_details.info.status)
-                    # st.write("**⏳ Thời gian bắt đầu:**", run_details.info.start_time)
-                    # st.write("**🏁 Thời gian kết thúc:**", run_details.info.end_time)
-                    
                     st.write("📌 **Tham số:**")
                     for key, value in run_details.data.params.items():
                         st.write(f"- **{key}**: {value}")
@@ -484,8 +488,5 @@ def create_streamlit_app():
 
         else:
             st.write("⚠️ Không có phiên làm việc nào được ghi lại.")
-
-
-
 if __name__ == "__main__":
     create_streamlit_app()
