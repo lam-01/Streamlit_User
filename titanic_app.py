@@ -121,23 +121,19 @@ class TitanicAnalyzer:
             # Loại bỏ cột PassengerId
             if 'PassengerId' in self.data.columns:
                 self.data = self.data.drop(columns=['PassengerId'])
-            if st.button("Xóa cột dữ liệu"):
+            # if st.button("Xóa cột dữ liệu"):
                 # Xóa các cột được chọn
-                self.data.drop(columns=columns_to_drop, inplace=True, errors='ignore')
-                
-                # Hiển thị thông tin sau khi xóa cột
-                st.write("Dữ liệu sau khi xóa các cột không cần thiết:")
-                st.dataframe(self.data.head())
+            self.data.drop(columns=columns_to_drop, inplace=True, errors='ignore')
+            
+            # Hiển thị thông tin sau khi xóa cột
+            st.write("Dữ liệu sau khi xóa các cột không cần thiết:")
+            st.dataframe(self.data.head())
 
             
             st.write("**4. Mã hóa biến phân loại**")
-
             st.write("**Mã hóa cột Sex:**")
-            col1, col2 = st.columns(2)  # Tạo 2 cột để hiển thị 'male' và 'female' cạnh nhau
-            with col1:
-                sex_male = st.number_input("Nhập giá trị mã hóa cho 'male':", value=0, key="sex_male")
-            with col2:
-                sex_female = st.number_input("Nhập giá trị mã hóa cho 'female':", value=1, key="sex_female")
+            sex_male = st.number_input("Nhập giá trị mã hóa cho 'male':", value=0, key="sex_male")
+            sex_female = st.number_input("Nhập giá trị mã hóa cho 'female':", value=1, key="sex_female")
 
             # Kiểm tra xem giá trị mã hóa có trùng nhau không
             if sex_male == sex_female:
@@ -146,17 +142,13 @@ class TitanicAnalyzer:
                 # Mã hóa cột 'Sex'
                 if 'Sex' in self.data.columns:
                     self.data['Sex'] = self.data['Sex'].map({'male': sex_male, 'female': sex_female})
-                    # st.write(f"Đã mã hóa 'male' thành {sex_male} và 'female' thành {sex_female}.")
+                    st.write(f"Đã mã hóa 'male' thành {sex_male} và 'female' thành {sex_female}.")
 
-            # Mã hóa cột 'Embarked' với 3 cột trên cùng hàng
+            # Cho phép người dùng nhập giá trị mã hóa cho 'Embarked'
             st.write("**Mã hóa cột Embarked:**")
-            col3, col4, col5 = st.columns(3)  # Tạo 3 cột để hiển thị 'C', 'Q', 'S' cạnh nhau
-            with col3:
-                embarked_C = st.number_input("Nhập giá trị mã hóa cho 'C':", value=0, key="embarked_C")
-            with col4:
-                embarked_Q = st.number_input("Nhập giá trị mã hóa cho 'Q':", value=1, key="embarked_Q")
-            with col5:
-                embarked_S = st.number_input("Nhập giá trị mã hóa cho 'S':", value=2, key="embarked_S")
+            embarked_C = st.number_input("Nhập giá trị mã hóa cho 'C':", value=0, key="embarked_C")
+            embarked_Q = st.number_input("Nhập giá trị mã hóa cho 'Q':", value=1, key="embarked_Q")
+            embarked_S = st.number_input("Nhập giá trị mã hóa cho 'S':", value=2, key="embarked_S")
 
             # Kiểm tra xem giá trị mã hóa có trùng nhau không
             embarked_values = [embarked_C, embarked_Q, embarked_S]
@@ -170,11 +162,10 @@ class TitanicAnalyzer:
                     # Mã hóa cột 'Embarked'
                     embarked_mapping = {'C': embarked_C, 'Q': embarked_Q, 'S': embarked_S}
                     self.data['Embarked'] = self.data['Embarked'].map(lambda x: embarked_mapping.get(x, -1))
-                    # st.write(f"Đã mã hóa 'C' thành {embarked_C}, 'Q' thành {embarked_Q}, và 'S' thành {embarked_S}.")
+                    st.write(f"Đã mã hóa 'C' thành {embarked_C}, 'Q' thành {embarked_Q}, và 'S' thành {embarked_S}.")
                     # Hiển thị dữ liệu sau khi mã hóa
-                    if st.button ("Mã hóa cột") :
-                        st.write("Dữ liệu sau khi mã hóa:")
-                        st.dataframe(self.data.head())
+                    st.write("Dữ liệu sau khi mã hóa:")
+                    st.dataframe(self.data.head())
 
             # Lưu giá trị mã hóa để sử dụng cho dự đoán
             self.sex_male = sex_male
@@ -470,6 +461,9 @@ def create_streamlit_app():
                 if selected_run_id:
                     run_details = mlflow.get_run(selected_run_id)
                     st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
+                    # st.write("**🟢 Trạng thái:**", run_details.info.status)
+                    # st.write("**⏳ Thời gian bắt đầu:**", run_details.info.start_time)
+                    # st.write("**🏁 Thời gian kết thúc:**", run_details.info.end_time)
                     
                     st.write("📌 **Tham số:**")
                     for key, value in run_details.data.params.items():
