@@ -92,7 +92,6 @@ class TitanicAnalyzer:
     
                 return df  # Trả về dataframe đã xử lý
     
-            # Thêm nút "Xử lý" để kích hoạt quá trình xử lý dữ liệu
             if st.button("Xử lý dữ liệu bị thiếu"):
                 # Gọi hàm xử lý dữ liệu bị thiếu
                 self.data = preprocess_data(self.data, missing_value_strategy)
@@ -122,13 +121,13 @@ class TitanicAnalyzer:
             # Loại bỏ cột PassengerId
             if 'PassengerId' in self.data.columns:
                 self.data = self.data.drop(columns=['PassengerId'])
-    
-            # Xóa các cột được chọn
-            self.data.drop(columns=columns_to_drop, inplace=True, errors='ignore')
-
-            # Hiển thị thông tin sau khi xóa cột
-            st.write("Dữ liệu sau khi xóa các cột không cần thiết:")
-            st.dataframe(self.data.head())
+            if st.button("Xóa cột dữ liệu"):
+                # Xóa các cột được chọn
+                self.data.drop(columns=columns_to_drop, inplace=True, errors='ignore')
+                
+                # Hiển thị thông tin sau khi xóa cột
+                st.write("Dữ liệu sau khi xóa các cột không cần thiết:")
+                st.dataframe(self.data.head())
 
             
             st.write("**4. Mã hóa biến phân loại**")
