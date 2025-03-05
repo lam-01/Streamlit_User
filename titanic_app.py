@@ -41,9 +41,9 @@ class TitanicAnalyzer:
             st.write("**2. Xử lý giá trị bị thiếu**")
             st.write("- Các cột dữ liệu bị thiếu: Age, Cabin, Embarked")
             missing_values_before = self.data.isnull().sum()
-            st.write("Số lượng dữ liệu bị thiếu : ")
+            st.write("Số lượng dữ liệu bị thiếu trước xử lý:")
             st.dataframe(missing_values_before.to_frame().T)
-
+    
             # Chuyển đổi tên phương pháp xử lý về định dạng đơn giản
             strategy_mapping = {
                 "Điền giá trị trung bình mean": "mean",
@@ -51,23 +51,25 @@ class TitanicAnalyzer:
                 "Điền giá trị xuất hiện nhiều nhất mode": "mode",
                 "Xóa hàng chứa dữ liệu thiếu drop": "drop"
             }
-
+    
             # Chọn phương pháp xử lý giá trị bị thiếu
             selected_strategy = st.selectbox(
-                "## Chọn phương pháp xử lý dữ liệu bị thiếu", list(strategy_mapping.keys()), index=0
+                "## Chọn phương pháp xử lý dữ liệu bị thiếu", 
+                list(strategy_mapping.keys()), 
+                index=0
             )
-
+    
             # Chuyển về dạng chuẩn
             missing_value_strategy = strategy_mapping[selected_strategy]
-
+    
             # Hàm xử lý dữ liệu bị thiếu
             def preprocess_data(df, missing_value_strategy):
                 df = df.dropna(subset=['Survived'])  # Bỏ các hàng có giá trị thiếu ở cột mục tiêu
-
+    
                 # Xác định cột số và cột phân loại
                 num_cols = df.select_dtypes(include=['number']).columns
                 cat_cols = df.select_dtypes(exclude=['number']).columns
-
+    
                 # Xử lý giá trị thiếu cho cột số từng cột để tránh lỗi
                 if missing_value_strategy in ['mean', 'median', 'mode']:
                     for col in num_cols:
@@ -78,28 +80,29 @@ class TitanicAnalyzer:
                                 df[col] = df[col].fillna(df[col].median())
                             elif missing_value_strategy == 'mode' and not df[col].mode().dropna().empty:
                                 df[col] = df[col].fillna(df[col].mode()[0])
-
+    
                 # Luôn xử lý giá trị thiếu cho Cabin và Embarked
                 if 'Cabin' in df.columns:
                     df['Cabin'] = df['Cabin'].fillna("Unknown")  # Điền "Unknown" cho Cabin
                 if 'Embarked' in df.columns:
                     df['Embarked'] = df['Embarked'].fillna(df['Embarked'].mode()[0])  # Điền mode() cho Embarked
-
+    
                 if missing_value_strategy == 'drop':
                     df.dropna(inplace=True)  # Nếu chọn "drop", xóa hàng còn thiếu
-
+    
                 return df  # Trả về dataframe đã xử lý
-
-            # Gọi hàm xử lý dữ liệu bị thiếu
-            self.data = preprocess_data(self.data, missing_value_strategy)
-
-            # Kiểm tra số lượng dữ liệu bị thiếu sau khi xử lý
-            missing_values_after = self.data.isnull().sum().sum()
-            mlflow.log_metric("missing_values_before", missing_values_before.sum())  # Chuyển thành số tổng
-            mlflow.log_metric("missing_values_after", missing_values_after)
-            st.write("Số lượng giá trị bị thiếu sau xử lý:")
-            st.dataframe(self.data.isnull().sum().to_frame().T)
-
+    
+            # Thêm nút "Xử lý" để kích hoạt quá trình xử lý dữ liệu
+            if st.button("Xử lý dữ liệu bị thiếu"):
+                # Gọi hàm xử lý dữ liệu bị thiếu
+                self.data = preprocess_data(self.data, missing_value_strategy)
+    
+                # Kiểm tra số lượng dữ liệu bị thiếu sau khi xử lý
+                missing_values_after = self.data.isnull().sum().sum()
+                mlflow.log_metric("missing_values_before", missing_values_before.sum())  # Chuyển thành số tổng
+                mlflow.log_metric("missing_values_after", missing_values_after)
+                st.write("Số lượng giá trị bị thiếu sau xử lý:")
+                st.dataframe(self.data.isnull().sum().to_frame().T)
 
 
             # Xóa các cột không cần thiết
