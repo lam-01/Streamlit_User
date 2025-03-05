@@ -103,10 +103,9 @@ def main():
         # phân kỳ. Nhúng chiều thấp được tối ưu hóa đến trạng thái ổn định.""")
 
     with tab2:
-        st.header("Phương pháp PCA và t-SNE")
         X, y = load_mnist_data()
 
-        st.subheader("Tùy chọn mẫu dữ liệu")
+        st.write("##### Tùy chọn mẫu dữ liệu")
         sample_size = st.slider("Chọn kích thước mẫu dữ liệu", 100, 10000, 1000, key="sample_size_tab2")
         X_sample, y_sample = sample_data(X, y, sample_size)
         st.write(f"Kích thước dữ liệu sau khi lấy mẫu: {X_sample.shape}")
