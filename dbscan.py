@@ -278,7 +278,7 @@ def main():
     with tab2:
         try:
             X, y = load_mnist_data()
-            st.write("**Một vài mẫu dữ liệu từ MNIST**")
+            st.write("##### Một vài mẫu dữ liệu từ MNIST")
             if len(X) == 0 or len(y) == 0:
                 st.error("Dữ liệu MNIST trống. Vui lòng kiểm tra lại hàm tải dữ liệu.")
             else:
