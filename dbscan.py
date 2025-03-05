@@ -292,7 +292,7 @@ def main():
                         ax.axis('off')
                         st.pyplot(fig)
                         plt.close(fig)
-            
+            st.write("##### Tùy chọn mẫu dữ liệu")
             sample_size = st.slider("Chọn cỡ mẫu để phân cụm", 
                                     min_value=1000, 
                                     max_value=10000, 
