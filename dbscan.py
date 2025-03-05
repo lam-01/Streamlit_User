@@ -150,26 +150,7 @@ def main():
     tab1, tab2, tab3 = st.tabs(["Tổng quan ", "Phân cụm ", "MLFlow"])
 
     with tab1:
-        try:
-            X, y = load_mnist_data()
-            st.subheader("🔹 Một vài mẫu dữ liệu từ MNIST")
-            if len(X) == 0 or len(y) == 0:
-                st.error("Dữ liệu MNIST trống. Vui lòng kiểm tra lại hàm tải dữ liệu.")
-            else:
-                cols = st.columns(5)
-                for i, col in enumerate(cols):
-                    idx = np.random.randint(0, len(X))
-                    with col:
-                        fig, ax = plt.subplots(figsize=(3, 3))
-                        ax.imshow(X[idx].reshape(28, 28), cmap='gray')
-                        ax.set_title(f"Digit: {y[idx]}")
-                        ax.axis('off')
-                        st.pyplot(fig)
-                        plt.close(fig)
-        except Exception as e:
-            st.error(f"Error loading MNIST data: {e}")
-            st.error(f"Chi tiết lỗi: {str(e)}")
-# Tiêu đề chính
+        # Tiêu đề chính
         st.subheader("Lý thuyết về thuật toán phân cụm")
         
         # Tạo tab với radio button
@@ -297,7 +278,7 @@ def main():
     with tab2:
         try:
             X, y = load_mnist_data()
-            st.subheader("🔹 Một vài mẫu dữ liệu từ MNIST")
+            st.write("**Một vài mẫu dữ liệu từ MNIST**")
             if len(X) == 0 or len(y) == 0:
                 st.error("Dữ liệu MNIST trống. Vui lòng kiểm tra lại hàm tải dữ liệu.")
             else:
