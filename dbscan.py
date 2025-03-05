@@ -17,6 +17,7 @@ import plotly.graph_objects as go
 from PIL import Image
 import io
 from sklearn.datasets import fetch_openml
+import base64
 
 # Set up MLflow
 def setup_mlflow():
