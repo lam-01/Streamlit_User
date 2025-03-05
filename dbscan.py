@@ -168,6 +168,130 @@ def main():
         except Exception as e:
             st.error(f"Error loading MNIST data: {e}")
             st.error(f"Chi tiết lỗi: {str(e)}")
+# Tiêu đề chính
+        st.title("Lý thuyết về thuật toán phân cụm")
+        
+        # Tạo tab với radio button
+        algorithm =st.selectbox("Chọn thuật toán:", ["K-Means", "DBSCAN"])
+        
+        # Nội dung cho K-Means
+        if algorithm == "K-Means":
+            st.write("##### Thuật toán K-Means")
+            st.write("""Thuật toán K-Means là một trong những thuật toán phân cụm phổ biến và đơn giản nhất trong lĩnh vực học không giám sát. Mục tiêu của thuật toán là phân chia một tập dữ liệu thành 
+            K cụm (clusters) sao cho các điểm dữ liệu trong cùng một cụm có độ tương đồng cao nhất, trong khi các điểm dữ liệu ở các cụm khác nhau có độ tương đồng thấp nhất.""")
+            
+            st.write("##### Các bước thực hiện phân cụm")
+            st.write("""**Bước 1: Khởi tạo**  
+            \n Chọn K số điểm dữ liệu ngẫu nhiên (cụm) trong tập dữ liệu. K là số cụm cần phân loại, được lựa chọn trước khi thiết lập thuật toán.""")
+            
+            st.write("""**Bước 2: Gán nhãn cho từng điểm dữ liệu**  
+            \n Sau khi có K cụm ban đầu, chúng ta sẽ tính toán khoảng cách giữa từng điểm dữ liệu với K cụm này và gán điểm dữ liệu đó vào cụm gần nó nhất. Khoảng cách giữa hai điểm dữ liệu thường được tính bằng khoảng cách Euclidean, công thức như sau:""")
+            st.latex(r"""
+            d(x_i, c_j) = \sqrt{\sum_{d=1}^{D} (x_{i,d} - c_{j,d})^2}
+            """)
+            
+            st.write("""**Bước 3: Cập nhật tâm của cụm**  
+            \n Sau khi đã gán nhãn cho tất cả các điểm dữ liệu, chúng ta cần xác định lại tâm của các cụm để cải thiện hiệu quả của thuật toán. Tâm mới của cụm sẽ được xác định bằng cách tính trung bình vị trí của tất cả các điểm dữ liệu thuộc cụm đó.""")
+            st.latex(r"""
+            c_j = \frac{1}{n_j} \sum_{i=1}^{n_j} x_i
+            """)
+            
+            st.write("""**Bước 4: Kiểm tra điều kiện dừng**  
+            \n Quá trình gán nhãn và cập nhật tâm cụm sẽ được lặp lại cho đến khi tâm cụm không thay đổi sau mỗi vòng lặp (hay chênh lệch đủ nhỏ) hoặc đạt số lần lặp tối đa.""")
+            
+            # Đường dẫn đến GIF
+            gif_path = "kmean.gif"  # Thay bằng tên tệp GIF của bạn
+            
+            # Đọc và mã hóa GIF
+            try:
+                with open(gif_path, "rb") as file:
+                    gif_data = file.read()
+                    gif_base64 = base64.b64encode(gif_data).decode("utf-8")
+                
+                # Tạo 3 cột, đặt nội dung vào cột giữa
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    st.markdown(
+                        f'<div style="text-align: center;">'
+                        f'<img src="data:image/gif;base64,{gif_base64}" alt="GIF" width="100%">'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                    st.markdown(
+                        '<p style="text-align: center; font-size: 10px;">Minh họa quá trình phân cụm K-Means trong dữ liệu</p>',
+                        unsafe_allow_html=True
+                    )
+            except FileNotFoundError:
+                st.error("Không tìm thấy tệp kmean.gif. Vui lòng kiểm tra đường dẫn.")
+        
+        # Nội dung cho DBSCAN
+        elif algorithm == "DBSCAN":
+            st.write("##### Thuật toán DBSCAN")
+            st.write("""DBSCAN là một thuật toán phân cụm dựa trên mật độ, được thiết kế để tìm
+        các cụm dữ liệu có hình dạng bất kỳ và phát hiện các điểm nhiễu (noise), không yêu cầu biết trước số cụm.""")
+            
+            st.write("##### Các khái niệm cơ bản")
+            st.write("""- **Epsilon (ε)**: Bán kính tối đa để xác định vùng lân cận của một điểm.  
+            \n- **MinPts**: Số lượng điểm tối thiểu cần thiết để một khu vực được coi là đủ mậtđộ.""")
+            st.write("""- **Loại điểm trong DBSCAN:**
+            - **Điểm lõi (Core Point)**: Điểm có ít nhất MinPts điểm khác nằm trong khoảng ε. 
+            - **Điểm biên (Border Point)**:Điểm không phải là Core Point nhưng nằm trong vùng lân cận của một Core Point..  
+            - **Điểm nhiễu (Noise)**: Điểm không thuộc Core Point hoặc Border Point.""")
+            st.image("db.png",caption="Minh họa các điểm của DBSCAN",width=400)
+            
+            st.write("""**Bước 1: Lựa chọn tham số**  
+            \n - Chọn ε (epsilon): Khoảng cách tối đa giữa hai điểm để chúng được coi là lân cận.  
+            \n - **Chọn MinPts**: Số điểm tối thiểu cần thiết để tạo thành một vùng dày đặc.""")
+            
+            st.write("""**Bước 2: Chọn điểm bắt đầu**  
+            \n Thuật toán bắt đầu với một điểm chưa được thăm tùy ý trong tập dữ liệu.""")
+        
+            st.write("""**Bước 3: Kiểm tra láng giềng**  
+            \n Nó lấy lại tất cả các điểm trong khoảng cách ε của điểm bắt đầu.  
+            \n - Nếu số điểm lân cận ít hơn MinPts, điểm đó sẽ được gắn nhãn là nhiễu (hiện tại).  
+            \n - Nếu có ít nhất MinPts điểm trong khoảng cách ε, điểm đó sẽ được đánh dấu là điểm lõi và một cụm mới sẽ được hình thành.""")
+            
+            st.write("""**Bước 4: Mở rộng cụm**  
+            \n Tất cả các điểm lân cận của điểm lõi sẽ được thêm vào cụm.  
+            \n Đối với mỗi điểm lân cận sau:  
+            \n - Nếu đó là điểm lõi, các điểm lân cận của nó sẽ được thêm vào cụm theo cách đệ quy.  
+            \n - Nếu đó không phải là điểm lõi, nó sẽ được đánh dấu là điểm biên giới và quá trình mở rộng sẽ dừng lại.""")
+            
+            st.write("""**Bước 5: Lặp lại quá trình**  
+            \n Thuật toán di chuyển đến điểm chưa được thăm tiếp theo trong tập dữ liệu.  
+            \n Lặp lại các bước 3 và 4 cho đến khi tất cả các điểm đã được thăm.""")
+            
+            st.write("""**Bước 6: Hoàn thiện các cụm**  
+            \n Sau khi tất cả các điểm đã được xử lý, thuật toán sẽ xác định tất cả các cụm.  
+            \n Các điểm ban đầu được gắn nhãn là nhiễu giờ đây có thể là điểm biên nếu chúng nằm trong khoảng cách ε của điểm lõi.
+            \n Bất kỳ điểm nào không thuộc bất kỳ cụm nào vẫn được phân loại là nhiễu.
+            """)
+            
+            
+                # Đường dẫn đến GIF
+            gif_path_db = "dbscan.gif"  # Thay bằng tên tệp GIF của bạn
+            
+            # Đọc và mã hóa GIF
+            try:
+                with open(gif_path_db, "rb") as file:
+                    gif_data = file.read()
+                    gif_base64 = base64.b64encode(gif_data).decode("utf-8")
+                
+                # Tạo 3 cột, đặt nội dung vào cột giữa
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    st.markdown(
+                        f'<div style="text-align: center;">'
+                        f'<img src="data:image/gif;base64,{gif_base64}" alt="GIF" width="100%">'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                    st.markdown(
+                        '<p style="text-align: center; font-size: 10px;">DBSCAN xác định các cụm trong dữ liệu là điểm biên. Bất kỳ điểm nào vẫn có màu xanh là điểm nhiễu và không phải là một phần của bất kỳ cụm nào.</p>',
+                        unsafe_allow_html=True
+                    )
+            except FileNotFoundError:
+                st.error("Không tìm thấy tệp dbscan.gif. Vui lòng kiểm tra đường dẫn.")
 
     with tab2:
         st.header("Run Clustering Algorithms")
