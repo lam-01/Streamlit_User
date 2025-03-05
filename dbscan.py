@@ -311,7 +311,7 @@ def main():
             selected_tab = st.selectbox("Chọn thuật toán phân cụm", ["K-means", "DBSCAN"])
 
             if selected_tab == "K-means":
-                st.subheader("K-means Clustering")
+                st.write("##### Phân cụm K-means ")
                 n_clusters = st.slider("Số cụm (k)", min_value=5, max_value=20, value=10)
                 
                 if st.button("Run K-means"):
@@ -368,7 +368,7 @@ def main():
                                             plt.close(fig)
 
             elif selected_tab == "DBSCAN":
-                st.subheader("Phân cụm DBSCAN")
+                st.write("##### Phân cụm DBSCAN")
                 eps = st.slider("Epsilon", min_value=0.1, max_value=10.0, value=5.0, step=0.1, help="""**Epsilon** : Bán kính để xác định khu vực lân cận của một điểm.
                 \n- Nếu một điểm có đủ số lượng hàng xóm (≥ min_samples) trong phạm vi eps, nó sẽ trở thành core point và giúp tạo cụm.
                 \n- Giá trị eps càng lớn(6-10), thì cụm càng rộng và số lượng cụm giảm xuống.
