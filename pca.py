@@ -70,7 +70,7 @@ def main():
 
     with tab1:
         X, y = load_mnist_data()
-        st.subheader("Một số ảnh mẫu từ tập dữ liệu MNIST")
+        st.write("##### Một số ảnh mẫu từ tập dữ liệu MNIST")
         num_samples = 5  
         cols = st.columns(5)
         for i in range(num_samples):
