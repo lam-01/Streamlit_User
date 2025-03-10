@@ -360,7 +360,7 @@ def main():
                         st.success(f"Mô hình K-means được lưu vào MLflow với run ID: {run_id}")
                         
                         st.subheader("Các chữ số mẫu từ mỗi cụm")
-                        for cluster_idx in range(min(n_clusters)):
+                        for cluster_idx in range(n_clusters):
                             if cluster_idx in digit_examples:
                                 st.write(f"Cluster {cluster_idx}")
                                 cols = st.columns(5)
