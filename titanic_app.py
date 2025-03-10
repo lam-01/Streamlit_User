@@ -441,7 +441,7 @@ def create_streamlit_app():
                     st.warning("Đối tượng này không có trong tập dữ liệu gốc.")
 
     with tab3:
-        st.header("MLflow Tracking")
+        st.subheader("MLflow Tracking")
 
         # Lấy danh sách các phiên làm việc từ MLflow
         runs = mlflow.search_runs(order_by=["start_time desc"])
