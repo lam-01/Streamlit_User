@@ -137,10 +137,26 @@ def create_streamlit_app():
         params = {}
 
         if model_name == "Decision Tree":
-            params["criterion"] = st.selectbox("📏 Tiêu chí đánh giá", ["gini", "entropy", "log_loss"], help="...")
-            params["max_depth"] = st.slider("🌳 Độ sâu tối đa (max_depth)", 1, 30, 15, help="...")
-            params["min_samples_split"] = st.slider("🔄 Số mẫu tối thiểu để chia nhánh (min_samples_split)", 2, 10, 5, help="...")
-            params["min_samples_leaf"] = st.slider("🍃 Số mẫu tối thiểu ở lá (min_samples_leaf)", 1, 10, 2, help="...")
+            params["criterion"] = st.selectbox("📏 Tiêu chí đánh giá", ["gini", "entropy", "log_loss"], help="""- **Gini impurity** đo lường xác suất một mẫu được chọn ngẫu nhiên từ tập dữ liệu bị phân loại sai 
+            nếu nó được gán nhãn ngẫu nhiên theo phân phối của các lớp trong tập dữ liệu.
+            \n- **Entropy** đo lường mức độ hỗn loạn hoặc không chắc chắn trong tập dữ liệu. Nó dựa trên khái niệm entropy trong lý thuyết thông tin.
+            \n- **Log loss (hay cross-entropy)** đo lường sự khác biệt giữa phân phối xác suất thực tế và phân phối xác suất dự đoán. Nó thường được sử dụng trong các bài toán phân loại xác suất.
+            """)
+            params["max_depth"] = st.slider("🌳 Độ sâu tối đa (max_depth)", 1, 30, 15, help="""- **max_depth** là tham số giới hạn độ sâu tối đa của cây quyết định. Độ sâu của cây được tính 
+            từ nút gốc (root) đến nút lá (leaf) xa nhất.
+            \n Nếu (max_depth > 25) quá lớn, cây có thể trở nên phức tạp và dễ bị overfitting (học thuộc dữ liệu huấn luyện nhưng kém hiệu quả trên dữ liệu mới).
+            \n Nếu (max_depth < 10) quá nhỏ, cây có thể quá đơn giản và dẫn đến underfitting (không học được đủ thông tin từ dữ liệu).""")
+            params["min_samples_split"] = st.slider("🔄 Số mẫu tối thiểu để chia nhánh (min_samples_split)", 2, 10, 5, help="""
+            \n- **min_samples_split** là số lượng mẫu tối thiểu cần thiết để chia một nút (node) thành các nút con. Nếu số lượng mẫu tại một nút ít hơn giá trị này, nút đó sẽ không được chia tiếp.
+            \n Giá trị lớn hơn (5-10) giúp ngăn chặn việc chia nhánh quá mức, từ đó giảm nguy cơ overfitting.
+            \n Giá trị nhỏ hơn (2-4) cho phép cây chia nhánh nhiều hơn, nhưng có thể dẫn đến cây phức tạp hơn.
+            
+            """)
+            params["min_samples_leaf"] = st.slider("🍃 Số mẫu tối thiểu ở lá (min_samples_leaf)", 1, 10, 2, help="""
+            \n- **min_samples_leaf** là số lượng mẫu tối thiểu cần thiết tại mỗi nút lá (leaf node). Nếu một phân chia dẫn đến một lá có ít mẫu hơn giá trị này, phân chia đó sẽ không được thực hiện.
+            \n Giá trị lớn hơn (5-10) giúp ngăn chặn việc tạo ra các lá quá nhỏ, từ đó giảm nguy cơ overfitting.
+            \n Giá trị nhỏ hơn (1-4) cho phép cây tạo ra các lá nhỏ hơn, nhưng có thể dẫn đến cây phức tạp hơn.
+            """)
         elif model_name == "SVM":
             params["kernel"] = st.selectbox("⚙️ Kernel", ["linear", "rbf", "poly", "sigmoid"], help="...")
             params["C"] = st.slider("🔧 Tham số C ", 0.1, 10.0, 1.0, help="...")
