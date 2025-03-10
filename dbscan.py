@@ -173,9 +173,9 @@ def main():
             """)
             st.markdown(r"""
             Trong đó:
-            - \( x = (x1, x2, ..., xD) \) là tọa độ điểm thứ nhất.
-            - \( c = (c1, c2, ..., cD) \) là tọa độ điểm thứ hai.
-            - \( d(x, c) \) là khoảng cách Euclidean giữa hai điểm.
+            - $$( x = (x1, x2, ..., xD) $$) là tọa độ điểm thứ nhất.
+            - $$( c = (c1, c2, ..., cD) $$) là tọa độ điểm thứ hai.
+            - $$( d(x, c) $$) là khoảng cách Euclidean giữa hai điểm.
             """)
                         
             st.write("""**Bước 3: Cập nhật tâm của cụm**  
