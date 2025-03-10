@@ -441,7 +441,7 @@ def create_streamlit_app():
                     st.warning("Đối tượng này không có trong tập dữ liệu gốc.")
 
     with tab3:
-        st.header("📊 MLflow Tracking")
+        st.header("MLflow Tracking")
 
         # Lấy danh sách các phiên làm việc từ MLflow
         runs = mlflow.search_runs(order_by=["start_time desc"])
@@ -472,7 +472,6 @@ def create_streamlit_app():
             if not filtered_runs.empty:
                 # Hiển thị các cột: model_name, regression_type, run_id, và các độ đo MSE, R²
                 display_df = filtered_runs[["model_name", "regression_type", "run_id", "train_mse", "valid_mse", "test_mse", "cv_mse", "train_r2", "valid_r2", "test_r2"]]
-                # Xử lý giá trị None bằng cách thay bằng "N/A"
                 display_df = display_df.fillna("N/A")
                 # Làm tròn các giá trị số nếu có
                 for col in ["train_mse", "valid_mse", "test_mse", "cv_mse", "train_r2", "valid_r2", "test_r2"]:
@@ -480,24 +479,26 @@ def create_streamlit_app():
                 st.dataframe(display_df)
 
                 # **Chọn một mô hình để xem chi tiết**
-                selected_run_id = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["run_id"].tolist())
+                selected_model_name = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["model_name"].tolist())
 
-                if selected_run_id:
+                if selected_model_name:
+                    # Lấy run_id tương ứng với model_name được chọn
+                    selected_run_id = filtered_runs[filtered_runs["model_name"] == selected_model_name]["run_id"].iloc[0]
                     run_details = mlflow.get_run(selected_run_id)
                     st.write(f"##### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
-                    st.write("📌 **Tham số:**")
+                    st.write("**Tham số:**")
                     for key, value in run_details.data.params.items():
                         st.write(f"- **{key}**: {value}")
 
-                    st.write("📊 **Metric:**")
+                    st.write("**Metric:**")
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
 
-                    st.write("📂 **Artifacts:**")
-                    if run_details.info.artifact_uri:
-                        st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
-                    else:
-                        st.write("- Không có artifacts nào.")
+                    # st.write("**Artifacts:**")
+                    # if run_details.info.artifact_uri:
+                    #     st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
+                    # else:
+                    #     st.write("- Không có artifacts nào.")
 
             else:
                 st.write("❌ Không tìm thấy mô hình nào.")
