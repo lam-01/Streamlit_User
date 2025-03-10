@@ -171,7 +171,13 @@ def main():
             st.latex(r"""
             d(x_i, c_j) = \sqrt{\sum_{d=1}^{D} (x_{i,d} - c_{j,d})^2}
             """)
-            
+            st.markdown(r"""
+            Trong đó:
+            - \( x = (x1, x2, ..., xD) \) là tọa độ điểm thứ nhất.
+            - \( c = (c1, c2, ..., cD) \) là tọa độ điểm thứ hai.
+            - \( d(x, c) \) là khoảng cách Euclidean giữa hai điểm.
+            """)
+                        
             st.write("""**Bước 3: Cập nhật tâm của cụm**  
             \n Sau khi đã gán nhãn cho tất cả các điểm dữ liệu, chúng ta cần xác định lại tâm của các cụm để cải thiện hiệu quả của thuật toán. Tâm mới của cụm sẽ được xác định bằng cách tính trung bình vị trí của tất cả các điểm dữ liệu thuộc cụm đó.""")
             st.latex(r"""
