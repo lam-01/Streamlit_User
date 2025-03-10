@@ -441,15 +441,24 @@ def create_streamlit_app():
                     st.warning("Đối tượng này không có trong tập dữ liệu gốc.")
 
     with tab3:
-        st.write("##### MLflow Tracking")
+        st.header("📊 MLflow Tracking")
 
         # Lấy danh sách các phiên làm việc từ MLflow
         runs = mlflow.search_runs(order_by=["start_time desc"])
 
         if not runs.empty:
             # Lấy danh sách tên mô hình
-            runs["model_name"] = runs["tags.mlflow.runName"]  # Giả sử tên mô hình lưu trong tag `mlflow.runName`
-            model_names = runs["model_name"].dropna().unique().tolist()
+            runs["model_name"] = runs["tags.mlflow.runName"]  # Tên mô hình từ tag `mlflow.runName`
+            
+            # Thêm các cột thông tin từ params và metrics
+            runs["regression_type"] = runs["params.regression_type"]  # Loại hồi quy từ params
+            runs["train_mse"] = runs["metrics.train_mse"]  # MSE trên tập train
+            runs["valid_mse"] = runs["metrics.valid_mse"]  # MSE trên tập validation
+            runs["test_mse"] = runs["metrics.test_mse"]  # MSE trên tập test
+            runs["cv_mse"] = runs["metrics.cv_mse"]  # MSE từ cross-validation
+            runs["train_r2"] = runs["metrics.train_r2"]  # R² trên tập train
+            runs["valid_r2"] = runs["metrics.valid_r2"]  # R² trên tập validation
+            runs["test_r2"] = runs["metrics.test_r2"]  # R² trên tập test
 
             # **Tìm kiếm mô hình**
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
@@ -459,16 +468,23 @@ def create_streamlit_app():
             else:
                 filtered_runs = runs
 
-            # **Hiển thị danh sách mô hình**
+            # **Hiển thị danh sách mô hình với thông tin bổ sung**
             if not filtered_runs.empty:
-                st.dataframe(filtered_runs[["model_name", "run_id"]])
+                # Hiển thị các cột: model_name, regression_type, run_id, và các độ đo MSE, R²
+                display_df = filtered_runs[["model_name", "regression_type", "run_id", "train_mse", "valid_mse", "test_mse", "cv_mse", "train_r2", "valid_r2", "test_r2"]]
+                # Xử lý giá trị None bằng cách thay bằng "N/A"
+                display_df = display_df.fillna("N/A")
+                # Làm tròn các giá trị số nếu có
+                for col in ["train_mse", "valid_mse", "test_mse", "cv_mse", "train_r2", "valid_r2", "test_r2"]:
+                    display_df[col] = display_df[col].apply(lambda x: round(x, 4) if isinstance(x, (int, float)) else x)
+                st.dataframe(display_df)
 
                 # **Chọn một mô hình để xem chi tiết**
                 selected_run_id = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["run_id"].tolist())
 
                 if selected_run_id:
                     run_details = mlflow.get_run(selected_run_id)
-                    st.write(f"### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
+                    st.write(f"##### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
                     st.write("📌 **Tham số:**")
                     for key, value in run_details.data.params.items():
                         st.write(f"- **{key}**: {value}")
