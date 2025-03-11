@@ -145,7 +145,9 @@ def create_streamlit_app():
             st.table(data_ratios)
 
         st.write("**🚀 Huấn luyện mô hình**")
-        custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", "My_Model")
+        custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")
+        if not custom_model_name:
+                custom_model_name = "Default_Model"
         model_name = st.selectbox("🔍 Chọn mô hình", ["Decision Tree", "SVM"])
         params = {}
 
