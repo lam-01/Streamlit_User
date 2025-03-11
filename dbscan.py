@@ -299,11 +299,7 @@ def main():
                         st.pyplot(fig)
                         plt.close(fig)
             st.write("##### Tùy chọn mẫu dữ liệu")
-            sample_size = st.slider("Chọn cỡ mẫu để phân cụm", 
-                                    min_value=1000, 
-                                    max_value=10000, 
-                                    value=5000, 
-                                    step=1000)
+            sample_size = st.number_input("Chọn cỡ mẫu để phân cụm", min_value=1000, max_value=70000, value=5000, step=1000)
             
             X_sample, X_scaled, X_pca, indices, X_original, pca = preprocess_data(X, sample_size)
             st.success(f"Số lượng mẫu: {sample_size} mẫu.")
