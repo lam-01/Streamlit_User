@@ -144,7 +144,7 @@ def create_streamlit_app():
 
         st.write("**🚀 Huấn luyện mô hình**")
         custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")
-        model_name = st.selectbox("🔍 Chọn mô hình", ["Decision Tree", "SVM"])
+        model_name = st.selectbox("🔍 Chọn mô hình", ["Decision Tree", "SVM","Neural Network"])
         params = {}
 
         if model_name == "Decision Tree":
