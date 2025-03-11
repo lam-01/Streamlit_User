@@ -93,7 +93,7 @@ def main():
         X_sample, y_sample = sample_data(X, y, sample_size)
         st.write(f"Kích thước dữ liệu sau khi lấy mẫu: {X_sample.shape}")
 
-        model_name = st.text_input("Nhập tên mô hình:", "Default_model")
+        model_name = st.text_input("Nhập tên mô hình:")
         if not model_name:
             model_name = "Default_model"
 
