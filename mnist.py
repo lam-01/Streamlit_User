@@ -39,7 +39,7 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 # 📌 Huấn luyện mô hình
-def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test):
+def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, progress_bar):
     if model_name == "Decision Tree":
         model = DecisionTreeClassifier(
             max_depth=params["max_depth"],
@@ -57,15 +57,29 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
     else:
         raise ValueError("Invalid model selected!")
 
+    # Giả lập tiến trình huấn luyện (vì sklearn không có callback trực tiếp)
+    progress_bar.progress(0)  # Khởi tạo thanh tiến trình
+    time.sleep(0.1)  # Đợi một chút để giao diện cập nhật
+    
+    # Bắt đầu huấn luyện
     model.fit(X_train, y_train)
-
+    progress_bar.progress(50)  # 50% sau khi huấn luyện xong
+    
+    # Dự đoán trên các tập
     y_train_pred = model.predict(X_train)
-    y_test_pred = model.predict(X_test)
+    progress_bar.progress(60)
     y_val_pred = model.predict(X_val)
+    progress_bar.progress(70)
+    y_test_pred = model.predict(X_test)
+    progress_bar.progress(80)
+    
+    # Tính độ chính xác
     train_accuracy = accuracy_score(y_train, y_train_pred)
     val_accuracy = accuracy_score(y_val, y_val_pred)
     test_accuracy = accuracy_score(y_test, y_test_pred)
+    progress_bar.progress(90)
     
+    # Lưu vào MLflow
     with mlflow.start_run(run_name=custom_model_name):
         mlflow.log_param("model_name", model_name)
         mlflow.log_metric("train_accuracy", train_accuracy)
@@ -73,8 +87,8 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
         mlflow.log_metric("test_accuracy", test_accuracy)
         mlflow.sklearn.log_model(model, model_name)
     
+    progress_bar.progress(100)  # Hoàn tất
     return model, train_accuracy, val_accuracy, test_accuracy
-
 # 📌 Xử lý ảnh tải lên
 def preprocess_uploaded_image(image):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
