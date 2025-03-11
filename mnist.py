@@ -40,11 +40,6 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
 
 # 📌 Huấn luyện mô hình
 def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test):
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-    status_text.text("Bước 1/5: Khởi tạo mô hình...")
-    progress_bar.progress(20)
     if model_name == "Decision Tree":
         model = DecisionTreeClassifier(
             max_depth=params["max_depth"],
@@ -62,24 +57,15 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
     else:
         raise ValueError("Invalid model selected!")
 
-    status_text.text("Bước 2/5: Huấn luyện mô hình trên tập train...")
-    progress_bar.progress(40)
     model.fit(X_train, y_train)
 
-    status_text.text("Bước 3/5: Dự đoán trên tập train...")
-    progress_bar.progress(60)
     y_train_pred = model.predict(X_train)
-    
-    status_text.text("Bước 4/5: Dự đoán trên tập validation và test...")
-    progress_bar.progress(80)
-    y_val_pred = model.predict(X_val)
     y_test_pred = model.predict(X_test)
-    
+    y_val_pred = model.predict(X_val)
     train_accuracy = accuracy_score(y_train, y_train_pred)
     val_accuracy = accuracy_score(y_val, y_val_pred)
     test_accuracy = accuracy_score(y_test, y_test_pred)
     
-    status_text.text("Bước 5/5: Ghi log vào MLflow...")
     with mlflow.start_run(run_name=custom_model_name):
         mlflow.log_param("model_name", model_name)
         mlflow.log_metric("train_accuracy", train_accuracy)
@@ -87,13 +73,8 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
         mlflow.log_metric("test_accuracy", test_accuracy)
         mlflow.sklearn.log_model(model, model_name)
     
-    progress_bar.progress(100)
-    status_text.text("Hoàn tất huấn luyện!")
-    time.sleep(1)
-    status_text.empty()
-    progress_bar.empty()
-    
     return model, train_accuracy, val_accuracy, test_accuracy
+
 # 📌 Xử lý ảnh tải lên
 def preprocess_uploaded_image(image):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
