@@ -20,6 +20,7 @@ import tempfile
 import runpy
 
 # 📌 Tải và xử lý dữ liệu MNIST từ OpenML
+@st.cache_data
 def load_data():
     mnist = fetch_openml("mnist_784", version=1, as_frame=False)
     X, y = mnist.data, mnist.target.astype(int)  # Chuyển nhãn về kiểu số nguyên
@@ -27,6 +28,7 @@ def load_data():
     return X, y
 
 # 📌 Chia dữ liệu thành train, validation, và test
+@st.cache_data
 def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state=42):
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size, random_state=random_state
