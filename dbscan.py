@@ -309,10 +309,9 @@ def main():
             st.success(f"Số lượng mẫu: {sample_size} mẫu.")
             
             # Nhập tên mô hình (model_name) thay vì tên experiment
-            model_name_input = st.text_input("Nhập tên mô hình:", "My_Model")
+            model_name_input = st.text_input("Nhập tên mô hình:")
             if not model_name_input:
-                model_name_input = "My_Model"
-            st.write(f"Tên mô hình hiện tại: {model_name_input}")
+                model_name_input = "Default_Model"
             
             selected_tab = st.selectbox("Chọn thuật toán phân cụm", ["K-means", "DBSCAN"])
 
@@ -375,33 +374,48 @@ def main():
 
             elif selected_tab == "DBSCAN":
                 st.write("##### Phân cụm DBSCAN")
-                eps = st.slider("Epsilon", min_value=0.1, max_value=10.0, value=5.0, step=0.1, help="""**Epsilon** : Bán kính để xác định khu vực lân cận của một điểm.
+                eps = st.slider("Epsilon", min_value=0.1, max_value=10.0, value=0.8, step=0.1, help="""**Epsilon** : Bán kính để xác định khu vực lân cận của một điểm.
                 \n- Nếu một điểm có đủ số lượng hàng xóm (≥ min_samples) trong phạm vi eps, nó sẽ trở thành core point và giúp tạo cụm.
                 \n- Giá trị eps càng lớn(6-10), thì cụm càng rộng và số lượng cụm giảm xuống.
                 \n- Nếu eps quá nhỏ(0.1-2), thuật toán có thể tạo quá nhiều cụm nhỏ hoặc không tìm thấy cụm nào.
-                 """)
-                min_samples = st.slider("Min Samples", min_value=2, max_value=50, value=10, help="""**MinPts** : Số lượng điểm tối thiểu cần thiết để một khu vực được coi là đủ mật độ.
+                """)
+                min_samples = st.slider("Min Samples", min_value=2, max_value=50, value=5, step=1, help="""**MinPts** : Số lượng điểm tối thiểu cần thiết để một khu vực được coi là đủ mật độ.
                 \n- Nếu min_samples nhỏ(2-5), các cụm có thể dễ dàng hình thành, ngay cả với dữ liệu nhiễu.
                 \n- Nếu min_samples lớn(>30), thuật toán có thể khó nhận diện cụm nhỏ và có thể đánh dấu nhiều điểm là nhiễu.
                 """)
                 
                 if st.button("Run DBSCAN"):
                     with st.spinner("Chạy phân cụm DBSCAN ..."):
-                        dbscan_model = run_dbscan(X_scaled, eps, min_samples)
+                        # Tùy chọn 1: Chạy DBSCAN trên dữ liệu giảm PCA thay vì dữ liệu được chia tỷ lệ để có kết quả tốt hơn
+                        dbscan_model = DBSCAN(eps=eps, min_samples=min_samples)
+                        # Phù hợp với mô hình trên dữ liệu giảm PCA
+                        dbscan_model.fit(X_pca)
+                        # Nhận nhãn
                         dbscan_labels = dbscan_model.labels_
                         
+                        # Số lượng cụm (không bao gồm nhiễu được đánh dấu là -1)
                         n_clusters = len(set(dbscan_labels)) - (1 if -1 in dbscan_labels else 0)
-                        if n_clusters > 1:
-                            silhouette = silhouette_score(X_scaled, dbscan_labels)
-                            calinski = calinski_harabasz_score(X_scaled, dbscan_labels)
-                        else:
-                            silhouette = 0
-                            calinski = 0
-                        
                         st.subheader("Kết quả phân cụm")
                         st.write(f"Số lượng cụm được tìm thấy: {n_clusters}")
+                        
+                        # Count noise points
                         noise_points = np.sum(dbscan_labels == -1)
                         st.write(f"Số điểm nhiễu: {noise_points} ({noise_points / len(dbscan_labels) * 100:.2f}%)")
+                        
+                        # Khởi tạo các biến số liệu
+                        silhouette = 0
+                        calinski = 0
+                        
+                        # Chỉ tính toán số liệu chỉ khi chúng ta có các cụm hợp lệ
+                        if n_clusters > 1:
+                            # Chỉ tính toán các điểm này nếu có nhiều hơn một cụm và không phải tất cả các điểm là tiếng ồn
+                            non_noise_mask = dbscan_labels != -1
+                            non_noise_points = np.sum(non_noise_mask)
+                            
+                            if non_noise_points > 0 and len(np.unique(dbscan_labels[non_noise_mask])) > 1:
+                                # Chỉ tính điểm bóng cho điểm không nhiễu nếu có ít nhất 2 cụm
+                                silhouette = silhouette_score(X_pca[non_noise_mask], dbscan_labels[non_noise_mask])
+                                calinski = calinski_harabasz_score(X_pca[non_noise_mask], dbscan_labels[non_noise_mask])
                         
                         st.markdown("Các số liệu phân cụm",help="""**Silhouette Score** đo lường mức độ tương đồng của một điểm với các điểm trong cùng một cụm so với các điểm trong cụm khác.
                         \n- Giá trị của Silhouette Score nằm trong khoảng từ -1 đến 1:
@@ -415,8 +429,11 @@ def main():
                         st.write(f"Silhouette Score: {silhouette:.4f}")
                         st.write(f"Calinski-Harabasz Score: {calinski:.4f}")
                         
+                        
+                        # Nhận các ví dụ về chữ số bằng cụm
                         digit_examples = get_digit_examples_by_cluster(X_original, dbscan_labels)
                         
+                        # Thiết lập các tham số và số liệu để ghi nhật ký MLFlow
                         params = {
                             "algorithm": "DBSCAN",
                             "eps": eps,
@@ -430,20 +447,22 @@ def main():
                             "noise_percentage": noise_points / len(dbscan_labels) * 100
                         }
                         
-                        # Sử dụng tên mô hình do người dùng nhập
+                        # Sử dụng tên mô hình được nhập bởi người dùng
                         run_id = log_model(dbscan_model, model_name_input, params, metrics, digit_examples)
+                        st.success(f"Mô hình DBSCAN được lưu vào MLflow với run ID: {run_id}")
                         
                         st.subheader("Các chữ số mẫu từ mỗi cụm")
                         unique_labels = sorted(set(dbscan_labels))
                         if -1 in unique_labels:
                             unique_labels.remove(-1)
-                            
+                        
+                        # Display samples from each cluster (up to 3 clusters)
                         for cluster_idx in unique_labels:
-                            if cluster_idx in digit_examples:
+                            if cluster_idx in digit_examples and len(digit_examples[cluster_idx]) > 0:
                                 st.write(f"Cụm {cluster_idx}")
                                 cols = st.columns(5)
                                 for i, col in enumerate(cols):
-                                    if i < len(digit_examples[cluster_idx]):
+                                    if i < min(5, len(digit_examples[cluster_idx])):
                                         with col:
                                             fig, ax = plt.subplots(figsize=(2, 2))
                                             ax.imshow(digit_examples[cluster_idx][i].reshape(28, 28), cmap='gray')
@@ -451,6 +470,7 @@ def main():
                                             st.pyplot(fig)
                                             plt.close(fig)
                         
+                        # Display noise samples if any exist
                         if -1 in dbscan_labels:
                             noise_indices = np.where(dbscan_labels == -1)[0]
                             if len(noise_indices) > 0:
