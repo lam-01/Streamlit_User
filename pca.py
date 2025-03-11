@@ -81,38 +81,17 @@ def main():
                 st.pyplot(fig)
                 st.caption(f"Chữ số {y[i]}")
 
-        # st.subheader("🔹Thuật toán giảm chiều dữ liệu")
-        # st.write("##### 1. PCA (Principal Component Analysis)")
-        # st.write("""- PCA là một phương pháp giảm chiều dữ liệu (dimensionality reduction) tương đối hiệu quả dựa trên phép phân tích
-        #  suy biến (singular decomposition) mà ở đó chúng 
-        #  ta sẽ chiếu các điểm dữ liệu trong không gian cao chiều xuống một số ít
-        #  những véc tơ thành phần chính trong không gian thấp chiều
-        #  mà đồng thời vẫn bảo toàn tối đa độ biến động của dữ liệu sau biến đổi. Ưu điểm của PCA đó là
-        #  sử dụng tất cả các biến đầu vào nên phương pháp này không bỏ sót những biến quan trọng.""")
-        # st.write("- Các bước thực hiện PCA :")
-        # st.image("p1.png")
-        # st.image("p2.png")
-        # st.write("##### 2. t-SNE (t-Distributed Stochastic Neighbor Embedding) ")
-        # st.write("""-  t-SNE là xác định một hàm phân phối xác suất chung dựa trên Gaussian cho các điểm dữ liệu chiều cao, xác định một hàm phân phối xác suất 
-        # chung dựa trên phân phối t cho các điểm dữ liệu chiều thấp và sau đó sắp xếp lại dữ liệu chiều thấp điểm để giảm độ chênh lệch (về KL phân kì) giữa hai lần phân bố. """)
-        # st.write("Các bước thực hiện t-SNE :")
-        # st.write("""+ Bước 1: t-SNE mô hình hóa một điểm được chọn làm lân cận của một điểm khác ở cả chiều cao hơn và chiều thấp hơn. Nó bắt đầu bằng cách tính toán độ tương đồng từng cặp giữa
-        # tất cả các điểm dữ liệu trong không gian chiều cao bằng cách sử dụng hạt nhân Gaussian. Các điểm xa nhau có xác suất được chọn thấp hơn các điểm gần nhau. """)
-        # st.write("+ Bước 2: Sau đó, thuật toán sẽ cố gắng ánh xạ các điểm dữ liệu có chiều cao hơn vào không gian có chiều thấp hơn trong khi vẫn bảo toàn các điểm tương đồng theo từng cặp.")  
-        # st.write("""+ Bước 3: Nó đạt được bằng cách giảm thiểu sự phân kỳ giữa phân phối xác suất chiều cao ban đầu và chiều thấp ban đầu. Thuật toán sử dụng gradient descent để giảm thiểu sự 
-        # phân kỳ. Nhúng chiều thấp được tối ưu hóa đến trạng thái ổn định.""")
-
     with tab2:
         X, y = load_mnist_data()
 
         st.write("##### Tùy chọn mẫu dữ liệu")
-        sample_size = st.slider("Chọn kích thước mẫu dữ liệu", 100, 10000, 1000, key="sample_size_tab2")
+        sample_size = st.number_input("Chọn cỡ mẫu để phân cụm", min_value=1000, max_value=70000, value=5000, step=1000)
         X_sample, y_sample = sample_data(X, y, sample_size)
         st.write(f"Kích thước dữ liệu sau khi lấy mẫu: {X_sample.shape}")
 
-        model_name = st.text_input("Nhập tên mô hình:", "My_Model")
+        model_name = st.text_input("Nhập tên mô hình:")
         if not model_name:
-            model_name = "My_Model"
+            model_name = "Default_model"
 
         method = st.selectbox("Chọn phương pháp giảm chiều", ["PCA", "t-SNE"], key="method_tab2")
 
