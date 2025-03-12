@@ -151,7 +151,7 @@ def create_streamlit_app():
             \n- Output Layer (tầng đầu ra): Nằm bên phải của hệ thống, bao gồm dữ liệu thông tin đầu ra. 
             \n- Hidden Layer (tầng ẩn): Nằm ở giữa tầng đầu vào và đầu ra, thể hiện quá trình suy luận và xử lý thông tin của hệ thống.    
             """)
-            st.image("neural_networks.png",caption="Neural Network",width=500)
+            st.image("neural_networks.png",caption="Cấu trúc mạng Neural Network",width=500)
             st.write("Ví dụ minh họa với bộ dữ liệu mnist : ")
             st.image("mau.png",caption="Nguồn : https://www.researchgate.net/",width=700)
         elif algorithm == "Decision Tree":
