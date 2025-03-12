@@ -178,9 +178,16 @@ def create_streamlit_app():
             st.write("""
             **4. Bộ giải tối ưu (solver)**:
             \n- Bộ giải tối ưu là thuật toán được sử dụng để cập nhật trọng số của mô hình trong quá trình huấn luyện. Các bộ giải phổ biến bao gồm:""")
-            st.write("Adam: Một trong những bộ giải tối ưu phổ biến nhất, kết hợp các ưu điểm của hai bộ giải khác là AdaGrad và RMSProp. Adam tự động điều chỉnh tốc độ học cho từng trọng số.")
+            st.write("**Adam**: Một trong những bộ giải tối ưu phổ biến nhất, kết hợp các ưu điểm của hai bộ giải khác là AdaGrad và RMSProp. Adam tự động điều chỉnh tốc độ học cho từng trọng số.")
+            st.write("Bước 1: Tính toán gradient")
+            st.latex(r"g_t = \nabla L(w_t)) 
+            st.write("Bước 2: Cập nhật các ước lượng trung bình")
             st.latex(r"m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t ] [ v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2")
-            st.write("SGD (Stochastic Gradient Descent): Một phương pháp đơn giản và hiệu quả, cập nhật trọng số dựa trên một mẫu ngẫu nhiên từ tập dữ liệu. SGD có thể hội tụ nhanh hơn nhưng có thể không ổn định.")
+            st.write("Bước 3: Điều chỉnh bias")
+            st.latex(r"\hat{m}_t = \frac{m_t}{1 - \beta_1^t} ] [ \hat{v}_t = \frac{v_t}{1 - \beta_2^t} ")
+            st.write("Bước 4: Cập nhật trọng số")
+            st.latex(r"w_{t+1} = w_t - \frac{\eta}{\sqrt{\hat{v}_t} + \epsilon} \hat{m}_t ")
+            st.write("**SGD (Stochastic Gradient Descent)**: Một phương pháp đơn giản và hiệu quả, cập nhật trọng số dựa trên một mẫu ngẫu nhiên từ tập dữ liệu. SGD có thể hội tụ nhanh hơn nhưng có thể không ổn định.")
             st.write("""
             **5. Tốc độ học (learning_rate)**:
             \n- Tốc độ học là một tham số điều chỉnh mức độ mà trọng số của mô hình được cập nhật trong mỗi lần lặp. Tốc độ học quá cao có thể dẫn đến việc mô hình không hội tụ, trong khi tốc độ học quá thấp có thể làm cho quá trình huấn luyện trở nên chậm chạp. Tốc độ học thường được điều chỉnh trong quá trình huấn luyện để đạt được hiệu suất tốt nhất.
