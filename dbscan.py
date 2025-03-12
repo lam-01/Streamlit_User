@@ -191,7 +191,7 @@ def main():
             st.image("gan2.png",caption="Lặp lại bước 2 : Gán nhãn cho từng điểm dữ liệu")
             st.image("capnhat2.png",caption="Lặp lại bước 3 : Cập nhật tâm của cụm")
             st.image("stop.png",caption="Dừng lặp")
-        
+            st.markdown("Tài liệu tham khảo : https://www.uit.edu.vn/100-bai-giang-ve-hoc-may")
         # Nội dung cho DBSCAN
         elif algorithm == "DBSCAN":
             st.write("##### Thuật toán DBSCAN")
