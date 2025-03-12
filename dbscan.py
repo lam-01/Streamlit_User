@@ -487,7 +487,7 @@ def main():
             st.error(f"Error details: {str(e)}")
 
     with tab3:
-        st.header("MLflow Tracking")
+        st.subheader("MLflow Tracking")
         client = setup_mlflow()
         
         experiments = list_experiments(client)
