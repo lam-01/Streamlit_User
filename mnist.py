@@ -160,7 +160,7 @@ def create_streamlit_app():
             st.table(data_ratios)
 
         st.write("**🚀 Huấn luyện mô hình**")
-        custom_model_name = st.text_input("Nhập tên mô hình để lưu :")
+        custom_model_name = st.text_input("Nhập tên mô hình :")
         if not custom_model_name:
             custom_model_name = "Default_model"
 
