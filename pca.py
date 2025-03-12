@@ -80,14 +80,10 @@ def main():
     tab1, tab2, tab3 = st.tabs(["Tổng quan", "PCA và t-SNE", "MLflow"])
 
     with tab1:
-        algorithm =st.selectbox("Chọn thuật toán:", ["PCA", "t-SNE"])
-        
-        # Nội dung cho K-Means
-        if algorithm == "PCA":
-            st.write("")
+        algorithm =st.selectbox("Chọn thuật toán:", ["t-SNE","PCA"])
         
 
-        elif algorithm == "t-SNE":
+        if algorithm == "t-SNE":
             st.write("##### Thuật toán t-SNE")
             st.write("**t-SNE (T-distributed Stochastic Neighbor Embedding)** là một kỹ thuật giảm kích thước phi tuyến không giám sát để khám phá dữ liệu và trực quan hóa dữ liệu chiều cao. Giảm kích thước phi tuyến tính có nghĩa là thuật toán cho phép chúng ta tách dữ liệu không thể phân tách bằng đường thẳng.")
             st.write("**Nguyên lí hoạt động**")
@@ -115,7 +111,9 @@ def main():
             st.image("tnse10.png")
             st.write("Trong thuật toán t-SNE, để so sánh hai phân phối xác suất giữa không gian cao chiều (trước khi giảm chiều) và không gian thấp chiều (sau khi giảm chiều), ta sử dụng phân kỳ Kullback-Leibler (KL Divergence).")
             st.image("tnse11.png")
-
+        elif algorithm == "PCA":
+            st.write("")
+       
     with tab2:
         X, y = load_mnist_data()
         st.write("##### Một số ảnh mẫu từ tập dữ liệu MNIST")
