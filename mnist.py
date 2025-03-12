@@ -162,7 +162,7 @@ def create_streamlit_app():
             st.latex(r"w = w - \eta \cdot \nabla L(w)")
             st.markdown(r"""
             Trong đó:
-                ( w ) là trọng số.
+                $$(w)$$ là trọng số.
                 ( \eta ) là tốc độ học (learning rate).
                 ( \nabla L(w) ) là gradient của hàm mất mát (loss function) theo trọng số.
             """)
