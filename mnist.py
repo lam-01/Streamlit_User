@@ -168,7 +168,7 @@ def create_streamlit_app():
         params = {}
 
         if model_name == "Decision Tree":
-            params["criterion"] = st.selectbox("📏 Tiêu chí đánh giá", ["gini", "entropy", "log_loss"])
+            params["criterion"] = st.selectbox("📏 Tiêu chí phân tách", ["gini", "entropy", "log_loss"])
             params["max_depth"] = st.slider("🌳 Độ sâu tối đa (max_depth)", 1, 30, 15)
             params["min_samples_split"] = st.slider("🔄 Số mẫu tối thiểu để chia nhánh (min_samples_split)", 2, 10, 5)
             params["min_samples_leaf"] = st.slider("🍃 Số mẫu tối thiểu ở lá (min_samples_leaf)", 1, 10, 2)
