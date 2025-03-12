@@ -77,9 +77,46 @@ def main():
     if 'last_run_id' not in st.session_state:
         st.session_state.last_run_id = None
 
-    tab1, tab2, tab3 = st.tabs(["Tổng quan", "Phương pháp PCA và t-SNE", "MLflow"])
+    tab1, tab2, tab3 = st.tabs(["Tổng quan", "PCA và t-SNE", "MLflow"])
 
     with tab1:
+        algorithm =st.selectbox("Chọn thuật toán:", ["PCA", "t-SNE"])
+        
+        # Nội dung cho K-Means
+        if algorithm == "PCA":
+            st.write("")
+        
+
+        elif algorithm == "t-SNE":
+            st.write("##### Thuật toán t-SNE")
+            st.write("**t-SNE (T-distributed Stochastic Neighbor Embedding)** là một kỹ thuật giảm kích thước phi tuyến không giám sát để khám phá dữ liệu và trực quan hóa dữ liệu chiều cao. Giảm kích thước phi tuyến tính có nghĩa là thuật toán cho phép chúng ta tách dữ liệu không thể phân tách bằng đường thẳng.")
+            st.write("**Nguyên lí hoạt động**")
+            st.write("- Bước 1:  t-SNE mô hình hóa một điểm được chọn làm hàng xóm của một điểm khác ở cả chiều cao hơn và thấp hơn. Nó bắt đầu bằng cách tính toán sự tương đồng theo cặp giữa tất cả các điểm dữ liệu trong không gian chiều cao bằng cách sử dụng hạt nhân Gaussian.")
+            st.image("tnse.png")
+            st.write("Sử dụng phân phối chuẩn nếu các điểm cách xa nhau, chúng có ít điểm giống nhau, và nếu chúng gần nhau, chúng có nhiều điểm giống nhau")
+            st.image("tnse2.png")
+            st.image("tnse3.png")
+            st.write("Lặp lại thao tác này cho tất cả các điểm nằm trong phạm vi đã xác định trước đó")
+            st.image("tnse4.png")
+            st.write("Sau khi tính toán các khoảng cách được biểu diễn trên phân phối chuẩn, chuyển đổi chúng thành một tập hợp xác suất của tất cả các điểm (cchia tỷ lệ chúng sao cho tất cả các giá trị có tổng bằng 1). Điều này cung cấp cho chúng ta một tập hợp xác suất cho tất cả các điểm ở đó")
+            st.image("tnse5.png")
+
+            st.write("- Bước 2 : Sau đó, thuật toán cố gắng ánh xạ các điểm dữ liệu chiều cao hơn vào không gian chiều thấp hơn trong khi vẫn giữ nguyên các điểm tương đồng theo cặp.")
+            st.image("tnse6.png")
+            st.write("Khi t-SNE chuyển đổi dữ liệu từ không gian cao chiều xuống không gian thấp chiều (2D hoặc 3D), nó không sử dụng phân phối Gaussian nữa mà thay vào đó dùng phân phối t hay còn gọi là phân phối Cauchy")
+            st.write("a. Tính toán tất cả các khoảng cách")
+            st.image("tnse7.png")
+            st.write("b. Danh sách các điểm tương đồng")
+            st.image("tnse8.png")
+            st.write("c. Tính toán tập xác suất  trong không gian có chiều thấp")
+            st.image("tnse9.png")
+            st.write("- Bước 3: Nó đạt được bằng cách giảm thiểu sự phân kỳ giữa phân phối xác suất chiều cao và chiều thấp hơn ban đầu. Thuật toán sử dụng độ dốc gradient để giảm thiểu sự phân kỳ. Việc nhúng chiều thấp hơn được tối ưu hóa ở trạng thái ổn định.")
+            st.write("Làm cho tập hợp các xác suất từ không gian chiều thấp phản ánh càng sát càng tốt các xác suất từ không gian chiều cao giúp hai cấu trúc tập hợp này phải giống nhau.")
+            st.image("tnse10.png")
+            st.write("Trong thuật toán t-SNE, để so sánh hai phân phối xác suất giữa không gian cao chiều (trước khi giảm chiều) và không gian thấp chiều (sau khi giảm chiều), ta sử dụng phân kỳ Kullback-Leibler (KL Divergence).")
+            st.image("tnse11.png")
+
+    with tab2:
         X, y = load_mnist_data()
         st.write("##### Một số ảnh mẫu từ tập dữ liệu MNIST")
         num_samples = 5  
@@ -91,9 +128,6 @@ def main():
                 ax.axis("off")
                 st.pyplot(fig)
                 st.caption(f"Chữ số {y[i]}")
-
-    with tab2:
-        X, y = load_mnist_data()
 
         st.write("##### Tùy chọn mẫu dữ liệu")
         sample_size = st.number_input("Chọn cỡ mẫu để phân cụm", min_value=1000, max_value=70000, value=5000, step=1000)
