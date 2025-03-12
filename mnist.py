@@ -296,7 +296,7 @@ def create_streamlit_app():
                         st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
 
     with tab4:
-        st.subheard("📊 MLflow Tracking")
+        st.subheader("📊 MLflow Tracking")
     
         runs = mlflow.search_runs(order_by=["start_time desc"])
         if not runs.empty:
