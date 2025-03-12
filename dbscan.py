@@ -177,16 +177,20 @@ def main():
             - $$( c = (c1, c2, ..., cD) $$) là tọa độ điểm thứ hai.
             - $$( d(x, c) $$) là khoảng cách Euclidean giữa hai điểm.
             """)
-                        
+            st.image("gancum.png",caption="Gán nhãn cho từng điểm dữ liệu")            
             st.write("""**Bước 3: Cập nhật tâm của cụm**  
             \n Sau khi đã gán nhãn cho tất cả các điểm dữ liệu, chúng ta cần xác định lại tâm của các cụm để cải thiện hiệu quả của thuật toán. Tâm mới của cụm sẽ được xác định bằng cách tính trung bình vị trí của tất cả các điểm dữ liệu thuộc cụm đó.""")
             st.latex(r"""
             c_j = \frac{1}{n_j} \sum_{i=1}^{n_j} x_i
             """)
-            
+            st.image("capnhat.png",caption="Cập nhật tâm của cụm")
             st.write("""**Bước 4: Kiểm tra điều kiện dừng**  
             \n Quá trình gán nhãn và cập nhật tâm cụm sẽ được lặp lại cho đến khi tâm cụm không thay đổi sau mỗi vòng lặp (hay chênh lệch đủ nhỏ) hoặc đạt số lần lặp tối đa.""")
-            
+            st.image("gan1.png",caption="Lặp lại bước 2 : Gán nhãn cho từng điểm dữ liệu")
+            st.image("capnhat1.png",caption="Lặp lại bước 3 : Cập nhật tâm của cụm")
+            st.image("gan2.png",caption="Lặp lại bước 2 : Gán nhãn cho từng điểm dữ liệu")
+            st.image("capnhat2.png",caption="Lặp lại bước 3 : Cập nhật tâm của cụm")
+            st.image("stop.png",caption="Dừng lặp")
             # Đường dẫn đến GIF
             gif_path = "kmean.gif"  # Thay bằng tên tệp GIF của bạn
             
