@@ -140,13 +140,12 @@ def create_streamlit_app():
             st.write("##### Neural Network")
             st.write("""Neural Network là một phương thức phổ biến trong lĩnh vực trí tuệ nhân tạo, được dùng để điều khiển máy tính dự đoán, nhận dạng và xử lý dữ liệu như một bộ não của con người. 
             Bên cạnh đó, quy trình này còn được biết đến với thuật ngữ quen thuộc là “deep learning”, nghĩa là việc vận dụng các nơ-ron hoặc các nút tạo sự liên kết với nhau trong cùng một cấu trúc phân lớp.""")
-            st.write("**1. Đặc điểm của Neural Network**")
+            st.write("##### 1. Đặc điểm của Neural Network")
             st.write("""- Mạng lưới nơ-ron nhân tạo hoạt động như nơ-ron trong não bộ con người. Trong đó, mỗi nơ-ron là một hàm toán học, có chức năng thu thập và phân loại dữ liệu, thông tin theo cấu trúc chi tiết. 
             \n- Neural Network tương đồng với những phương pháp thống kê theo đồ thị đường cong hoặc phân tích hồi quy. Để giải thích đơn giản nhất, bạn hãy hình dung Neural Network bao hàm các nút mạng liên kết với nhau. 
             \n- Mỗi nút là một tập hợp tri giác, cấu tạo tương tự hàm hồi quy đa tuyến tính, được sắp xếp liên kết với nhau. Các lớp này sẽ thu thập thông tin, sau đó phân loại và phát tín hiệu đầu ra tương ứng.
             """)
-            st.image("neural_networks.png",caption="Neural Network",width=500)
-            st.write("**2. Cấu trúc mạng Neural Network**")
+            st.write("##### 2. Cấu trúc mạng Neural Network")
             st.write("""- Input Layer (tầng đầu vào): Nằm bên trái của hệ thống, bao gồm dữ liệu thông tin đầu vào. 
             \n- Output Layer (tầng đầu ra): Nằm bên phải của hệ thống, bao gồm dữ liệu thông tin đầu ra. 
             \n- Hidden Layer (tầng ẩn): Nằm ở giữa tầng đầu vào và đầu ra, thể hiện quá trình suy luận và xử lý thông tin của hệ thống.    
@@ -154,23 +153,24 @@ def create_streamlit_app():
             st.image("neural_networks.png",caption="Cấu trúc mạng Neural Network",width=500)
             st.write("Ví dụ minh họa với bộ dữ liệu mnist : ")
             st.image("mau.png",caption="Nguồn : https://www.researchgate.net/",width=700)
-            st.write("**3. Các tham số quan trọng")
+            st.write("##### 3. Các tham số quan trọng")
             st.write("""
             **1. Kích thước tầng ẩn (hidden_layer_size)**:
-            \n Đây là số lượng nơ-ron trong tầng ẩn của mạng nơ-ron. Tầng ẩn là nơi mà các phép toán phi tuyến được thực hiện, giúp mô hình học được các đặc trưng phức tạp từ dữ liệu. Kích thước của tầng ẩn có thể ảnh hưởng lớn đến khả năng học của mô hình. Nếu quá nhỏ, mô hình có thể không đủ khả năng để học các đặc trưng phức tạp (underfitting). Nếu quá lớn, mô hình có thể học quá nhiều chi tiết từ dữ liệu huấn luyện, dẫn đến hiện tượng overfitting.
+            \n- Đây là số lượng nơ-ron trong tầng ẩn của mạng nơ-ron. Tầng ẩn là nơi mà các phép toán phi tuyến được thực hiện, giúp mô hình học được các đặc trưng phức tạp từ dữ liệu. Kích thước của tầng ẩn có thể ảnh hưởng lớn đến khả năng học của mô hình. Nếu quá nhỏ, mô hình có thể không đủ khả năng để học các đặc trưng phức tạp (underfitting). 
+            \n- Nếu quá lớn, mô hình có thể học quá nhiều chi tiết từ dữ liệu huấn luyện, dẫn đến hiện tượng overfitting.
             \n **2. Số lần lặp tối đa (max_iter)**:
-            \n Đây là số lần mà thuật toán tối ưu sẽ cập nhật trọng số của mô hình trong quá trình huấn luyện. Số lần lặp tối đa cần được chọn cẩn thận; nếu quá ít, mô hình có thể chưa hội tụ (underfitting), trong khi nếu quá nhiều, có thể dẫn đến việc mô hình học quá nhiều từ dữ liệu huấn luyện (overfitting) hoặc tốn thời gian tính toán không cần thiết.
+            \n- Đây là số lần mà thuật toán tối ưu sẽ cập nhật trọng số của mô hình trong quá trình huấn luyện. Số lần lặp tối đa cần được chọn cẩn thận; nếu quá ít, mô hình có thể chưa hội tụ (underfitting), trong khi nếu quá nhiều, có thể dẫn đến việc mô hình học quá nhiều từ dữ liệu huấn luyện (overfitting) hoặc tốn thời gian tính toán không cần thiết.
              \n **3. Hàm kích hoạt (activation)**: 
-            \n Hàm kích hoạt là một hàm toán học được áp dụng cho đầu ra của mỗi nơ-ron trong tầng ẩn. Nó giúp mô hình học được các mối quan hệ phi tuyến giữa các đặc trưng. Các hàm kích hoạt phổ biến bao gồm:
+            \n- Hàm kích hoạt là một hàm toán học được áp dụng cho đầu ra của mỗi nơ-ron trong tầng ẩn. Nó giúp mô hình học được các mối quan hệ phi tuyến giữa các đặc trưng. Các hàm kích hoạt phổ biến bao gồm:
             \n ReLU (Rectified Linear Unit): Hàm này trả về giá trị đầu vào nếu nó lớn hơn 0, ngược lại trả về 0. ReLU giúp giảm thiểu vấn đề vanishing gradient.
             \n Tanh: Hàm này trả về giá trị trong khoảng từ -1 đến 1, giúp cải thiện tốc độ hội tụ so với hàm sigmoid.
             \n Logistic (Sigmoid): Hàm này trả về giá trị trong khoảng từ 0 đến 1, thường được sử dụng cho các bài toán phân loại nhị phân.
             \n **4. Bộ giải tối ưu (solver)**:
-            \n Bộ giải tối ưu là thuật toán được sử dụng để cập nhật trọng số của mô hình trong quá trình huấn luyện. Các bộ giải phổ biến bao gồm:
+            \n- Bộ giải tối ưu là thuật toán được sử dụng để cập nhật trọng số của mô hình trong quá trình huấn luyện. Các bộ giải phổ biến bao gồm:
             \n Adam: Một trong những bộ giải tối ưu phổ biến nhất, kết hợp các ưu điểm của hai bộ giải khác là AdaGrad và RMSProp. Adam tự động điều chỉnh tốc độ học cho từng trọng số.
             \n SGD (Stochastic Gradient Descent): Một phương pháp đơn giản và hiệu quả, cập nhật trọng số dựa trên một mẫu ngẫu nhiên từ tập dữ liệu. SGD có thể hội tụ nhanh hơn nhưng có thể không ổn định.
             \n **5. Tốc độ học (learning_rate)**:
-            \n Tốc độ học là một tham số điều chỉnh mức độ mà trọng số của mô hình được cập nhật trong mỗi lần lặp. Tốc độ học quá cao có thể dẫn đến việc mô hình không hội tụ, trong khi tốc độ học quá thấp có thể làm cho quá trình huấn luyện trở nên chậm chạp. Tốc độ học thường được điều chỉnh trong quá trình huấn luyện để đạt được hiệu suất tốt nhất.
+            \n- Tốc độ học là một tham số điều chỉnh mức độ mà trọng số của mô hình được cập nhật trong mỗi lần lặp. Tốc độ học quá cao có thể dẫn đến việc mô hình không hội tụ, trong khi tốc độ học quá thấp có thể làm cho quá trình huấn luyện trở nên chậm chạp. Tốc độ học thường được điều chỉnh trong quá trình huấn luyện để đạt được hiệu suất tốt nhất.
             """)
         elif algorithm == "Decision Tree":
             st.write("")
