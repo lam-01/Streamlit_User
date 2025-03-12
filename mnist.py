@@ -77,7 +77,7 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             end_time = time.time()
             
             progress_bar.progress(1.0)
-            status_text.text(f"Đã hoàn tất huấn luyện trong {end_time - start_time:.2f} giây!")
+            # status_text.text(f"Đã hoàn tất huấn luyện trong {end_time - start_time:.2f} giây!")
 
             y_train_pred = model.predict(X_train)
             y_test_pred = model.predict(X_test)
