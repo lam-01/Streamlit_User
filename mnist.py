@@ -190,7 +190,7 @@ def create_streamlit_app():
             st.write("**SGD (Stochastic Gradient Descent)**: Một phương pháp đơn giản và hiệu quả, cập nhật trọng số dựa trên một mẫu ngẫu nhiên từ tập dữ liệu. SGD có thể hội tụ nhanh hơn nhưng có thể không ổn định.")
             st.write("""
             **5. Tốc độ học (learning_rate)**:
-            \n- Tốc độ học là một tham số điều chỉnh mức độ mà trọng số của mô hình được cập nhật trong mỗi lần lặp. Tốc độ học quá cao có thể dẫn đến việc mô hình không hội tụ, trong khi tốc độ học quá thấp có thể làm cho quá trình huấn luyện trở nên chậm chạp. Tốc độ học thường được điều chỉnh trong quá trình huấn luyện để đạt được hiệu suất tốt nhất.
+            \n- Tốc độ học là một tham số điều chỉnh mức độ mà trọng số của mô hình được cập nhật trong mỗi lần lặp. Tốc độ học quá cao có thể dẫn đến việc mô hình không hội tụ, trong khi tốc độ học quá thấp có thể làm cho quá trình huấn luyện trở nên chậm.
             """)
         elif algorithm == "Decision Tree":
             st.write("")
