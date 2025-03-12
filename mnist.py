@@ -17,10 +17,12 @@ import time
 
 # 📌 Tải và xử lý dữ liệu MNIST từ OpenML
 @st.cache_data
-def load_data():
+def load_data(sample_size=None):
     mnist = fetch_openml("mnist_784", version=1, as_frame=False)
     X, y = mnist.data, mnist.target.astype(int)
     X = X / 255.0
+    if sample_size is not None and sample_size < len(X):
+        X, _, y, _ = train_test_split(X, y, train_size=sample_size, random_state=42)
     return X, y
 
 # 📌 Chia dữ liệu thành train, validation, và test
@@ -38,6 +40,7 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
 def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test):
     progress_bar = st.progress(0)
     status_text = st.empty()
+    status_text.text("Đang huấn luyện...")
 
     if model_name == "Decision Tree":
         model = DecisionTreeClassifier(
@@ -60,24 +63,22 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             activation=params["activation"],
             solver=params["solver"],
             learning_rate_init=params["learning_rate"],
-            random_state=42
+            random_state=42,
+            early_stopping=True,
+            validation_fraction=0.1
         )
     else:
         raise ValueError("Invalid model selected!")
 
     try:
         with mlflow.start_run(run_name=custom_model_name):
-            # Huấn luyện mô hình
+            start_time = time.time()
             model.fit(X_train, y_train)
+            end_time = time.time()
             
-            # Mô phỏng thanh tiến trình (giả lập thời gian xử lý)
-            for i in range(100):
-                progress = (i + 1) / 100
-                progress_bar.progress(progress)
-                status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
-                time.sleep(0.05)  # Giả lập thời gian huấn luyện
+            progress_bar.progress(1.0)
+            status_text.text(f"Đã hoàn tất huấn luyện trong {end_time - start_time:.2f} giây!")
 
-            # Dự đoán và tính toán độ chính xác
             y_train_pred = model.predict(X_train)
             y_test_pred = model.predict(X_test)
             y_val_pred = model.predict(X_val)
@@ -85,15 +86,14 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
 
-            # Ghi log tham số và metric vào MLflow
             mlflow.log_param("model_name", model_name)
             mlflow.log_params(params)
             mlflow.log_metric("train_accuracy", train_accuracy)
             mlflow.log_metric("val_accuracy", val_accuracy)
             mlflow.log_metric("test_accuracy", test_accuracy)
+            mlflow.log_metric("training_time", end_time - start_time)
             
-            # Thêm input_example để tránh cảnh báo MLflow
-            input_example = X_train[:1]  # Lấy một mẫu từ dữ liệu huấn luyện
+            input_example = X_train[:1]
             mlflow.sklearn.log_model(model, model_name, input_example=input_example)
     except Exception as e:
         st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
@@ -132,11 +132,11 @@ def show_sample_images(X, y):
 def create_streamlit_app():
     st.title("🔢 Phân loại chữ số viết tay")
     
-    X, y = load_data()
     tab1, tab2, tab3 = st.tabs(["📋 Huấn luyện", "🔮 Dự đoán", "⚡ MLflow"])
-    
     with tab1:
-        st.write(f"**Số lượng mẫu của bộ dữ liệu MNIST: {X.shape[0]}**")
+        sample_size = st.number_input("**Chọn cỡ mẫu để huấn luyện**", 1000, 70000, 10000, step=1000)
+        X, y = load_data(sample_size=sample_size)
+        st.write(f"**Số lượng mẫu của bộ dữ liệu: {X.shape[0]}**")
         show_sample_images(X, y)
         
         st.write("**📊 Tỷ lệ dữ liệu**")
@@ -173,8 +173,8 @@ def create_streamlit_app():
             params["kernel"] = st.selectbox("⚙️ Kernel", ["linear", "rbf", "poly", "sigmoid"])
             params["C"] = st.slider("🔧 Tham số C ", 0.1, 10.0, 1.0)
         elif model_name == "Neural Network":
-            params["hidden_layer_size"] = st.slider("Kích thước tầng ẩn", 50, 200, 100, help="Số nơ-ron trong tầng ẩn.")
-            params["max_iter"] = st.slider("Số lần lặp tối đa", 5, 50, 10, help="Số lần lặp tối đa để huấn luyện.")
+            params["hidden_layer_size"] = st.slider("Kích thước tầng ẩn", 10, 100, 50, help="Số nơ-ron trong tầng ẩn.")
+            params["max_iter"] = st.slider("Số lần lặp tối đa", 5, 20, 10, help="Số lần lặp tối đa để huấn luyện.")
             params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"], help="Hàm kích hoạt cho các nơ-ron.")
             params["solver"] = st.selectbox("Bộ giải tối ưu", ["adam", "sgd"], help="Bộ giải tối ưu hóa trọng số.")
             params["learning_rate"] = st.slider("Tốc độ học", 0.0001, 0.01, 0.001, format="%.4f", help="Tốc độ học ban đầu.")
@@ -253,7 +253,6 @@ def create_streamlit_app():
                                      if col in runs.columns]
                 display_df = filtered_runs[available_columns]
                 
-                # Chuyển đổi kiểu dữ liệu để tránh lỗi Arrow
                 for col in display_df.columns:
                     if display_df[col].dtype == 'object':
                         display_df[col] = display_df[col].astype(str)
@@ -280,12 +279,6 @@ def create_streamlit_app():
                     st.write("📊 **Metric:**")
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
-
-                    st.write("📂 **Artifacts:**")
-                    if run_details.info.artifact_uri:
-                        st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
-                    else:
-                        st.write("- Không có artifacts nào.")
             else:
                 st.write("❌ Không tìm thấy mô hình nào.")
         else:
