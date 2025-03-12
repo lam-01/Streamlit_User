@@ -5,20 +5,15 @@ import numpy as np
 import cv2
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 from streamlit_drawable_canvas import st_canvas
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.metrics.pairwise import cosine_similarity
-from streamlit_tags import st_tags
-import io
-import os
-import tempfile
-import runpy
 from sklearn.neural_network import MLPClassifier
+import time
 
 # 📌 Tải và xử lý dữ liệu MNIST từ OpenML
 @st.cache_data
@@ -39,8 +34,11 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-# 📌 Huấn luyện mô hình
+# 📌 Huấn luyện mô hình với thanh tiến trình
 def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test):
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
     if model_name == "Decision Tree":
         model = DecisionTreeClassifier(
             max_depth=params["max_depth"],
@@ -57,32 +55,52 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
         )
     elif model_name == "Neural Network":
         model = MLPClassifier(
-        hidden_layer_sizes=(params["hidden_layer_size"],),
-        max_iter=params["max_iter"],
-        activation=params["activation"],
-        solver=params["solver"],
-        learning_rate_init=params["learning_rate"],
-        random_state=42
-    )
+            hidden_layer_sizes=(params["hidden_layer_size"],),
+            max_iter=params["max_iter"],
+            activation=params["activation"],
+            solver=params["solver"],
+            learning_rate_init=params["learning_rate"],
+            random_state=42,
+            warm_start=True  # Cho phép huấn luyện tiếp tục để mô phỏng tiến trình
+        )
     else:
         raise ValueError("Invalid model selected!")
 
-    model.fit(X_train, y_train)
-
-    y_train_pred = model.predict(X_train)
-    y_test_pred = model.predict(X_test)
-    y_val_pred = model.predict(X_val)
-    train_accuracy = accuracy_score(y_train, y_train_pred)
-    val_accuracy = accuracy_score(y_val, y_val_pred)
-    test_accuracy = accuracy_score(y_test, y_test_pred)
-    
+    # Huấn luyện mô hình
     with mlflow.start_run(run_name=custom_model_name):
+        if model_name == "Neural Network":
+            # Mô phỏng tiến trình huấn luyện cho Neural Network
+            for i in range(params["max_iter"]):
+                model.max_iter = i + 1  # Tăng số lần lặp từng bước
+                model.fit(X_train, y_train)  # Huấn luyện từng epoch
+                progress = (i + 1) / params["max_iter"]
+                progress_bar.progress(progress)
+                status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
+                time.sleep(0.1)  # Giả lập thời gian huấn luyện để thấy tiến trình
+        else:
+            # Đối với Decision Tree và SVM, huấn luyện toàn bộ ngay lập tức
+            model.fit(X_train, y_train)
+            progress_bar.progress(1.0)
+            status_text.text("Đang huấn luyện: 100%")
+
+        # Dự đoán và tính toán độ chính xác
+        y_train_pred = model.predict(X_train)
+        y_test_pred = model.predict(X_test)
+        y_val_pred = model.predict(X_val)
+        train_accuracy = accuracy_score(y_train, y_train_pred)
+        val_accuracy = accuracy_score(y_val, y_val_pred)
+        test_accuracy = accuracy_score(y_test, y_test_pred)
+
+        # Ghi log tham số và metric vào MLflow
         mlflow.log_param("model_name", model_name)
+        mlflow.log_params(params)  # Ghi toàn bộ tham số
         mlflow.log_metric("train_accuracy", train_accuracy)
         mlflow.log_metric("val_accuracy", val_accuracy)
         mlflow.log_metric("test_accuracy", test_accuracy)
         mlflow.sklearn.log_model(model, model_name)
     
+    # Xóa thanh tiến trình và trạng thái sau khi hoàn thành
+    status_text.text("Hoàn thành huấn luyện!")
     return model, train_accuracy, val_accuracy, test_accuracy
 
 # 📌 Xử lý ảnh tải lên
@@ -117,10 +135,10 @@ def create_streamlit_app():
     st.title("🔢 Phân loại chữ số viết tay")
     
     X, y = load_data()
-    tab1, tab2, tab3 = st.tabs(["📋 Huấn luyện", "🔮 Dự đoán", "⚡ Mlflow"])
+    tab1, tab2, tab3 = st.tabs(["📋 Huấn luyện", "🔮 Dự đoán", "⚡ MLflow"])
     
     with tab1:
-        st.write(f"**Số lượng mẫu của bộ dữ liệu MNIST : {X.shape[0]}**")
+        st.write(f"**Số lượng mẫu của bộ dữ liệu MNIST: {X.shape[0]}**")
         show_sample_images(X, y)
         
         st.write("**📊 Tỷ lệ dữ liệu**")
@@ -144,45 +162,27 @@ def create_streamlit_app():
             st.table(data_ratios)
 
         st.write("**🚀 Huấn luyện mô hình**")
-        custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")
-        model_name = st.selectbox("🔍 Chọn mô hình", ["Decision Tree", "SVM","Neural Network"])
+        custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", "MyModel")
+        model_name = st.selectbox("🔍 Chọn mô hình", ["Decision Tree", "SVM", "Neural Network"])
         params = {}
 
         if model_name == "Decision Tree":
-            params["criterion"] = st.selectbox("📏 Tiêu chí đánh giá", ["gini", "entropy", "log_loss"], help="""- **Gini impurity** đo lường xác suất một mẫu được chọn ngẫu nhiên từ tập dữ liệu bị phân loại sai 
-            nếu nó được gán nhãn ngẫu nhiên theo phân phối của các lớp trong tập dữ liệu.
-            \n- **Entropy** đo lường mức độ hỗn loạn hoặc không chắc chắn trong tập dữ liệu. Nó dựa trên khái niệm entropy trong lý thuyết thông tin.
-            \n- **Log loss (hay cross-entropy)** đo lường sự khác biệt giữa phân phối xác suất thực tế và phân phối xác suất dự đoán. Nó thường được sử dụng trong các bài toán phân loại xác suất.
-            """)
-            params["max_depth"] = st.slider("🌳 Độ sâu tối đa (max_depth)", 1, 30, 15, help="""- **max_depth** là tham số giới hạn độ sâu tối đa của cây quyết định. Độ sâu của cây được tính 
-            từ nút gốc (root) đến nút lá (leaf) xa nhất.
-            \n Nếu (max_depth > 25) quá lớn, cây có thể trở nên phức tạp và dễ bị overfitting (học thuộc dữ liệu huấn luyện nhưng kém hiệu quả trên dữ liệu mới).
-            \n Nếu (max_depth < 10) quá nhỏ, cây có thể quá đơn giản và dẫn đến underfitting (không học được đủ thông tin từ dữ liệu).""")
-            params["min_samples_split"] = st.slider("🔄 Số mẫu tối thiểu để chia nhánh (min_samples_split)", 2, 10, 5, help="""
-            \n- **min_samples_split** là số lượng mẫu tối thiểu cần thiết để chia một nút (node) thành các nút con. Nếu số lượng mẫu tại một nút ít hơn giá trị này, nút đó sẽ không được chia tiếp.
-            \n Giá trị lớn hơn (5-10) giúp ngăn chặn việc chia nhánh quá mức, từ đó giảm nguy cơ overfitting.
-            \n Giá trị nhỏ hơn (2-4) cho phép cây chia nhánh nhiều hơn, nhưng có thể dẫn đến cây phức tạp hơn.
-            
-            """)
-            params["min_samples_leaf"] = st.slider("🍃 Số mẫu tối thiểu ở lá (min_samples_leaf)", 1, 10, 2, help="""
-            \n- **min_samples_leaf** là số lượng mẫu tối thiểu cần thiết tại mỗi nút lá (leaf node). Nếu một phân chia dẫn đến một lá có ít mẫu hơn giá trị này, phân chia đó sẽ không được thực hiện.
-            \n Giá trị lớn hơn (5-10) giúp ngăn chặn việc tạo ra các lá quá nhỏ, từ đó giảm nguy cơ overfitting.
-            \n Giá trị nhỏ hơn (1-4) cho phép cây tạo ra các lá nhỏ hơn, nhưng có thể dẫn đến cây phức tạp hơn.
-            """)
+            params["criterion"] = st.selectbox("📏 Tiêu chí đánh giá", ["gini", "entropy", "log_loss"])
+            params["max_depth"] = st.slider("🌳 Độ sâu tối đa (max_depth)", 1, 30, 15)
+            params["min_samples_split"] = st.slider("🔄 Số mẫu tối thiểu để chia nhánh (min_samples_split)", 2, 10, 5)
+            params["min_samples_leaf"] = st.slider("🍃 Số mẫu tối thiểu ở lá (min_samples_leaf)", 1, 10, 2)
         elif model_name == "SVM":
-            params["kernel"] = st.selectbox("⚙️ Kernel", ["linear", "rbf", "poly", "sigmoid"], help="...")
-            params["C"] = st.slider("🔧 Tham số C ", 0.1, 10.0, 1.0, help="...")
+            params["kernel"] = st.selectbox("⚙️ Kernel", ["linear", "rbf", "poly", "sigmoid"])
+            params["C"] = st.slider("🔧 Tham số C ", 0.1, 10.0, 1.0)
         elif model_name == "Neural Network":
             params["hidden_layer_size"] = st.slider("Kích thước tầng ẩn", 50, 200, 100, help="Số nơ-ron trong tầng ẩn.")
             params["max_iter"] = st.slider("Số lần lặp tối đa", 5, 50, 10, help="Số lần lặp tối đa để huấn luyện.")
             params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"], help="Hàm kích hoạt cho các nơ-ron.")
             params["solver"] = st.selectbox("Bộ giải tối ưu", ["adam", "sgd"], help="Bộ giải tối ưu hóa trọng số.")
             params["learning_rate"] = st.slider("Tốc độ học", 0.0001, 0.01, 0.001, format="%.4f", help="Tốc độ học ban đầu.")
-        else:
-            raise ValueError("Invalid model selected!")
 
         if st.button("🚀 Huấn luyện mô hình"):
-            with st.spinner("🔄 Đang huấn luyện..."):
+            with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
                 model, train_accuracy, val_accuracy, test_accuracy = train_model(
                     custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test
                 )
@@ -240,7 +240,6 @@ def create_streamlit_app():
 
             if not filtered_runs.empty:
                 st.write("### 📜 Danh sách mô hình đã lưu:")
-                # Thêm cột params.model_name vào bảng và đổi tên thành "Model Type"
                 display_df = filtered_runs[["model_custom_name", "params.model_name", "run_id", "start_time", 
                                            "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy"]]
                 display_df = display_df.rename(columns={
@@ -259,7 +258,7 @@ def create_streamlit_app():
 
                     st.write("📌 **Tham số:**")
                     for key, value in run_details.data.params.items():
-                        if key != 'model_name':  # Đã hiển thị model_name ở trên
+                        if key != 'model_name':
                             st.write(f"- **{key}**: {value}")
 
                     st.write("📊 **Metric:**")
