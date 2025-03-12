@@ -316,7 +316,7 @@ def create_streamlit_app():
     
             if not filtered_runs.empty:
                 st.write("### 📜 Danh sách mô hình đã lưu:")
-                available_columns = [col for col in ["model_custom_name", "params.model_name", "run_id", "start_time", 
+                available_columns = [col for col in ["model_custom_name", "params.model_name", "start_time", 
                                                      "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy"] 
                                      if col in runs.columns]
                 display_df = filtered_runs[available_columns]
