@@ -159,21 +159,23 @@ def create_streamlit_app():
             \n- Đây là số lượng nơ-ron trong tầng ẩn của mạng nơ-ron. Tầng ẩn là nơi mà các phép toán phi tuyến được thực hiện, giúp mô hình học được các đặc trưng phức tạp từ dữ liệu. Kích thước của tầng ẩn có thể ảnh hưởng lớn đến khả năng học của mô hình
             \n **2. Số lần lặp tối đa (max_iter)**:
             \n- Đây là số lần mà thuật toán tối ưu sẽ cập nhật trọng số của mô hình trong quá trình huấn luyện .""")
-            \n st.latex(r"w = w - \eta \cdot \nabla L(w)")
+            st.latex(r"w = w - \eta \cdot \nabla L(w)")
             st.write("""
             **3. Hàm kích hoạt (activation)**: 
-            \n- Hàm kích hoạt là một hàm toán học được áp dụng cho đầu ra của mỗi nơ-ron trong tầng ẩn. Nó giúp mô hình học được các mối quan hệ phi tuyến giữa các đặc trưng. Các hàm kích hoạt phổ biến bao gồm:
-            \n ReLU (Rectified Linear Unit): Hàm này trả về giá trị đầu vào nếu nó lớn hơn 0, ngược lại trả về 0. ReLU giúp giảm thiểu vấn đề vanishing gradient.""")
-            \n st.latex("( f(x) = \max(0, x))")
-            \n Tanh: Hàm này trả về giá trị trong khoảng từ -1 đến 1, giúp cải thiện tốc độ hội tụ so với hàm sigmoid.
-            \n st.latex(r" f(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} ")
-            \n Logistic (Sigmoid): Hàm này trả về giá trị trong khoảng từ 0 đến 1, thường được sử dụng cho các bài toán phân loại nhị phân.
-            \n st.latex(r"f(x) = \frac{1}{1 + e^{-x}}")
-            \n **4. Bộ giải tối ưu (solver)**:
-            \n- Bộ giải tối ưu là thuật toán được sử dụng để cập nhật trọng số của mô hình trong quá trình huấn luyện. Các bộ giải phổ biến bao gồm:
-            \n Adam: Một trong những bộ giải tối ưu phổ biến nhất, kết hợp các ưu điểm của hai bộ giải khác là AdaGrad và RMSProp. Adam tự động điều chỉnh tốc độ học cho từng trọng số.
-            \n SGD (Stochastic Gradient Descent): Một phương pháp đơn giản và hiệu quả, cập nhật trọng số dựa trên một mẫu ngẫu nhiên từ tập dữ liệu. SGD có thể hội tụ nhanh hơn nhưng có thể không ổn định.
-            \n **5. Tốc độ học (learning_rate)**:
+            \n- Hàm kích hoạt là một hàm toán học được áp dụng cho đầu ra của mỗi nơ-ron trong tầng ẩn. Nó giúp mô hình học được các mối quan hệ phi tuyến giữa các đặc trưng. Các hàm kích hoạt phổ biến bao gồm:""")
+            st.write("ReLU (Rectified Linear Unit): Hàm này trả về giá trị đầu vào nếu nó lớn hơn 0, ngược lại trả về 0. ReLU giúp giảm thiểu vấn đề vanishing gradient.")
+            st.latex("( f(x) = \max(0, x))")
+            st.write("Tanh: Hàm này trả về giá trị trong khoảng từ -1 đến 1, giúp cải thiện tốc độ hội tụ so với hàm sigmoid.")
+            st.latex(r" f(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} ")
+            st.write("Logistic (Sigmoid): Hàm này trả về giá trị trong khoảng từ 0 đến 1, thường được sử dụng cho các bài toán phân loại nhị phân.")
+            st.latex(r"f(x) = \frac{1}{1 + e^{-x}}")
+            st.write("""
+            **4. Bộ giải tối ưu (solver)**:
+            \n- Bộ giải tối ưu là thuật toán được sử dụng để cập nhật trọng số của mô hình trong quá trình huấn luyện. Các bộ giải phổ biến bao gồm:""")
+            st.write("Adam: Một trong những bộ giải tối ưu phổ biến nhất, kết hợp các ưu điểm của hai bộ giải khác là AdaGrad và RMSProp. Adam tự động điều chỉnh tốc độ học cho từng trọng số.")
+            st.write("SGD (Stochastic Gradient Descent): Một phương pháp đơn giản và hiệu quả, cập nhật trọng số dựa trên một mẫu ngẫu nhiên từ tập dữ liệu. SGD có thể hội tụ nhanh hơn nhưng có thể không ổn định.")
+            st.write("""
+            **5. Tốc độ học (learning_rate)**:
             \n- Tốc độ học là một tham số điều chỉnh mức độ mà trọng số của mô hình được cập nhật trong mỗi lần lặp. Tốc độ học quá cao có thể dẫn đến việc mô hình không hội tụ, trong khi tốc độ học quá thấp có thể làm cho quá trình huấn luyện trở nên chậm chạp. Tốc độ học thường được điều chỉnh trong quá trình huấn luyện để đạt được hiệu suất tốt nhất.
             """)
         elif algorithm == "Decision Tree":
