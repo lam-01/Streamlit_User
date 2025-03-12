@@ -165,7 +165,7 @@ def main():
             st.write("##### Các bước thực hiện phân cụm")
             st.write("""**Bước 1: Khởi tạo**  
             \n Chọn K số điểm dữ liệu ngẫu nhiên (cụm) trong tập dữ liệu. K là số cụm cần phân loại, được lựa chọn trước khi thiết lập thuật toán.""")
-            st.image("/images/khoitao.png",caption="Khởi tạo")
+            st.image(".\images\khoitao.png",caption="Khởi tạo")
             st.write("""**Bước 2: Gán nhãn cho từng điểm dữ liệu**  
             \n Sau khi có K cụm ban đầu, chúng ta sẽ tính toán khoảng cách giữa từng điểm dữ liệu với K cụm này và gán điểm dữ liệu đó vào cụm gần nó nhất. Khoảng cách giữa hai điểm dữ liệu thường được tính bằng khoảng cách Euclidean, công thức như sau:""")
             st.latex(r"""
