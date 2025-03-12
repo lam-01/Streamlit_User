@@ -151,7 +151,12 @@ def create_streamlit_app():
             \n- Hidden Layer (tầng ẩn): Nằm ở giữa tầng đầu vào và đầu ra, thể hiện quá trình suy luận và xử lý thông tin của hệ thống.    
             """)
             st.image("cautruc.png")
+        elif algorithm == "Decision Tree":
+            st.write("")
             
+            
+        elif algorithm == "SVM":
+            st.write("")
     with tab2:
         sample_size = st.number_input("**Chọn cỡ mẫu để huấn luyện**", 1000, 70000, 10000, step=1000)
         X, y = load_data(sample_size=sample_size)
