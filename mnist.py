@@ -67,40 +67,42 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
         raise ValueError("Invalid model selected!")
 
     # Huấn luyện mô hình
-    with mlflow.start_run(run_name=custom_model_name):
-        if model_name == "Neural Network":
-            # Mô phỏng tiến trình huấn luyện cho Neural Network
-            for i in range(params["max_iter"]):
-                model.max_iter = i + 1  # Tăng số lần lặp từng bước
-                model.fit(X_train, y_train)  # Huấn luyện từng epoch
-                progress = (i + 1) / params["max_iter"]
-                progress_bar.progress(progress)
-                status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
-                time.sleep(0.1)  # Giả lập thời gian huấn luyện để thấy tiến trình
-        else:
-            # Đối với Decision Tree và SVM, huấn luyện toàn bộ ngay lập tức
-            model.fit(X_train, y_train)
-            progress_bar.progress(1.0)
-            status_text.text("Đang huấn luyện: 100%")
+    try:
+        with mlflow.start_run(run_name=custom_model_name):
+            if model_name == "Neural Network":
+                # Mô phỏng tiến trình huấn luyện cho Neural Network
+                for i in range(params["max_iter"]):
+                    model.max_iter = i + 1  # Tăng số lần lặp từng bước
+                    model.fit(X_train, y_train)  # Huấn luyện từng epoch
+                    progress = (i + 1) / params["max_iter"]
+                    progress_bar.progress(progress)
+                    status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
+                    time.sleep(0.1)  # Giả lập thời gian để thấy tiến trình
+            else:
+                # Đối với Decision Tree và SVM, huấn luyện toàn bộ ngay lập tức
+                model.fit(X_train, y_train)
+                progress_bar.progress(1.0)
+                status_text.text("Đang huấn luyện: 100%")
 
-        # Dự đoán và tính toán độ chính xác
-        y_train_pred = model.predict(X_train)
-        y_test_pred = model.predict(X_test)
-        y_val_pred = model.predict(X_val)
-        train_accuracy = accuracy_score(y_train, y_train_pred)
-        val_accuracy = accuracy_score(y_val, y_val_pred)
-        test_accuracy = accuracy_score(y_test, y_test_pred)
+            # Dự đoán và tính toán độ chính xác
+            y_train_pred = model.predict(X_train)
+            y_test_pred = model.predict(X_test)
+            y_val_pred = model.predict(X_val)
+            train_accuracy = accuracy_score(y_train, y_train_pred)
+            val_accuracy = accuracy_score(y_val, y_val_pred)
+            test_accuracy = accuracy_score(y_test, y_test_pred)
 
-        # Ghi log tham số và metric vào MLflow
-        mlflow.log_param("model_name", model_name)
-        mlflow.log_params(params)  # Ghi toàn bộ tham số
-        mlflow.log_metric("train_accuracy", train_accuracy)
-        mlflow.log_metric("val_accuracy", val_accuracy)
-        mlflow.log_metric("test_accuracy", test_accuracy)
-        mlflow.sklearn.log_model(model, model_name)
-    
-    # Xóa thanh tiến trình và trạng thái sau khi hoàn thành
-    status_text.text("Hoàn thành huấn luyện!")
+            # Ghi log tham số và metric vào MLflow
+            mlflow.log_param("model_name", model_name)
+            mlflow.log_params(params)
+            mlflow.log_metric("train_accuracy", train_accuracy)
+            mlflow.log_metric("val_accuracy", val_accuracy)
+            mlflow.log_metric("test_accuracy", test_accuracy)
+            mlflow.sklearn.log_model(model, model_name)
+    except Exception as e:
+        st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
+        return None, None, None, None
+
     return model, train_accuracy, val_accuracy, test_accuracy
 
 # 📌 Xử lý ảnh tải lên
@@ -186,10 +188,15 @@ def create_streamlit_app():
                 model, train_accuracy, val_accuracy, test_accuracy = train_model(
                     custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test
                 )
-            st.success(f"✅ Huấn luyện xong!")
-            st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
-            st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
-            st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
+            
+            # Hiển thị kết quả sau khi huấn luyện hoàn tất
+            if model is not None:  # Kiểm tra xem huấn luyện có thành công không
+                st.success(f"✅ Huấn luyện xong!")
+                st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
+                st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
+                st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
+            else:
+                st.error("Huấn luyện thất bại, không có kết quả để hiển thị.")
 
     with tab2:
         option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
@@ -203,10 +210,11 @@ def create_streamlit_app():
                     model, train_accuracy, val_accuracy, test_accuracy = train_model(
                         custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test
                     )
-                    prediction = model.predict(processed_image)[0]
-                    probabilities = model.predict_proba(processed_image)[0]
-                    st.write(f"🎯 **Dự đoán: {prediction}**")
-                    st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                    if model is not None:
+                        prediction = model.predict(processed_image)[0]
+                        probabilities = model.predict_proba(processed_image)[0]
+                        st.write(f"🎯 **Dự đoán: {prediction}**")
+                        st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
         elif option == "✏️ Vẽ số":
             canvas_result = st_canvas(
                 fill_color="white", stroke_width=15, stroke_color="black",
@@ -218,10 +226,11 @@ def create_streamlit_app():
                     model, train_accuracy, val_accuracy, test_accuracy = train_model(
                         custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test
                     )
-                    prediction = model.predict(processed_canvas)[0]
-                    probabilities = model.predict_proba(processed_canvas)[0]
-                    st.write(f"🎯 **Dự đoán: {prediction}**")
-                    st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                    if model is not None:
+                        prediction = model.predict(processed_canvas)[0]
+                        probabilities = model.predict_proba(processed_canvas)[0]
+                        st.write(f"🎯 **Dự đoán: {prediction}**")
+                        st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
 
     with tab3:
         st.header("📊 MLflow Tracking")
