@@ -169,11 +169,11 @@ def create_streamlit_app():
             st.write("""
             **c. Hàm kích hoạt (activation)**: 
             \n- Hàm kích hoạt là một hàm toán học được áp dụng cho đầu ra của mỗi nơ-ron trong tầng ẩn. Nó giúp mô hình học được các mối quan hệ phi tuyến giữa các đặc trưng. Các hàm kích hoạt phổ biến bao gồm:""")
-            st.write("ReLU (Rectified Linear Unit): Hàm này trả về giá trị đầu vào nếu nó lớn hơn 0, ngược lại trả về 0. ReLU giúp giảm thiểu vấn đề vanishing gradient.")
+            st.write("**ReLU (Rectified Linear Unit)**: Hàm này trả về giá trị đầu vào nếu nó lớn hơn 0, ngược lại trả về 0. ReLU giúp giảm thiểu vấn đề vanishing gradient.")
             st.latex("f(x) = \max(0, x)")
-            st.write("Tanh: Hàm này trả về giá trị trong khoảng từ -1 đến 1, giúp cải thiện tốc độ hội tụ so với hàm sigmoid.")
+            st.write("**Tanh**: Hàm này trả về giá trị trong khoảng từ -1 đến 1, giúp cải thiện tốc độ hội tụ so với hàm sigmoid.")
             st.latex(r" f(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} ")
-            st.write("Logistic (Sigmoid): Hàm này trả về giá trị trong khoảng từ 0 đến 1, thường được sử dụng cho các bài toán phân loại nhị phân.")
+            st.write("**Logistic (Sigmoid)**: Hàm này trả về giá trị trong khoảng từ 0 đến 1, thường được sử dụng cho các bài toán phân loại nhị phân.")
             st.latex(r"f(x) = \frac{1}{1 + e^{-x}}")
             st.write("""
             **d. Bộ giải tối ưu (solver)**:
