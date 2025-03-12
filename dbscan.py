@@ -558,7 +558,7 @@ def main():
                             model_uri = f"runs:/{selected_run_id}/model"
                             model = mlflow.sklearn.load_model(model_uri)
                             if run_details.data.params.get("algorithm") == "KMeans":
-                                st.subheader("Trực quan hóa tất cả các cụm")
+                                st.write("##### Trực quan hóa các cụm")
                                 n_clusters = model.cluster_centers_.shape[0]
                                 # Tính số cột tối đa trên mỗi hàng (ví dụ: 5)
                                 cols_per_row = 5
