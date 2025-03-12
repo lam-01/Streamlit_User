@@ -151,7 +151,7 @@ def main():
                 progress_bar.progress(100)  # 100% khi hoàn tất
                 
             time.sleep(1)
-            st.success(f"Đã hoàn thành giảm chiều và lưu vào thí nghiệm 'MNIST_Dimensionality_Reduction' với tên mô hình '{model_name}'!")
+            # st.success(f"Đã hoàn thành giảm chiều và lưu vào thí nghiệm 'MNIST_Dimensionality_Reduction' với tên mô hình '{model_name}'!")
 
     with tab3:
         st.subheader("MLflow Tracking")
