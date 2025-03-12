@@ -165,7 +165,7 @@ def main():
             st.write("##### Các bước thực hiện phân cụm")
             st.write("""**Bước 1: Khởi tạo**  
             \n Chọn K số điểm dữ liệu ngẫu nhiên (cụm) trong tập dữ liệu. K là số cụm cần phân loại, được lựa chọn trước khi thiết lập thuật toán.""")
-            st.image("khoitao.png",caption="Khởi tạo")
+            st.image("khoitao.png",caption="Khởi tạo",width=600)
             st.write("""**Bước 2: Gán nhãn cho từng điểm dữ liệu**  
             \n Sau khi có K cụm ban đầu, chúng ta sẽ tính toán khoảng cách giữa từng điểm dữ liệu với K cụm này và gán điểm dữ liệu đó vào cụm gần nó nhất. Khoảng cách giữa hai điểm dữ liệu thường được tính bằng khoảng cách Euclidean, công thức như sau:""")
             st.latex(r"""
@@ -177,20 +177,20 @@ def main():
             - $$( c = (c1, c2, ..., cD) $$) là tọa độ điểm thứ hai.
             - $$( d(x, c) $$) là khoảng cách Euclidean giữa hai điểm.
             """)
-            st.image("gancum.png",caption="Gán nhãn cho từng điểm dữ liệu")            
+            st.image("gancum.png",caption="Gán nhãn cho từng điểm dữ liệu",width=600)            
             st.write("""**Bước 3: Cập nhật tâm của cụm**  
             \n Sau khi đã gán nhãn cho tất cả các điểm dữ liệu, chúng ta cần xác định lại tâm của các cụm để cải thiện hiệu quả của thuật toán. Tâm mới của cụm sẽ được xác định bằng cách tính trung bình vị trí của tất cả các điểm dữ liệu thuộc cụm đó.""")
             st.latex(r"""
             c_j = \frac{1}{n_j} \sum_{i=1}^{n_j} x_i
             """)
-            st.image("capnhat.png",caption="Cập nhật tâm của cụm")
+            st.image("capnhat.png",caption="Cập nhật tâm của cụm",width=600)
             st.write("""**Bước 4: Kiểm tra điều kiện dừng**  
             \n Quá trình gán nhãn và cập nhật tâm cụm sẽ được lặp lại cho đến khi tâm cụm không thay đổi sau mỗi vòng lặp (hay chênh lệch đủ nhỏ) hoặc đạt số lần lặp tối đa.""")
-            st.image("gan1.png",caption="Lặp lại bước 2 : Gán nhãn cho từng điểm dữ liệu")
-            st.image("capnhat1.png",caption="Lặp lại bước 3 : Cập nhật tâm của cụm")
-            st.image("gan2.png",caption="Lặp lại bước 2 : Gán nhãn cho từng điểm dữ liệu")
-            st.image("capnhat2.png",caption="Lặp lại bước 3 : Cập nhật tâm của cụm")
-            st.image("stop.png",caption="Dừng lặp")
+            st.image("gan1.png",caption="Lặp lại bước 2 : Gán nhãn cho từng điểm dữ liệu",width=600)
+            st.image("capnhat1.png",caption="Lặp lại bước 3 : Cập nhật tâm của cụm",width=600)
+            st.image("gan2.png",caption="Lặp lại bước 2 : Gán nhãn cho từng điểm dữ liệu",width=600)
+            st.image("capnhat2.png",caption="Lặp lại bước 3 : Cập nhật tâm của cụm",width=600)
+            st.image("stop.png",caption="Dừng lặp",width=600)
             st.markdown("Tài liệu tham khảo : https://www.uit.edu.vn/100-bai-giang-ve-hoc-may")
         # Nội dung cho DBSCAN
         elif algorithm == "DBSCAN":
