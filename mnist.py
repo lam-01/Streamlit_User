@@ -160,11 +160,17 @@ def create_streamlit_app():
             \n **2. Số lần lặp tối đa (max_iter)**:
             \n- Đây là số lần mà thuật toán tối ưu sẽ cập nhật trọng số của mô hình trong quá trình huấn luyện .""")
             st.latex(r"w = w - \eta \cdot \nabla L(w)")
+            st.markdown(r"""
+            Trong đó:
+                ( w ) là trọng số.
+                ( \eta ) là tốc độ học (learning rate).
+                ( \nabla L(w) ) là gradient của hàm mất mát (loss function) theo trọng số.
+            """)
             st.write("""
             **3. Hàm kích hoạt (activation)**: 
             \n- Hàm kích hoạt là một hàm toán học được áp dụng cho đầu ra của mỗi nơ-ron trong tầng ẩn. Nó giúp mô hình học được các mối quan hệ phi tuyến giữa các đặc trưng. Các hàm kích hoạt phổ biến bao gồm:""")
             st.write("ReLU (Rectified Linear Unit): Hàm này trả về giá trị đầu vào nếu nó lớn hơn 0, ngược lại trả về 0. ReLU giúp giảm thiểu vấn đề vanishing gradient.")
-            st.latex("( f(x) = \max(0, x))")
+            st.latex("f(x) = \max(0, x)")
             st.write("Tanh: Hàm này trả về giá trị trong khoảng từ -1 đến 1, giúp cải thiện tốc độ hội tụ so với hàm sigmoid.")
             st.latex(r" f(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} ")
             st.write("Logistic (Sigmoid): Hàm này trả về giá trị trong khoảng từ 0 đến 1, thường được sử dụng cho các bài toán phân loại nhị phân.")
