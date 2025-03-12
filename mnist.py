@@ -298,22 +298,22 @@ def create_streamlit_app():
     with tab4:
         st.header("📊 MLflow Tracking")
         st.write("Xem chi tiết các kết quả đã lưu trong MLflow.")
-
+    
         runs = mlflow.search_runs(order_by=["start_time desc"])
         if not runs.empty:
             runs["model_custom_name"] = runs["tags.mlflow.runName"]
-
+    
             if "params.model_name" in runs.columns:
                 model_names = runs["params.model_name"].dropna().unique().tolist()
             else:
                 model_names = ["Không xác định"]
-
+    
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
             if search_model_name:
                 filtered_runs = runs[runs["model_custom_name"].str.contains(search_model_name, case=False, na=False)]
             else:
                 filtered_runs = runs
-
+    
             if not filtered_runs.empty:
                 st.write("### 📜 Danh sách mô hình đã lưu:")
                 available_columns = [col for col in ["model_custom_name", "params.model_name", "run_id", "start_time", 
@@ -330,20 +330,24 @@ def create_streamlit_app():
                     "params.model_name": "Model Type"
                 })
                 st.dataframe(display_df)
-
-                selected_run_id = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["run_id"].tolist())
-                if selected_run_id:
-                    run_details = mlflow.get_run(selected_run_id)
+    
+                # Thay đổi từ run_id sang model_custom_name
+                selected_model_name = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", 
+                                                   filtered_runs["model_custom_name"].tolist())
+                if selected_model_name:
+                    # Lấy run_id tương ứng với custom_model_name được chọn
+                    selected_run = filtered_runs[filtered_runs["model_custom_name"] == selected_model_name].iloc[0]
+                    run_details = mlflow.get_run(selected_run["run_id"])
                     custom_name = run_details.data.tags.get('mlflow.runName', 'Không có tên')
                     model_type = run_details.data.params.get('model_name', 'Không xác định')
                     st.write(f"### 🔍 Chi tiết mô hình: `{custom_name}`")
                     st.write(f"**📌 Loại mô hình huấn luyện:** {model_type}")
-
+    
                     st.write("📌 **Tham số:**")
                     for key, value in run_details.data.params.items():
                         if key != 'model_name':
                             st.write(f"- **{key}**: {value}")
-
+    
                     st.write("📊 **Metric:**")
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
