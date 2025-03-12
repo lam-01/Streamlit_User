@@ -153,7 +153,7 @@ def create_streamlit_app():
             """)
             st.image("neural_networks.png",caption="Neural Network",width=500)
             st.write("Ví dụ minh họa với bộ dữ liệu mnist : ")
-            st.image("mau.png",caption="https://www.researchgate.net/",width=500)
+            st.image("mau.png",caption="Nguồn : https://www.researchgate.net/",width=700)
         elif algorithm == "Decision Tree":
             st.write("")
             
