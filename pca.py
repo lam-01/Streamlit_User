@@ -154,7 +154,7 @@ def main():
             st.success(f"Đã hoàn thành giảm chiều và lưu vào thí nghiệm 'MNIST_Dimensionality_Reduction' với tên mô hình '{model_name}'!")
 
     with tab3:
-        st.header("MLflow Tracking")
+        st.subheader("MLflow Tracking")
 
         experiments = mlflow.search_experiments()
         experiment_dict = {exp.name: exp.experiment_id for exp in experiments}
