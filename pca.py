@@ -13,6 +13,8 @@ import time
 
 # Thiết lập logging với MLflow
 mlflow.set_tracking_uri("file:./mlruns")
+# Disable MLflow autologging to prevent unintended runs
+mlflow.sklearn.autolog(disable=True)
 
 # Tải dữ liệu MNIST từ OpenML
 @st.cache_data
@@ -70,6 +72,11 @@ def plot_scatter(X_reduced, y, title):
 def main():
     st.title("Giảm Chiều Dữ Liệu MNIST với PCA và t-SNE")
     
+    if 'run_in_progress' not in st.session_state:
+        st.session_state.run_in_progress = False
+    if 'last_run_id' not in st.session_state:
+        st.session_state.last_run_id = None
+
     tab1, tab2, tab3 = st.tabs(["Tổng quan", "Phương pháp PCA và t-SNE", "MLflow"])
 
     with tab1:
@@ -95,8 +102,7 @@ def main():
 
         model_name = st.text_input("Nhập tên mô hình:")
         if not model_name:
-            model_name = "Default_model"
-
+            model_name= "Default_Model"
         method = st.selectbox("Chọn phương pháp giảm chiều", ["PCA", "t-SNE"], key="method_tab2")
 
         if method == "PCA":
@@ -105,56 +111,73 @@ def main():
             n_components = st.slider("Số lượng thành phần t-SNE", 2, 10, 2, key="n_components_tsne")
 
         if st.button("Giảm chiều", key="reduce_button_tab2"):
-            with st.spinner("Đang thực hiện giảm chiều..."):
-                progress_bar = st.progress(0)  # Khởi tạo thanh tiến trình
-                start_time = time.time()
-                mlflow.set_experiment("MNIST_Dimensionality_Reduction")
-                
-                progress_bar.progress(10)  # 10% sau khi lấy mẫu dữ liệu
-                
-                if method == "PCA":
-                    with mlflow.start_run(run_name=model_name):
-                        X_reduced, explained_variance = apply_pca(X_sample, n_components, progress_bar)
-                        mlflow.log_param("method", "PCA")
-                        mlflow.log_param("n_components", n_components)
-                        mlflow.log_param("sample_size", sample_size)
-                        mlflow.log_param("model_name", model_name)
-                        mlflow.log_metric("explained_variance", explained_variance)
-                        if n_components in [2, 3]:
-                            fig = plot_scatter(X_reduced, y_sample, f"PCA - {n_components} Components")
-                            progress_bar.progress(80)  # 80% sau khi vẽ biểu đồ
-                            if fig is not None:
-                                st.plotly_chart(fig)
-                            st.write(f"Tỷ lệ phương sai giải thích: {explained_variance:.4f}")
-                        else:
-                            progress_bar.progress(80)
-                            st.write(f"Kết quả PCA có {n_components} chiều, không thể visual hóa trực tiếp ở 2D hoặc 3D. Tỷ lệ phương sai giải thích: {explained_variance:.4f}")
+            if not st.session_state.run_in_progress:  
+                st.session_state.run_in_progress = True
+                with st.spinner("Đang thực hiện giảm chiều..."):
+                    progress_bar = st.progress(0)
+                    
+                    if mlflow.active_run():
+                        mlflow.end_run()
+                    
+                    progress_bar.progress(10)
+                    start_time = time.time()
+                    mlflow.set_experiment("MNIST_Dimensionality_Reduction")
+                    
+                    try:
+                        with mlflow.start_run(run_name=model_name) as run:
+                            st.session_state.last_run_id = run.info.run_id
+                            if method == "PCA":
+                                X_reduced, explained_variance = apply_pca(X_sample, n_components, progress_bar)
+                                mlflow.log_param("method", "PCA")
+                                mlflow.log_param("n_components", n_components)
+                                mlflow.log_param("sample_size", sample_size)
+                                mlflow.log_param("model_name", model_name)
+                                mlflow.log_metric("explained_variance", explained_variance)
+                                if n_components in [2, 3]:
+                                    fig = plot_scatter(X_reduced, y_sample, f"PCA - {n_components} Components")
+                                    progress_bar.progress(80)
+                                    if fig is not None:
+                                        st.plotly_chart(fig, use_container_width=True)
+                                    st.write(f"Tỷ lệ phương sai giải thích: {explained_variance:.4f}")
+                                else:
+                                    progress_bar.progress(80)
+                                    st.write(f"Kết quả PCA có {n_components} chiều, không thể visual hóa trực tiếp ở 2D hoặc 3D. Tỷ lệ phương sai giải thích: {explained_variance:.4f}")
 
-                elif method == "t-SNE":
-                    with mlflow.start_run(run_name=model_name):
-                        X_reduced = apply_tsne(X_sample, n_components, progress_bar)
-                        mlflow.log_param("method", "t-SNE")
-                        mlflow.log_param("n_components", n_components)
-                        mlflow.log_param("sample_size", sample_size)
-                        mlflow.log_param("model_name", model_name)
-                        if n_components in [2, 3]:
-                            fig = plot_scatter(X_reduced, y_sample, f"t-SNE - {n_components} Components")
-                            progress_bar.progress(80)  # 80% sau khi vẽ biểu đồ
-                            if fig is not None:
-                                st.plotly_chart(fig)
-                        else:
-                            progress_bar.progress(80)
-                            st.write(f"Kết quả t-SNE có {n_components} chiều, không thể visual hóa trực tiếp ở 2D hoặc 3D.")
+                            elif method == "t-SNE":
+                                X_reduced = apply_tsne(X_sample, n_components, progress_bar)
+                                mlflow.log_param("method", "t-SNE")
+                                mlflow.log_param("n_components", n_components)
+                                mlflow.log_param("sample_size", sample_size)
+                                mlflow.log_param("model_name", model_name)
+                                if n_components in [2, 3]:
+                                    fig = plot_scatter(X_reduced, y_sample, f"t-SNE - {n_components} Components")
+                                    progress_bar.progress(80)
+                                    if fig is not None:
+                                        st.plotly_chart(fig, use_container_width=True)
+                                else:
+                                    progress_bar.progress(80)
+                                    st.write(f"Kết quả t-SNE có {n_components} chiều, không thể visual hóa trực tiếp ở 2D hoặc 3D.")
+                            
+                            execution_time = time.time() - start_time
+                            mlflow.log_metric("execution_time", execution_time)
+                            progress_bar.progress(100)
+                    except Exception as e:
+                        if mlflow.active_run():
+                            mlflow.end_run()
+                    
+                    # Đảm bảo chạy được kết thúc
+                    if mlflow.active_run():
+                        mlflow.end_run()
                 
-                execution_time = time.time() - start_time
-                mlflow.log_metric("execution_time", execution_time)
-                progress_bar.progress(100)  # 100% khi hoàn tất
-                
-            time.sleep(1)
-            # st.success(f"Đã hoàn thành giảm chiều và lưu vào thí nghiệm 'MNIST_Dimensionality_Reduction' với tên mô hình '{model_name}'!")
+                time.sleep(1)
+                # st.success(f"Đã hoàn thành giảm chiều và lưu vào thí nghiệm 'MNIST_Dimensionality_Reduction' với tên mô hình '{model_name}'!")
+                st.session_state.run_in_progress = False
 
     with tab3:
         st.subheader("MLflow Tracking")
+
+        if mlflow.active_run():
+            mlflow.end_run()
 
         experiments = mlflow.search_experiments()
         experiment_dict = {exp.name: exp.experiment_id for exp in experiments}
@@ -182,13 +205,13 @@ def main():
                 
                 if selected_model_name:
                     selected_run = runs[runs['params.model_name'] == selected_model_name].iloc[0]
-                    st.subheader(f"Chi tiết của Model Name: {selected_model_name}")
+                    st.write(f"##### Chi tiết của Model Name: {selected_model_name}")
                     
                     st.write("**Thông tin chung:**")
                     general_info = {
                         'Model Name': selected_run.get('params.model_name', 'N/A'),
-                        'Start Time': selected_run.get('start_time', 'N/A'),
-                        'Execution Time (s)': selected_run.get('metrics.execution_time', 'N/A'),
+                        'Start Time': selected_run.get('start_time', 'N/A')
+                        # 'Execution Time (s)': selected_run.get('metrics.execution_time', 'N/A'),  # Không nhận thức và cố định
                     }
                     for key, value in general_info.items():
                         if pd.notna(value):
@@ -200,14 +223,14 @@ def main():
                         method_info = {
                             'Phương pháp': method,
                             'Số lượng thành phần (n_components)': selected_run.get('params.n_components', 'N/A'),
-                            'Tỷ lệ phương sai giải thích (explained_variance)': selected_run.get('metrics.explained_variance', 'N/A'),
-                            'Kích thước mẫu (sample_size)': selected_run.get('params.sample_size', 'N/A'),
+                            'Tỷ lệ phương sai giải thích': selected_run.get('metrics.explained_variance', 'N/A'),
+                            'Kích thước mẫu': selected_run.get('params.sample_size', 'N/A'),  # Fixed spacing
                         }
                     elif method == "t-SNE":
                         method_info = {
                             'Phương pháp': method,
                             'Số lượng thành phần (n_components)': selected_run.get('params.n_components', 'N/A'),
-                            'Kích thước mẫu (sample_size)': selected_run.get('params.sample_size', 'N/A'),
+                            'Kích thước mẫu': selected_run.get('params.sample_size', 'N/A'),  # Fixed spacing
                         }
                     else:
                         method_info = {'Phương pháp': 'Không xác định'}
