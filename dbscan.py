@@ -445,7 +445,7 @@ def main():
                         
                         # Sử dụng tên mô hình được nhập bởi người dùng
                         run_id = log_model(dbscan_model, model_name_input, params, metrics, digit_examples)
-                        st.success(f"Mô hình DBSCAN được lưu vào MLflow với run ID: {run_id}")
+                        st.success(f"Mô hình DBSCAN được lưu vào MLflow}")
                         
                         st.subheader("Các chữ số mẫu từ mỗi cụm")
                         unique_labels = sorted(set(dbscan_labels))
