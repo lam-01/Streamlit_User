@@ -19,8 +19,8 @@ import time
 @st.cache_data
 def load_data():
     mnist = fetch_openml("mnist_784", version=1, as_frame=False)
-    X, y = mnist.data, mnist.target.astype(int)  # Chuyển nhãn về kiểu số nguyên
-    X = X / 255.0  # Chuẩn hóa về [0,1]
+    X, y = mnist.data, mnist.target.astype(int)
+    X = X / 255.0
     return X, y
 
 # 📌 Chia dữ liệu thành train, validation, và test
@@ -60,29 +60,22 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             activation=params["activation"],
             solver=params["solver"],
             learning_rate_init=params["learning_rate"],
-            random_state=42,
-            warm_start=True  # Cho phép huấn luyện tiếp tục để mô phỏng tiến trình
+            random_state=42
         )
     else:
         raise ValueError("Invalid model selected!")
 
-    # Huấn luyện mô hình
     try:
         with mlflow.start_run(run_name=custom_model_name):
-            if model_name == "Neural Network":
-                # Mô phỏng tiến trình huấn luyện cho Neural Network
-                for i in range(params["max_iter"]):
-                    model.max_iter = i + 1  # Tăng số lần lặp từng bước
-                    model.fit(X_train, y_train)  # Huấn luyện từng epoch
-                    progress = (i + 1) / params["max_iter"]
-                    progress_bar.progress(progress)
-                    status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
-                    time.sleep(0.1)  # Giả lập thời gian để thấy tiến trình
-            else:
-                # Đối với Decision Tree và SVM, huấn luyện toàn bộ ngay lập tức
-                model.fit(X_train, y_train)
-                progress_bar.progress(1.0)
-                status_text.text("Đang huấn luyện: 100%")
+            # Huấn luyện mô hình
+            model.fit(X_train, y_train)
+            
+            # Mô phỏng thanh tiến trình (giả lập thời gian xử lý)
+            for i in range(100):
+                progress = (i + 1) / 100
+                progress_bar.progress(progress)
+                status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
+                time.sleep(0.05)  # Giả lập thời gian huấn luyện
 
             # Dự đoán và tính toán độ chính xác
             y_train_pred = model.predict(X_train)
@@ -98,7 +91,10 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             mlflow.log_metric("train_accuracy", train_accuracy)
             mlflow.log_metric("val_accuracy", val_accuracy)
             mlflow.log_metric("test_accuracy", test_accuracy)
-            mlflow.sklearn.log_model(model, model_name)
+            
+            # Thêm input_example để tránh cảnh báo MLflow
+            input_example = X_train[:1]  # Lấy một mẫu từ dữ liệu huấn luyện
+            mlflow.sklearn.log_model(model, model_name, input_example=input_example)
     except Exception as e:
         st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
         return None, None, None, None
@@ -189,8 +185,7 @@ def create_streamlit_app():
                     custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test
                 )
             
-            # Hiển thị kết quả sau khi huấn luyện hoàn tất
-            if model is not None:  # Kiểm tra xem huấn luyện có thành công không
+            if model is not None:
                 st.success(f"✅ Huấn luyện xong!")
                 st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
                 st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
@@ -239,7 +234,11 @@ def create_streamlit_app():
         runs = mlflow.search_runs(order_by=["start_time desc"])
         if not runs.empty:
             runs["model_custom_name"] = runs["tags.mlflow.runName"]
-            model_names = runs["model_custom_name"].dropna().unique().tolist()
+
+            if "params.model_name" in runs.columns:
+                model_names = runs["params.model_name"].dropna().unique().tolist()
+            else:
+                model_names = ["Không xác định"]
 
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
             if search_model_name:
@@ -249,8 +248,16 @@ def create_streamlit_app():
 
             if not filtered_runs.empty:
                 st.write("### 📜 Danh sách mô hình đã lưu:")
-                display_df = filtered_runs[["model_custom_name", "params.model_name", "run_id", "start_time", 
-                                           "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy"]]
+                available_columns = [col for col in ["model_custom_name", "params.model_name", "run_id", "start_time", 
+                                                     "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy"] 
+                                     if col in runs.columns]
+                display_df = filtered_runs[available_columns]
+                
+                # Chuyển đổi kiểu dữ liệu để tránh lỗi Arrow
+                for col in display_df.columns:
+                    if display_df[col].dtype == 'object':
+                        display_df[col] = display_df[col].astype(str)
+                
                 display_df = display_df.rename(columns={
                     "model_custom_name": "Custom Model Name",
                     "params.model_name": "Model Type"
