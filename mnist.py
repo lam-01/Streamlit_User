@@ -182,7 +182,7 @@ def create_streamlit_app():
             st.write("Bước 1: Tính toán gradient")
             st.latex(r"g_t = \nabla L(w_t)") 
             st.write("Bước 2: Cập nhật các ước lượng trung bình")
-            st.latex(r"m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t ] [ v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2")
+            st.latex(r"m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t ] [ v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2 ")
             st.write("Bước 3: Điều chỉnh bias")
             st.latex(r"\hat{m}_t = \frac{m_t}{1 - \beta_1^t} ] [ \hat{v}_t = \frac{v_t}{1 - \beta_2^t} ")
             st.write("Bước 4: Cập nhật trọng số")
