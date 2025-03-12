@@ -445,7 +445,7 @@ def main():
                         
                         # Sử dụng tên mô hình được nhập bởi người dùng
                         run_id = log_model(dbscan_model, model_name_input, params, metrics, digit_examples)
-                        st.success(f"Mô hình DBSCAN được lưu vào MLflow}")
+                        st.success(f"Mô hình DBSCAN được lưu vào MLflow với run ID: {run_id}")
                         
                         st.subheader("Các chữ số mẫu từ mỗi cụm")
                         unique_labels = sorted(set(dbscan_labels))
@@ -558,29 +558,21 @@ def main():
                             model_uri = f"runs:/{selected_run_id}/model"
                             model = mlflow.sklearn.load_model(model_uri)
                             if run_details.data.params.get("algorithm") == "KMeans":
-                                st.subheader("Trực quan hóa tất cả các cụm")
-                                n_clusters = model.cluster_centers_.shape[0]
-                                # Tính số cột tối đa trên mỗi hàng (ví dụ: 5)
-                                cols_per_row = 5
-                                # Tính số hàng cần thiết
-                                n_rows = (n_clusters + cols_per_row - 1) // cols_per_row
-                                
-                                for row in range(n_rows):
-                                    # Tạo số cột cho mỗi hàng
-                                    cols = st.columns(cols_per_row)
-                                    for col_idx, col in enumerate(cols):
-                                        cluster_idx = row * cols_per_row + col_idx
-                                        if cluster_idx < n_clusters:
-                                            with col:
-                                                fig, ax = plt.subplots(figsize=(3, 3))
-                                                ax.imshow(model.cluster_centers_[cluster_idx].reshape(28, 28), cmap='gray')
-                                                ax.set_title(f"Cluster {cluster_idx}")
-                                                ax.axis('off')
-                                                st.pyplot(fig)
-                                                plt.close(fig)
+                                st.subheader("Trực quan hóa các cụm")
+                                cols = st.columns(5)
+                                for i, col in enumerate(cols):
+                                    if i < min(5, model.cluster_centers_.shape[0]):
+                                        with col:
+                                            fig, ax = plt.subplots(figsize=(3, 3))
+                                            ax.imshow(model.cluster_centers_[i].reshape(28, 28), cmap='gray')
+                                            ax.set_title(f"Cluster {i}")
+                                            ax.axis('off')
+                                            st.pyplot(fig)
+                                            plt.close(fig)
                             elif run_details.data.params.get("algorithm") == "DBSCAN":
                                 st.write("**Core Samples:**", len(model.core_sample_indices_))
                         except Exception as e:
                             st.error(f"Không thể tải mô hình: {e}")
+
 if __name__ == "__main__":
     main()
