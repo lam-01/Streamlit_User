@@ -179,6 +179,7 @@ def create_streamlit_app():
             **4. Bộ giải tối ưu (solver)**:
             \n- Bộ giải tối ưu là thuật toán được sử dụng để cập nhật trọng số của mô hình trong quá trình huấn luyện. Các bộ giải phổ biến bao gồm:""")
             st.write("Adam: Một trong những bộ giải tối ưu phổ biến nhất, kết hợp các ưu điểm của hai bộ giải khác là AdaGrad và RMSProp. Adam tự động điều chỉnh tốc độ học cho từng trọng số.")
+            st.markdown("m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t ] [ v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2")
             st.write("SGD (Stochastic Gradient Descent): Một phương pháp đơn giản và hiệu quả, cập nhật trọng số dựa trên một mẫu ngẫu nhiên từ tập dữ liệu. SGD có thể hội tụ nhanh hơn nhưng có thể không ổn định.")
             st.write("""
             **5. Tốc độ học (learning_rate)**:
