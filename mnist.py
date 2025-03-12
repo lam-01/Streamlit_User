@@ -180,7 +180,7 @@ def create_streamlit_app():
             \n- Bộ giải tối ưu là thuật toán được sử dụng để cập nhật trọng số của mô hình trong quá trình huấn luyện. Các bộ giải phổ biến bao gồm:""")
             st.write("**Adam**: Một trong những bộ giải tối ưu phổ biến nhất, kết hợp các ưu điểm của hai bộ giải khác là AdaGrad và RMSProp. Adam tự động điều chỉnh tốc độ học cho từng trọng số.")
             st.write("Bước 1: Tính toán gradient")
-            st.latex(r"g_t = \nabla L(w_t)) 
+            st.latex(r"g_t = \nabla L(w_t)") 
             st.write("Bước 2: Cập nhật các ước lượng trung bình")
             st.latex(r"m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t ] [ v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2")
             st.write("Bước 3: Điều chỉnh bias")
