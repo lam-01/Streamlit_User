@@ -191,30 +191,6 @@ def main():
             st.image("gan2.png",caption="Lặp lại bước 2 : Gán nhãn cho từng điểm dữ liệu")
             st.image("capnhat2.png",caption="Lặp lại bước 3 : Cập nhật tâm của cụm")
             st.image("stop.png",caption="Dừng lặp")
-            # Đường dẫn đến GIF
-            gif_path = "kmean.gif"  # Thay bằng tên tệp GIF của bạn
-            
-            # Đọc và mã hóa GIF
-            try:
-                with open(gif_path, "rb") as file:
-                    gif_data = file.read()
-                    gif_base64 = base64.b64encode(gif_data).decode("utf-8")
-                
-                # Tạo 3 cột, đặt nội dung vào cột giữa
-                col1, col2, col3 = st.columns([1, 2, 1])
-                with col2:
-                    st.markdown(
-                        f'<div style="text-align: center;">'
-                        f'<img src="data:image/gif;base64,{gif_base64}" alt="GIF" width="100%">'
-                        f'</div>',
-                        unsafe_allow_html=True
-                    )
-                    st.markdown(
-                        '<p style="text-align: center; font-size: 10px;">Minh họa quá trình phân cụm K-Means trong dữ liệu</p>',
-                        unsafe_allow_html=True
-                    )
-            except FileNotFoundError:
-                st.error("Không tìm thấy tệp kmean.gif. Vui lòng kiểm tra đường dẫn.")
         
         # Nội dung cho DBSCAN
         elif algorithm == "DBSCAN":
