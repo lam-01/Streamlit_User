@@ -171,7 +171,6 @@ def main():
                 if search_query:
                     runs = runs[runs['params.model_name'].str.contains(search_query, case=False, na=False)]
                 
-                st.write(f"Tìm thấy {len(runs)} kết quả trong thí nghiệm 'MNIST_Dimensionality_Reduction'.")
                 available_columns = ['params.model_name', 'start_time', 'params.method', 
                                     'params.n_components', 'params.sample_size', 'metrics.explained_variance']
                 display_columns = [col for col in available_columns if col in runs.columns]
