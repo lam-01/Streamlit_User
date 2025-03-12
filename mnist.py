@@ -162,9 +162,9 @@ def create_streamlit_app():
             st.latex(r"w = w - \eta \cdot \nabla L(w)")
             st.markdown(r"""
             Trong đó:
-            \n $$w$$ là trọng số.
-                /n $$\eta$$ là tốc độ học (learning rate).
-                /n $$\nabla L(w)$$ là gradient của hàm mất mát (loss function) theo trọng số.
+                $$w$$ là trọng số.
+                $$\eta$$ là tốc độ học (learning rate).
+                $$\nabla L(w)$$ là gradient của hàm mất mát (loss function) theo trọng số.
             """)
             st.write("""
             **3. Hàm kích hoạt (activation)**: 
