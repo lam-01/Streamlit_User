@@ -99,7 +99,6 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             mlflow.log_metric("train_accuracy", train_accuracy)
             mlflow.log_metric("val_accuracy", val_accuracy)
             mlflow.log_metric("test_accuracy", test_accuracy)
-            mlflow.log_metric("training_time", train_duration)
             
             input_example = X_train[:1]
             mlflow.sklearn.log_model(model, model_name, input_example=input_example)
@@ -264,7 +263,7 @@ def create_streamlit_app():
 
             if not filtered_runs.empty:
                 st.write("### 📜 Danh sách mô hình đã lưu:")
-                available_columns = [col for col in ["model_custom_name", "params.model_name", "run_id", "start_time", 
+                available_columns = [col for col in ["model_custom_name", "params.model_name", "start_time", 
                                                      "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy"] 
                                      if col in runs.columns]
                 display_df = filtered_runs[available_columns]
