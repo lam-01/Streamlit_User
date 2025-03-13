@@ -87,6 +87,7 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             mlflow.log_metric("train_accuracy", train_accuracy)
             mlflow.log_metric("val_accuracy", val_accuracy)
             mlflow.log_metric("test_accuracy", test_accuracy)
+            mlflow.log_metric("training_time", end_time - start_time)
             
             input_example = X_train[:1]
             mlflow.sklearn.log_model(model, model_name, input_example=input_example)
