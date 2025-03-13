@@ -35,11 +35,11 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-# 📌 Huấn luyện mô hình với thanh tiến trình chi tiết và hiển thị %
+# 📌 Huấn luyện mô hình với thanh tiến trình phản ánh tiến độ thực tế
 def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test):
     progress_bar = st.progress(0)
     status_text = st.empty()
-    status_text.text("Đang khởi tạo mô hình... (10%)")
+    status_text.text("Đang khởi tạo mô hình... (0%)")
 
     if model_name == "Decision Tree":
         model = DecisionTreeClassifier(
@@ -60,34 +60,46 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
 
     try:
         with mlflow.start_run(run_name=custom_model_name):
-            # Bước 1: Khởi tạo (10%)
+            # Bước 1: Khởi tạo mô hình
             progress_bar.progress(0.1)
-            status_text.text("Đang huấn luyện mô hình... (50%)")
-
-            # Bước 2: Huấn luyện mô hình (50%)
+            status_text.text("Đang huấn luyện mô hình... (10%)")
             start_time = time.time()
-            model.fit(X_train, y_train)
-            end_time = time.time()
-            progress_bar.progress(0.5)
 
-            # Bước 3: Dự đoán trên các tập dữ liệu (80%)
-            status_text.text("Đang dự đoán trên các tập dữ liệu... (80%)")
+            # Bước 2: Huấn luyện mô hình
+            model.fit(X_train, y_train)
+            train_end_time = time.time()
+            train_duration = train_end_time - start_time
+            progress_bar.progress(0.5)  # Giả định huấn luyện chiếm 40% tổng tiến trình
+            status_text.text(f"Đã huấn luyện xong... (50%)")
+
+            # Bước 3: Dự đoán trên các tập dữ liệu
             y_train_pred = model.predict(X_train)
-            y_test_pred = model.predict(X_test)
+            progress_bar.progress(0.6)
+            status_text.text("Đang dự đoán trên tập train... (60%)")
+
             y_val_pred = model.predict(X_val)
+            progress_bar.progress(0.7)
+            status_text.text("Đang dự đoán trên tập validation... (70%)")
+
+            y_test_pred = model.predict(X_test)
+            predict_end_time = time.time()
+            predict_duration = predict_end_time - train_end_time
+            progress_bar.progress(0.8)
+            status_text.text("Đã dự đoán xong... (80%)")
+
+            # Tính toán độ chính xác
             train_accuracy = accuracy_score(y_train, y_train_pred)
             val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
-            progress_bar.progress(0.8)
 
-            # Bước 4: Ghi log vào MLflow (100%)
-            status_text.text("Đang ghi log vào MLflow... (100%)")
+            # Bước 4: Ghi log vào MLflow
+            status_text.text("Đang ghi log vào MLflow... (90%)")
             mlflow.log_param("model_name", model_name)
             mlflow.log_params(params)
             mlflow.log_metric("train_accuracy", train_accuracy)
             mlflow.log_metric("val_accuracy", val_accuracy)
             mlflow.log_metric("test_accuracy", test_accuracy)
-            mlflow.log_metric("training_time", end_time - start_time)
+            mlflow.log_metric("training_time", train_duration)
             
             input_example = X_train[:1]
             mlflow.sklearn.log_model(model, model_name, input_example=input_example)
