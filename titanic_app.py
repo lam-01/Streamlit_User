@@ -439,17 +439,41 @@ def create_streamlit_app():
         runs = mlflow.search_runs(order_by=["start_time desc"])
     
         if not runs.empty:
+            # Debug: Hiển thị các cột của DataFrame để kiểm tra
+            st.write("Columns in runs DataFrame:", runs.columns.tolist())
+    
             # Lấy tên mô hình từ tags.mlflow.runName
-            runs["model_name"] = runs["tags.mlflow.runName"]
+            runs["model_name"] = runs.get("tags.mlflow.runName", pd.Series([None] * len(runs))).fillna("Unnamed")
     
-            # Trích xuất regression_type từ params
-            runs["regression_type"] = runs["params"].apply(lambda x: x.get("regression_type", "N/A") if isinstance(x, dict) else "N/A")
+            # Trích xuất regression_type từ params (nếu tồn tại)
+            if "params" in runs.columns:
+                runs["regression_type"] = runs["params"].apply(
+                    lambda x: x.get("regression_type", "N/A") if isinstance(x, dict) else "N/A"
+                )
+            else:
+                runs["regression_type"] = "N/A"
+                st.warning("No 'params' column found in MLflow runs. Parameters may not have been logged.")
     
-            # Trích xuất các metrics từ metrics column
-            runs["train_mse"] = runs["metrics"].apply(lambda x: x.get("train_mse", "N/A") if isinstance(x, dict) else "N/A")
-            runs["valid_mse"] = runs["metrics"].apply(lambda x: x.get("valid_mse", "N/A") if isinstance(x, dict) else "N/A")
-            runs["test_mse"] = runs["metrics"].apply(lambda x: x.get("test_mse", "N/A") if isinstance(x, dict) else "N/A")
-            runs["cv_mse"] = runs["metrics"].apply(lambda x: x.get("cv_mse", "N/A") if isinstance(x, dict) else "N/A")
+            # Trích xuất các metrics từ metrics column (nếu tồn tại)
+            if "metrics" in runs.columns:
+                runs["train_mse"] = runs["metrics"].apply(
+                    lambda x: x.get("train_mse", "N/A") if isinstance(x, dict) else "N/A"
+                )
+                runs["valid_mse"] = runs["metrics"].apply(
+                    lambda x: x.get("valid_mse", "N/A") if isinstance(x, dict) else "N/A"
+                )
+                runs["test_mse"] = runs["metrics"].apply(
+                    lambda x: x.get("test_mse", "N/A") if isinstance(x, dict) else "N/A"
+                )
+                runs["cv_mse"] = runs["metrics"].apply(
+                    lambda x: x.get("cv_mse", "N/A") if isinstance(x, dict) else "N/A"
+                )
+            else:
+                runs["train_mse"] = "N/A"
+                runs["valid_mse"] = "N/A"
+                runs["test_mse"] = "N/A"
+                runs["cv_mse"] = "N/A"
+                st.warning("No 'metrics' column found in MLflow runs. Metrics may not have been logged.")
     
             # **Tìm kiếm mô hình**
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
@@ -466,7 +490,9 @@ def create_streamlit_app():
                 display_df = display_df.fillna("N/A")
                 # Làm tròn các giá trị số nếu có
                 for col in ["train_mse", "valid_mse", "test_mse", "cv_mse"]:
-                    display_df[col] = display_df[col].apply(lambda x: round(x, 4) if isinstance(x, (int, float)) and x != "N/A" else x)
+                    display_df[col] = display_df[col].apply(
+                        lambda x: round(x, 4) if isinstance(x, (int, float)) and x != "N/A" else x
+                    )
                 st.dataframe(display_df)
     
                 # **Chọn một mô hình để xem chi tiết**
@@ -480,13 +506,12 @@ def create_streamlit_app():
                     st.write("**Tham số:**")
                     for key, value in run_details.data.params.items():
                         st.write(f"- **{key}**: {value}")
-    
                     st.write("**Metric:**")
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
     
             else:
-                st.write("❌ Không tìm thấy mô hình nào.")
+                st.write("❌ Không tìm thấy mô hình nào khớp với tìm kiếm.")
     
         else:
             st.write("⚠️ Không có phiên làm việc nào được ghi lại.")
