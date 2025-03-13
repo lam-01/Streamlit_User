@@ -434,45 +434,44 @@ def create_streamlit_app():
 
     with tab3:
         st.subheader("MLflow Tracking")
-
+    
         # Lấy danh sách các phiên làm việc từ MLflow
         runs = mlflow.search_runs(order_by=["start_time desc"])
-
+    
         if not runs.empty:
-            # Lấy danh sách tên mô hình
-            runs["model_name"] = runs["tags.mlflow.runName"]  # Tên mô hình từ tag `mlflow.runName`
-            
-            # Thêm các cột thông tin từ params và metrics
-            runs["regression_type"] = runs["params.regression_type"]  # Loại hồi quy từ params
-            runs["train_mse"] = runs["metrics.train_mse"]  # MSE trên tập train
-            runs["valid_mse"] = runs["metrics.valid_mse"]  # MSE trên tập validation
-            runs["test_mse"] = runs["metrics.test_mse"]  # MSE trên tập test
-            runs["cv_mse"] = runs["metrics.cv_mse"]  # MSE từ cross-validation
-            runs["train_r2"] = runs["metrics.train_r2"]  # R² trên tập train
-            runs["valid_r2"] = runs["metrics.valid_r2"]  # R² trên tập validation
-            runs["test_r2"] = runs["metrics.test_r2"]  # R² trên tập test
-
+            # Lấy tên mô hình từ tags.mlflow.runName
+            runs["model_name"] = runs["tags.mlflow.runName"]
+    
+            # Trích xuất regression_type từ params
+            runs["regression_type"] = runs["params"].apply(lambda x: x.get("regression_type", "N/A") if isinstance(x, dict) else "N/A")
+    
+            # Trích xuất các metrics từ metrics column
+            runs["train_mse"] = runs["metrics"].apply(lambda x: x.get("train_mse", "N/A") if isinstance(x, dict) else "N/A")
+            runs["valid_mse"] = runs["metrics"].apply(lambda x: x.get("valid_mse", "N/A") if isinstance(x, dict) else "N/A")
+            runs["test_mse"] = runs["metrics"].apply(lambda x: x.get("test_mse", "N/A") if isinstance(x, dict) else "N/A")
+            runs["cv_mse"] = runs["metrics"].apply(lambda x: x.get("cv_mse", "N/A") if isinstance(x, dict) else "N/A")
+    
             # **Tìm kiếm mô hình**
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
-
+    
             if search_model_name:
                 filtered_runs = runs[runs["model_name"].str.contains(search_model_name, case=False, na=False)]
             else:
                 filtered_runs = runs
-
+    
             # **Hiển thị danh sách mô hình với thông tin bổ sung**
             if not filtered_runs.empty:
-                # Hiển thị các cột: model_name, regression_type, run_id, và các độ đo MSE, R²
+                # Hiển thị các cột: model_name, regression_type, run_id, và các độ đo MSE
                 display_df = filtered_runs[["model_name", "regression_type", "run_id", "train_mse", "valid_mse", "test_mse", "cv_mse"]]
                 display_df = display_df.fillna("N/A")
                 # Làm tròn các giá trị số nếu có
                 for col in ["train_mse", "valid_mse", "test_mse", "cv_mse"]:
-                    display_df[col] = display_df[col].apply(lambda x: round(x, 4) if isinstance(x, (int, float)) else x)
+                    display_df[col] = display_df[col].apply(lambda x: round(x, 4) if isinstance(x, (int, float)) and x != "N/A" else x)
                 st.dataframe(display_df)
-
+    
                 # **Chọn một mô hình để xem chi tiết**
                 selected_model_name = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["model_name"].tolist())
-
+    
                 if selected_model_name:
                     # Lấy run_id tương ứng với model_name được chọn
                     selected_run_id = filtered_runs[filtered_runs["model_name"] == selected_model_name]["run_id"].iloc[0]
@@ -481,14 +480,14 @@ def create_streamlit_app():
                     st.write("**Tham số:**")
                     for key, value in run_details.data.params.items():
                         st.write(f"- **{key}**: {value}")
-
+    
                     st.write("**Metric:**")
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
-
+    
             else:
                 st.write("❌ Không tìm thấy mô hình nào.")
-
+    
         else:
             st.write("⚠️ Không có phiên làm việc nào được ghi lại.")
 if __name__ == "__main__":
