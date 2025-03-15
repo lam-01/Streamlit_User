@@ -14,10 +14,14 @@ import time
 
 # 📌 Tải và xử lý dữ liệu MNIST từ OpenML
 @st.cache_data
-def load_data():
+def load_data(n_samples=None):
     mnist = fetch_openml("mnist_784", version=1, as_frame=False)
     X, y = mnist.data, mnist.target.astype(int)  # Chuyển nhãn về kiểu số nguyên
     X = X / 255.0  # Chuẩn hóa về [0,1]
+    if n_samples is not None and n_samples < len(X):
+        indices = np.random.choice(len(X), n_samples, replace=False)
+        X = X[indices]
+        y = y[indices]
     return X, y
 
 # 📌 Chia dữ liệu thành train, validation, và test
@@ -115,7 +119,6 @@ def show_sample_images(X, y):
 def create_streamlit_app():
     st.title("🔢 Phân loại chữ số viết tay")
     
-    X, y = load_data()
     tab1, tab2, tab3, tab4 = st.tabs(["📓 Lí thuyết", "📋 Huấn luyện", "🔮 Dự đoán", "⚡ MLflow"])
     
     with tab1:
@@ -169,7 +172,13 @@ def create_streamlit_app():
         st.write("**SGD (Stochastic Gradient Descent)**: Một phương pháp đơn giản và hiệu quả, cập nhật trọng số dựa trên một mẫu ngẫu nhiên từ tập dữ liệu. SGD có thể hội tụ nhanh hơn nhưng có thể không ổn định.")
 
     with tab2:
-        st.write(f"**Số lượng mẫu của bộ dữ liệu MNIST: {X.shape[0]}**")
+        # Cho phép chọn số mẫu để huấn luyện
+        max_samples = 70000  # Tổng số mẫu trong MNIST
+        n_samples = st.slider("Số lượng mẫu để huấn luyện", 1000, max_samples, 10000, step=1000, 
+                              help=f"Chọn số lượng mẫu từ 1,000 đến {max_samples} để huấn luyện.")
+        
+        X, y = load_data(n_samples=n_samples)
+        st.write(f"**Số lượng mẫu được chọn để huấn luyện: {X.shape[0]}**")
         show_sample_images(X, y)
         
         st.write("**📊 Tỷ lệ dữ liệu**")
