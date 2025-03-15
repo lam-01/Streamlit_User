@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score
 from streamlit_drawable_canvas import st_canvas
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Circle
 from sklearn.neural_network import MLPClassifier
 import time
 
@@ -34,6 +35,83 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
         X_train, y_train, test_size=val_size / (train_size + val_size), random_state=random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
+
+# 📌 Visualize mạng neural với neurons và connections
+def visualize_neural_network(model, input_size, output_size, processed_image=None, prediction=None):
+    hidden_layer_sizes = model.hidden_layer_sizes
+    if isinstance(hidden_layer_sizes, int):  # Handle case where hidden_layer_sizes is a single integer
+        hidden_layer_sizes = [hidden_layer_sizes]
+    elif isinstance(hidden_layer_sizes, tuple):
+        hidden_layer_sizes = list(hidden_layer_sizes)
+
+    # Define layers: input, hidden layers, output
+    layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
+    num_layers = len(layer_sizes)
+    
+    # For visualization, limit the number of neurons shown (e.g., show 10 input neurons instead of 784)
+    display_sizes = [min(size, 10) if i == 0 else size for i, size in enumerate(layer_sizes)]
+    if display_sizes[0] < input_size:  # If input layer is truncated
+        display_sizes[0] = 10  # Show 10 neurons with "..." to indicate truncation
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.set_facecolor('black')  # Match background color
+    ax.set_title("Dự đoán", pad=20, size=14, color='white')
+    ax.axis('off')
+
+    # Define x positions for each layer
+    x_positions = np.linspace(0, 10, num_layers)
+    max_neurons = max(display_sizes)
+
+    # Draw neurons and connections
+    neuron_positions = []
+    for layer_idx, (layer_size, display_size) in enumerate(zip(layer_sizes, display_sizes)):
+        x = x_positions[layer_idx]
+        y_positions = np.linspace(0, max_neurons, display_size + 2)[1:-1]  # Evenly spaced y positions
+        layer_positions = []
+        
+        # Draw neurons
+        for neuron_idx in range(display_size):
+            y = y_positions[neuron_idx]
+            color = 'white' if layer_idx == 0 or layer_idx == num_layers - 1 else 'gray'
+            circle = Circle((x, y), 0.3, color=color, edgecolor='white', zorder=2)
+            ax.add_patch(circle)
+            layer_positions.append((x, y))
+            
+            # Label output neurons (0-9)
+            if layer_idx == num_layers - 1:  # Output layer
+                ax.text(x + 0.6, y, str(neuron_idx), ha='left', va='center', fontsize=12, color='white', zorder=3)
+                # Highlight predicted digit
+                if prediction is not None and neuron_idx == prediction:
+                    ax.add_patch(Circle((x, y), 0.4, color='yellow', alpha=0.5, zorder=1))
+        
+        neuron_positions.append(layer_positions)
+        
+        # Indicate truncation for input layer
+        if layer_idx == 0 and display_size < layer_size:
+            ax.text(x, max_neurons + 0.5, "...", ha='center', va='center', fontsize=12, color='white')
+
+    # Draw connections
+    for layer_idx in range(num_layers - 1):
+        for i, (x1, y1) in enumerate(neuron_positions[layer_idx]):
+            for j, (x2, y2) in enumerate(neuron_positions[layer_idx + 1]):
+                # Color connections based on layers
+                if layer_idx < num_layers - 2:  # Between input/hidden layers
+                    ax.plot([x1, x2], [y1, y2], color='cyan', alpha=0.1, zorder=1)
+                else:  # Between last hidden and output
+                    ax.plot([x1, x2], [y1, y2], color='red', alpha=0.1, zorder=1)
+
+    # Add input image (processed digit) to the left
+    if processed_image is not None:
+        ax_image = fig.add_axes([0.05, 0.6, 0.15, 0.15])  # [left, bottom, width, height]
+        ax_image.imshow(processed_image.reshape(28, 28), cmap='gray')
+        ax_image.axis('off')
+
+    # Set axis limits
+    ax.set_xlim(-1, 11)
+    ax.set_ylim(-1, max_neurons + 1)
+    plt.tight_layout()
+    return fig
 
 # 📌 Huấn luyện mô hình với thanh tiến trình và cross-validation
 def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds):
@@ -138,7 +216,7 @@ def create_streamlit_app():
         st.write("##### 2. Cấu trúc mạng Neural Network")
         st.write("""- Input Layer (tầng đầu vào): Nằm bên trái của hệ thống, bao gồm dữ liệu thông tin đầu vào. 
         \n- Output Layer (tầng đầu ra): Nằm bên phải của hệ thống, bao gồm dữ liệu thông tin đầu ra. 
-        \n- Hidden Layer (tầng ẩn): Nằm ở giữa tầng đầu vào và đầu ra, thể hiện quá trình suy luận và xử lý thôngtin của hệ thống.    
+        \n- Hidden Layer (tầng ẩn): Nằm ở giữa tầng đầu vào và đầu ra, thể hiện quá trình suy luận và xử lý thông tin của hệ thống.    
         """)
         st.image("neural_networks.png", caption="Cấu trúc mạng Neural Network", width=500)
         st.write("Ví dụ minh họa với bộ dữ liệu mnist : ")
@@ -245,6 +323,10 @@ def create_streamlit_app():
                         probabilities = model.predict_proba(processed_image)[0]
                         st.write(f"🎯 **Dự đoán: {prediction}**")
                         st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                        # Visualize neural network with prediction
+                        fig = visualize_neural_network(model, input_size=784, output_size=10, 
+                                                       processed_image=processed_image, prediction=prediction)
+                        st.pyplot(fig)
         elif option == "✏️ Vẽ số":
             canvas_result = st_canvas(
                 fill_color="white", stroke_width=15, stroke_color="black",
@@ -262,6 +344,10 @@ def create_streamlit_app():
                         probabilities = model.predict_proba(processed_canvas)[0]
                         st.write(f"🎯 **Dự đoán: {prediction}**")
                         st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                        # Visualize neural network with prediction
+                        fig = visualize_neural_network(model, input_size=784, output_size=10, 
+                                                       processed_image=processed_canvas, prediction=prediction)
+                        st.pyplot(fig)
 
     with tab4:
         st.header("📊 MLflow Tracking")
@@ -333,4 +419,3 @@ def create_streamlit_app():
 
 if __name__ == "__main__":
     create_streamlit_app()
-
