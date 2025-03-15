@@ -348,7 +348,7 @@ def main():
                             run_id = log_model(kmeans_model, model_name_input, params, metrics, digit_examples)
                             progress_bar.progress(100)
                             progress_text.text("Tiến độ: 100% - Đã hoàn tất huấn luyện K-Means!")
-                            st.success(f"Mô hình K-means được lưu vào MLflow với run ID: {run_id}")
+                            # st.success(f"Mô hình K-means được lưu vào MLflow với run ID: {run_id}")
                             
                             # Hiển thị kết quả sau khi hoàn tất
                             st.subheader("Các chữ số mẫu từ mỗi cụm")
@@ -445,7 +445,7 @@ def main():
                             run_id = log_model(dbscan_model, model_name_input, params, metrics, digit_examples)
                             progress_bar.progress(100)
                             progress_text.text("Tiến độ: 100% - Đã hoàn tất huấn luyện DBSCAN!")
-                            st.success(f"Mô hình DBSCAN được lưu vào MLflow với run ID: {run_id}")
+                            # st.success(f"Mô hình DBSCAN được lưu vào MLflow với run ID: {run_id}")
                             
                             # Hiển thị kết quả sau khi hoàn tất
                             st.subheader("Các chữ số mẫu từ mỗi cụm")
