@@ -250,15 +250,17 @@ def create_streamlit_app():
         st.header("📊 MLflow Tracking")
         st.write("Xem chi tiết các kết quả đã lưu trong MLflow.")
     
+        # Lấy danh sách các runs từ MLflow
         runs = mlflow.search_runs(order_by=["start_time desc"])
+        
         if not runs.empty:
-            # Safely assign 'model_custom_name' from tags, with a fallback
+            # Gán tên tùy chỉnh từ tags, với giá trị mặc định nếu không tồn tại
             if "tags.mlflow.runName" in runs.columns:
-                runs["model_custom_name"] = runs["tags.mlflow.runName"]
+                runs["model_custom_name"] = runs["tags.mlflow.runName"].fillna("Unnamed Model")
             else:
-                runs["model_custom_name"] = "Unnamed Model"  # Default value if tag is missing
-            model_names = runs["model_custom_name"].dropna().unique().tolist()
+                runs["model_custom_name"] = "Unnamed Model"
     
+            # Tìm kiếm mô hình
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
             if search_model_name:
                 filtered_runs = runs[runs["model_custom_name"].str.contains(search_model_name, case=False, na=False)]
@@ -267,7 +269,7 @@ def create_streamlit_app():
     
             if not filtered_runs.empty:
                 st.write("### 📜 Danh sách mô hình đã lưu:")
-                # Define available columns dynamically
+                # Xác định các cột có sẵn để hiển thị
                 available_columns = [
                     col for col in [
                         "model_custom_name", "params.model_name", "run_id", "start_time",
@@ -275,30 +277,47 @@ def create_streamlit_app():
                         "metrics.cv_mean_accuracy", "metrics.cv_std_accuracy"
                     ] if col in filtered_runs.columns
                 ]
-                display_df = filtered_runs[available_columns]
+                display_df = filtered_runs[available_columns].copy()
+    
+                # Đổi tên cột để dễ đọc
                 display_df = display_df.rename(columns={
-                    "model_custom_name": "Custom Model Name",
-                    "params.model_name": "Model Type"
+                    "model_custom_name": "Tên mô hình tùy chỉnh",
+                    "params.model_name": "Loại mô hình",
+                    "run_id": "ID phiên",
+                    "start_time": "Thời gian bắt đầu",
+                    "metrics.train_accuracy": "Độ chính xác (Train)",
+                    "metrics.val_accuracy": "Độ chính xác (Val)",
+                    "metrics.test_accuracy": "Độ chính xác (Test)",
+                    "metrics.cv_mean_accuracy": "Độ chính xác CV trung bình",
+                    "metrics.cv_std_accuracy": "Độ lệch chuẩn CV"
                 })
+                
+                # Đảm bảo dữ liệu hiển thị dưới dạng chuỗi để tránh lỗi
+                for col in display_df.columns:
+                    display_df[col] = display_df[col].astype(str)
+                
                 st.dataframe(display_df)
     
-                selected_run_id = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["run_id"].tolist())
+                # Chọn mô hình để xem chi tiết
+                selected_run_id = st.selectbox("📝 Chọn một phiên để xem chi tiết:", 
+                                              filtered_runs["run_id"].tolist())
                 if selected_run_id:
                     run_details = mlflow.get_run(selected_run_id)
                     custom_name = run_details.data.tags.get('mlflow.runName', 'Không có tên')
                     model_type = run_details.data.params.get('model_name', 'Không xác định')
+                    
                     st.write(f"### 🔍 Chi tiết mô hình: `{custom_name}`")
                     st.write(f"**📌 Loại mô hình huấn luyện:** {model_type}")
-    
+                    
                     st.write("📌 **Tham số:**")
                     for key, value in run_details.data.params.items():
-                        if key != 'model_name':
+                        if key != 'model_name':  # Bỏ qua model_name vì đã hiển thị ở trên
                             st.write(f"- **{key}**: {value}")
-    
+                    
                     st.write("📊 **Metric:**")
                     for key, value in run_details.data.metrics.items():
-                        st.write(f"- **{key}**: {value}")
-    
+                        st.write(f"- **{key}**: {value:.4f}")
+                    
                     st.write("📂 **Artifacts:**")
                     if run_details.info.artifact_uri:
                         st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
