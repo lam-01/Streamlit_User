@@ -112,7 +112,198 @@ def main():
             st.write("Trong thuật toán t-SNE, để so sánh hai phân phối xác suất giữa không gian cao chiều (trước khi giảm chiều) và không gian thấp chiều (sau khi giảm chiều), ta sử dụng phân kỳ Kullback-Leibler (KL Divergence).")
             st.image("tnse11.png",caption="Nguồn : https://statquest.org")
         elif algorithm == "PCA":
-            st.write("")
+            st.write("##### Thuật toán PCA")
+            st.write("""- **PCA (Principal Component Analysis)** là một phương pháp giảm chiều dữ liệu tuyến tính, tìm ra các thành phần chính (principal components) để chiếu dữ liệu từ không gian chiều cao xuống không gian chiều thấp hơn mà vẫn giữ tối đa thông tin (phương sai).""")
+            st.write("- **Các bước thực hiện PCA** :")
+        
+            # Tạo dữ liệu giả lập 2D
+            st.write("🔹Minh họa PCA trên dữ liệu giả lập 2D")
+            st.write("Chúng ta sẽ sử dụng một tập dữ liệu 2D giả lập với 300 điểm, phân bố theo dạng elip nghiêng.")
+        
+            # Tạo dữ liệu giả lập
+            np.random.seed(42)
+            n_samples = 300
+            cov = [[1, 0.8], [0.8, 1]]  # Ma trận hiệp phương sai với tương quan cao
+            X_sim = np.random.multivariate_normal(mean=[0, 0], cov=cov, size=n_samples)
+            y_sim = (X_sim[:, 0] + X_sim[:, 1] > 0).astype(int)
+        
+            # Bước 1: Chuẩn hóa dữ liệu
+            st.write("**Bước 1: Chuẩn hóa dữ liệu**")
+            st.write("Đồng nhất hóa thang đo và mức độ biến thiên của các biến số, nhằm loại bỏ sự thiên lệch do khác biệt về đơn vị hoặc phạm vi giá trị, thực hiện bằng công thức Z-score:")
+            st.latex(r"""
+            X' = \frac{X - \mu}{\sigma}
+            """)
+            st.write("Trong đó:")
+            st.latex(r"""
+            \begin{aligned}
+            &X: \text{Giá trị gốc của dữ liệu} \\
+            &\mu: \text{Trung bình của mỗi chiều}, \quad \mu = \frac{1}{n} \sum_{i=1}^{n} X_i \\
+            &\sigma: \text{Độ lệch chuẩn của mỗi chiều}, \quad \sigma = \sqrt{\frac{1}{n} \sum_{i=1}^{n} (X_i - \mu)^2}
+            \end{aligned}
+            """)
+
+            # Chuẩn hóa dữ liệu
+            X_mean = X_sim.mean(axis=0)
+            X_std = X_sim.std(axis=0)
+            X_std[X_std == 0] = 1e-10  # Tránh chia cho 0
+            X_normalized = (X_sim - X_mean) / X_std
+        
+            # Vẽ dữ liệu trước và sau chuẩn hóa
+            fig, ax = plt.subplots(1, 2, figsize=(10, 4))
+            ax[0].scatter(X_sim[:, 0], X_sim[:, 1], c=y_sim, cmap="viridis", alpha=0.6)
+            ax[0].set_title("Dữ liệu gốc")
+            ax[0].set_xlabel("X")
+            ax[0].set_ylabel("Y")
+            ax[0].grid(True)
+        
+            ax[1].scatter(X_normalized[:, 0], X_normalized[:, 1], c=y_sim, cmap="viridis", alpha=0.6)
+            ax[1].set_title("Dữ liệu sau chuẩn hóa")
+            ax[1].set_xlabel("X (chuẩn hóa)")
+            ax[1].set_ylabel("Y (chuẩn hóa)")
+            ax[1].grid(True)
+            plt.tight_layout()
+            st.pyplot(fig)
+            st.write("Dữ liệu gốc (trái) có phân bố elip nghiêng. Sau chuẩn hóa (phải), trung bình bằng 0 và phương sai bằng 1, nhưng hình dạng phân bố không thay đổi.")
+        
+            # Bước 2: Tính ma trận hiệp phương sai (Biểu đồ phân tán với đường hồi quy)
+            st.write("**Bước 2: Tính ma trận hiệp phương sai (Covariance Matrix)**")
+            st.write("Ma trận hiệp phương sai biểu diễn mức độ tương quan giữa các biến:")
+            st.latex(r"""
+            \Sigma = \frac{1}{n-1} X^T X
+            """)
+            st.write("Trong đó:")
+            st.latex(r"""
+            \begin{aligned}
+            &X: \text{Ma trận dữ liệu đã chuẩn hóa} \, (n \times d, \text{với } n \text{ là số mẫu, } d \text{ là số chiều}) \\
+            &X^T: \text{Ma trận chuyển vị của } X \\
+            &\Sigma_{ij}: \text{Phần tử tại hàng } i, \text{ cột } j \text{ là hiệp phương sai giữa chiều } i \text{ và chiều } j \\
+            &\quad \Sigma_{ij} = \frac{1}{n-1} \sum_{k=1}^{n} (X_{ki} - \mu_i)(X_{kj} - \mu_j)
+            \end{aligned}
+            """)
+            st.write("Nếu hai biến có hiệp phương sai lớn, chúng có xu hướng thay đổi cùng nhau. Để minh họa, chúng ta vẽ biểu đồ phân tán của hai chiều với đường hồi quy tuyến tính, phản ánh mức độ tương quan.")
+        
+            # Tính ma trận hiệp phương sai
+            covariance_matrix = np.cov(X_normalized.T)
+        
+            # Tính đường hồi quy tuyến tính
+            from scipy.stats import linregress
+            slope, intercept, r_value, p_value, std_err = linregress(X_normalized[:, 0], X_normalized[:, 1])
+            line = slope * X_normalized[:, 0] + intercept
+        
+            # Vẽ biểu đồ phân tán với đường hồi quy
+            fig, ax = plt.subplots(figsize=(6, 5))
+            ax.scatter(X_normalized[:, 0], X_normalized[:, 1], c=y_sim, cmap="viridis", alpha=0.6)
+            ax.plot(X_normalized[:, 0], line, color="red", linestyle="--", label=f"Đường hồi quy (R² = {r_value**2:.2f})")
+            ax.set_title("Phân tán và đường hồi quy giữa X và Y")
+            ax.set_xlabel("X (chuẩn hóa)")
+            ax.set_ylabel("Y (chuẩn hóa)")
+            ax.grid(True)
+            ax.legend()
+            st.pyplot(fig)
+            st.write(f"Đường hồi quy (màu đỏ) cho thấy mức độ tương quan giữa X và Y, với hệ số R² = {r_value**2:.2f}. Ma trận hiệp phương sai sẽ có giá trị ngoài đường chéo (khoảng {covariance_matrix[0, 1]:.2f}) phản ánh tương quan này.")
+        
+            # Bước 3: Tính toán giá trị riêng và vector riêng
+            st.write("**Bước 3: Tính toán giá trị riêng và vector riêng**")
+            st.write("Giải phương trình eigenvalue decomposition:")
+            st.latex(r"""
+            \Sigma v = \lambda v
+            """)
+            st.write("Trong đó:")
+            st.latex(r"""
+            \begin{aligned}
+            &\Sigma: \text{Ma trận hiệp phương sai} \\
+            &v: \text{Vector riêng (hướng của thành phần chính, là vector đơn vị, } ||v|| = 1\text{)} \\
+            &\lambda: \text{Giá trị riêng (số thực, thể hiện phương sai theo hướng } v\text{)}
+            \end{aligned}
+            """)
+            st.write("Phương trình này được giải bằng phân rã giá trị riêng (eigen decomposition), tìm tất cả \( (\lambda, v) \) sao cho phương trình thỏa mãn.")
+        
+            # Tính giá trị riêng và vector riêng
+            eigenvalues, eigenvectors = np.linalg.eigh(covariance_matrix)
+            idx = np.argsort(eigenvalues)[::-1]
+            eigenvalues = eigenvalues[idx]
+            eigenvectors = eigenvectors[:, idx]
+        
+            # Vẽ dữ liệu với vector riêng
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=X_normalized[:, 0], y=X_normalized[:, 1], mode="markers",
+                                    marker=dict(color=y_sim, colorscale="Viridis", size=8, opacity=0.6),
+                                    name="Dữ liệu"))
+            
+            # Thêm vector riêng
+            scale = 2
+            for i in range(2):
+                fig.add_shape(type="line", x0=0, y0=0, x1=eigenvectors[0, i] * scale * np.sqrt(eigenvalues[i]),
+                            y1=eigenvectors[1, i] * scale * np.sqrt(eigenvalues[i]),
+                            line=dict(color="red", width=3))
+                fig.add_annotation(x=eigenvectors[0, i] * scale * np.sqrt(eigenvalues[i]),
+                                y=eigenvectors[1, i] * scale * np.sqrt(eigenvalues[i]),
+                                text=f"PC{i+1}", showarrow=False)
+        
+            fig.update_layout(title="Dữ liệu với vector riêng (PC1, PC2)",
+                            xaxis_title="X (chuẩn hóa)", yaxis_title="Y (chuẩn hóa)",
+                            showlegend=True)
+            st.plotly_chart(fig)
+            st.write(f"Giá trị riêng: PC1 = {eigenvalues[0]:.2f}, PC2 = {eigenvalues[1]:.2f}. Vector riêng (PC1, PC2) là các hướng chính, thể hiện độ biến thiên lớn nhất.")
+        
+            # Bước 4: Chọn số lượng thành phần chính
+            st.write("**Bước 4: Chọn số lượng thành phần chính**")
+            st.write("Chọn số thành phần chính dựa trên tỷ lệ phương sai tích lũy:")
+            st.latex(r"""
+            \text{Explained Variance Ratio}_i = \frac{\lambda_i}{\sum_{j=1}^{d} \lambda_j}
+            """)
+            st.latex(r"""
+            \text{Cumulative Explained Variance} = \sum_{i=1}^{k} \frac{\lambda_i}{\sum_{j=1}^{d} \lambda_j}
+            """)
+            st.write("Trong đó:")
+            st.latex(r"""
+            \begin{aligned}
+            &\lambda_i: \text{Giá trị riêng của thành phần thứ } i \\
+            &d: \text{Tổng số chiều của dữ liệu} \\
+            &k: \text{Số thành phần chính được chọn}
+            \end{aligned}
+            """)
+            st.write("Thường chọn \( k \) sao cho tổng phương sai đạt 85-95%.")
+        
+            # Tính tỷ lệ phương sai tích lũy
+            explained_variance_ratio = eigenvalues / eigenvalues.sum()
+            cumulative_variance = np.cumsum(explained_variance_ratio)
+        
+            # Vẽ biểu đồ tỷ lệ phương sai tích lũy
+            fig = px.bar(x=["PC1", "PC2"], y=explained_variance_ratio,
+                        title="Tỷ lệ phương sai giải thích bởi từng thành phần chính",
+                        labels={'x': 'Thành phần chính', 'y': 'Tỷ lệ phương sai'})
+            st.plotly_chart(fig)
+            st.write(f"PC1 giải thích {explained_variance_ratio[0]*100:.2f}% phương sai, PC2 giải thích {explained_variance_ratio[1]*100:.2f}%. Tổng cộng: {cumulative_variance[-1]*100:.2f}%. Trong ví dụ này, chúng ta chọn cả 2 thành phần chính để trực quan hóa.")
+        
+            # Bước 5: Biến đổi dữ liệu sang không gian mới
+            st.write("**Bước 5: Biến đổi dữ liệu sang không gian mới**")
+            st.write("Chuyển dữ liệu sang hệ tọa độ mới bằng cách nhân với ma trận chứa các vector riêng:")
+            st.latex(r"""
+            X_{\text{new}} = X V_k
+            """)
+            st.write("Trong đó:")
+            st.latex(r"""
+            \begin{aligned}
+            &X: \text{Ma trận dữ liệu đã chuẩn hóa} \, (n \times d) \\
+            &V_k: \text{Ma trận chứa } k \text{ vector riêng đầu tiên} \, (d \times k), \text{ với các cột là vector riêng} \\
+            &X_{\text{new}}: \text{Ma trận dữ liệu sau khi giảm chiều} \, (n \times k)
+            \end{aligned}
+            """)
+        
+            # Chiếu dữ liệu lên không gian mới
+            X_new = np.dot(X_normalized, eigenvectors)
+        
+            # Vẽ dữ liệu trong không gian mới
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=X_new[:, 0], y=X_new[:, 1], mode="markers",
+                                    marker=dict(color=y_sim, colorscale="Viridis", size=8, opacity=0.6),
+                                    name="Dữ liệu"))
+            fig.update_layout(title="Dữ liệu trong không gian mới (PC1, PC2)",
+                            xaxis_title="PC1", yaxis_title="PC2",
+                            showlegend=True)
+            st.plotly_chart(fig)
+            st.write("Dữ liệu được chiếu lên không gian mới, với trục tọa độ là các thành phần chính PC1 và PC2. PC1 (trục X) là hướng có độ biến thiên lớn nhất.")
        
     with tab2:
         X, y = load_mnist_data()
