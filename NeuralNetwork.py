@@ -73,7 +73,7 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
         # Thực hiện cross-validation
         cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds)
         cv_mean_accuracy = np.mean(cv_scores)
-        cv_std_accuracy = np.std(cv_scores)
+        # cv_std_accuracy = np.std(cv_scores)
 
         # Ghi log tham số và metric vào MLflow
         mlflow.log_param("model_name", "Neural Network")
@@ -88,7 +88,7 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
     
     # Xóa thanh tiến trình và trạng thái sau khi hoàn thành
     status_text.text("Hoàn thành huấn luyện!")
-    return model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy, cv_std_accuracy
+    return model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy
 
 # 📌 Xử lý ảnh tải lên
 def preprocess_uploaded_image(image):
