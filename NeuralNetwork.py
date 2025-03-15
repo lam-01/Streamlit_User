@@ -281,7 +281,7 @@ def create_streamlit_app():
                     st.write(f"🎯 **Độ chính xác trung bình Cross-Validation: {cv_mean_accuracy:.4f}**")
                     
                     # Visualize neural network
-                    st.write("### 📉 Kiến trúc mạng Neural Network")
+                    st.write("##### 📉 Kiến trúc mạng Neural Network")
                     fig = visualize_neural_network(model, input_size=784, output_size=10)  # MNIST: 784 inputs, 10 outputs
                     st.pyplot(fig)
                 else:
@@ -324,7 +324,7 @@ def create_streamlit_app():
                         st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
 
     with tab4:
-        st.header("📊 MLflow Tracking")
+        st.write("##### 📊 MLflow Tracking")
         st.write("Xem chi tiết các kết quả đã lưu trong MLflow.")
         
         runs = mlflow.search_runs(order_by=["start_time desc"])
@@ -343,11 +343,11 @@ def create_streamlit_app():
                 filtered_runs = runs
         
             if not filtered_runs.empty:
-                st.write("### 📜 Danh sách mô hình đã lưu:")
+                st.write("##### 📜 Danh sách mô hình đã lưu:")
                 # Define available columns dynamically
                 available_columns = [
                     col for col in [
-                        "model_custom_name", "params.model_name", "run_id", "start_time",
+                        "model_custom_name", "params.model_name", "start_time",
                         "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy",
                         "metrics.cv_mean_accuracy"
                     ] if col in filtered_runs.columns
@@ -369,7 +369,7 @@ def create_streamlit_app():
                     run_details = mlflow.get_run(selected_run_id)
                     custom_name = run_details.data.tags.get('mlflow.runName', 'Không có tên')
                     model_type = run_details.data.params.get('model_name', 'Không xác định')
-                    st.write(f"### 🔍 Chi tiết mô hình: `{custom_name}`")
+                    st.write(f"##### 🔍 Chi tiết mô hình: `{custom_name}`")
                     st.write(f"**📌 Loại mô hình huấn luyện:** {model_type}")
         
                     st.write("📌 **Tham số:**")
@@ -380,12 +380,6 @@ def create_streamlit_app():
                     st.write("📊 **Metric:**")
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
-        
-                    st.write("📂 **Artifacts:**")
-                    if run_details.info.artifact_uri:
-                        st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
-                    else:
-                        st.write("- Không có artifacts nào.")
             else:
                 st.write("❌ Không tìm thấy mô hình nào khớp với tìm kiếm.")
         else:
