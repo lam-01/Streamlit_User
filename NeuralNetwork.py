@@ -53,10 +53,9 @@ def visualize_neural_network(model, input_size, output_size):
     ax.set_title("Kiến trúc mạng Neural Network", pad=20, size=14)
     ax.axis('off')
 
-    # Define x and y positions for funnel
+    # Define x positions for funnel
     x_positions = np.linspace(0, 10, num_layers)
     max_neurons = max(layer_sizes)
-    y_positions = np.arange(max_neurons)
 
     # Draw funnel with gradient
     for i in range(num_layers - 1):
@@ -74,21 +73,22 @@ def visualize_neural_network(model, input_size, output_size):
         ]
         funnel = Polygon(verts, facecolor='gray', alpha=0.7, edgecolor='black')
         ax.add_patch(funnel)
-        
-        # Add layer label
-        if i == 0:
-            ax.text(x_positions[i], max_neurons + 2, f"Input\n({current_size})", ha='center', va='top', fontsize=12)
-        elif i == num_layers - 2:
-            ax.text(x_positions[i + 1], max_neurons + 2, f"Output\n({next_size})", ha='center', va='top', fontsize=12)
-        else:
-            ax.text((x_positions[i] + x_positions[i + 1]) / 2, max_neurons + 2, 
-                    f"Hidden {i}\n({current_size})", ha='center', va='top', fontsize=12)
 
     # Add vertical bars at layer boundaries for emphasis
     for i in range(num_layers):
         y_start = (max_neurons - layer_sizes[i]) / 2
         ax.plot([x_positions[i], x_positions[i]], [y_start, y_start + layer_sizes[i]], 
                 color='black', lw=2)
+
+    # Add layer labels
+    for i in range(num_layers):
+        if i == 0:
+            ax.text(x_positions[i], max_neurons + 2, f"Input\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
+        elif i == num_layers - 1:
+            ax.text(x_positions[i], max_neurons + 2, f"Output\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
+        else:
+            # Label hidden layers correctly
+            ax.text(x_positions[i], max_neurons + 2, f"Hidden {i}\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
 
     # Set axis limits
     ax.set_xlim(-1, 11)
@@ -261,7 +261,7 @@ def create_streamlit_app():
         custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", "MyModel")
         params = {}
         
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 1, help="Số lượng tầng ẩn trong mạng nơ-ron.")
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2, help="Số lượng tầng ẩn trong mạng nơ-ron.")  # Default set to 2
         params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100, help="Số nơ-ron trong mỗi tầng ẩn.")
         params["epochs"] = st.slider("Epochs", 5, 50, 10, help="Số lần lặp qua toàn bộ dữ liệu huấn luyện.")
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"], help="Hàm kích hoạt cho các nơ-ron.")
