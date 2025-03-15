@@ -249,75 +249,61 @@ def create_streamlit_app():
     with tab4:
         st.header("📊 MLflow Tracking")
         st.write("Xem chi tiết các kết quả đã lưu trong MLflow.")
-    
-        # Lấy danh sách các runs từ MLflow
-        runs = mlflow.search_runs(order_by=["start_time desc"])
         
+        runs = mlflow.search_runs(order_by=["start_time desc"])
         if not runs.empty:
-            # Gán tên tùy chỉnh từ tags, với giá trị mặc định nếu không tồn tại
+            # Safely assign 'model_custom_name' from tags, with a fallback
             if "tags.mlflow.runName" in runs.columns:
-                runs["model_custom_name"] = runs["tags.mlflow.runName"].fillna("Unnamed Model")
+                runs["model_custom_name"] = runs["tags.mlflow.runName"]
             else:
-                runs["model_custom_name"] = "Unnamed Model"
-    
-            # Tìm kiếm mô hình
+                runs["model_custom_name"] = "Unnamed Model"  # Default value if tag is missing
+            model_names = runs["model_custom_name"].dropna().unique().tolist()
+        
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
             if search_model_name:
                 filtered_runs = runs[runs["model_custom_name"].str.contains(search_model_name, case=False, na=False)]
             else:
                 filtered_runs = runs
-    
+        
             if not filtered_runs.empty:
                 st.write("### 📜 Danh sách mô hình đã lưu:")
-                # Xác định các cột có sẵn để hiển thị
+                # Define available columns dynamically
                 available_columns = [
                     col for col in [
-                        "model_custom_name", "params.model_name", "run_id", "start_time",
+                        "model_custom_name", "params.model_name", "start_time",
                         "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy",
                         "metrics.cv_mean_accuracy", "metrics.cv_std_accuracy"
                     ] if col in filtered_runs.columns
                 ]
-                display_df = filtered_runs[available_columns].copy()
-    
-                # Đổi tên cột để dễ đọc
+                display_df = filtered_runs[available_columns]
                 display_df = display_df.rename(columns={
-                    "model_custom_name": "Tên mô hình tùy chỉnh",
-                    "params.model_name": "Loại mô hình",
-                    "run_id": "ID phiên",
-                    "start_time": "Thời gian bắt đầu",
-                    "metrics.train_accuracy": "Độ chính xác (Train)",
-                    "metrics.val_accuracy": "Độ chính xác (Val)",
-                    "metrics.test_accuracy": "Độ chính xác (Test)",
-                    "metrics.cv_mean_accuracy": "Độ chính xác CV trung bình",
-                    "metrics.cv_std_accuracy": "Độ lệch chuẩn CV"
+                    "model_custom_name": "Custom Model Name",
+                    "params.model_name": "Model Type"
                 })
-                
-                # Đảm bảo dữ liệu hiển thị dưới dạng chuỗi để tránh lỗi
-                for col in display_df.columns:
-                    display_df[col] = display_df[col].astype(str)
-                
                 st.dataframe(display_df)
-    
-                # Chọn mô hình để xem chi tiết
-                selected_run_id = st.selectbox("📝 Chọn một phiên để xem chi tiết:", 
-                                              filtered_runs["run_id"].tolist())
-                if selected_run_id:
+        
+                # Use custom_model_name in selectbox instead of run_id
+                selected_model_name = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", model_names)
+                if selected_model_name:
+                    # Get the run_id corresponding to the selected custom_model_name
+                    selected_run = filtered_runs[filtered_runs["model_custom_name"] == selected_model_name].iloc[0]
+                    selected_run_id = selected_run["run_id"]
+                    
                     run_details = mlflow.get_run(selected_run_id)
                     custom_name = run_details.data.tags.get('mlflow.runName', 'Không có tên')
                     model_type = run_details.data.params.get('model_name', 'Không xác định')
-                    
                     st.write(f"### 🔍 Chi tiết mô hình: `{custom_name}`")
                     st.write(f"**📌 Loại mô hình huấn luyện:** {model_type}")
-                    
+        
                     st.write("📌 **Tham số:**")
                     for key, value in run_details.data.params.items():
-                        if key != 'model_name':  # Bỏ qua model_name vì đã hiển thị ở trên
+                        if key != 'model_name':
                             st.write(f"- **{key}**: {value}")
-                    
+        
                     st.write("📊 **Metric:**")
                     for key, value in run_details.data.metrics.items():
-                        st.write(f"- **{key}**: {value:.4f}")
-                    
+                        st.write(f"- **{key}**: {value}")
+        
                     st.write("📂 **Artifacts:**")
                     if run_details.info.artifact_uri:
                         st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
