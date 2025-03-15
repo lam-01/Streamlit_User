@@ -113,8 +113,8 @@ def main():
             st.image("tnse11.png",caption="Nguồn : https://statquest.org")
         elif algorithm == "PCA":
             st.write("##### Thuật toán PCA")
-            st.write("""- **PCA (Principal Component Analysis)** là một phương pháp giảm chiều dữ liệu tuyến tính, tìm ra các thành phần chính (principal components) để chiếu dữ liệu từ không gian chiều cao xuống không gian chiều thấp hơn mà vẫn giữ tối đa thông tin (phương sai).""")
-            st.write("- **Các bước thực hiện PCA** :")
+            st.write("""**PCA (Principal Component Analysis)** là một phương pháp giảm chiều dữ liệu tuyến tính, tìm ra các thành phần chính (principal components) để chiếu dữ liệu từ không gian chiều cao xuống không gian chiều thấp hơn mà vẫn giữ tối đa thông tin (phương sai).""")
+            st.write("**Các bước thực hiện PCA** :")
         
             # Tạo dữ liệu giả lập 2D
             st.write("🔹Minh họa PCA trên dữ liệu giả lập 2D")
@@ -128,7 +128,7 @@ def main():
             y_sim = (X_sim[:, 0] + X_sim[:, 1] > 0).astype(int)
         
             # Bước 1: Chuẩn hóa dữ liệu
-            st.write("**Bước 1: Chuẩn hóa dữ liệu**")
+            st.write("- **Bước 1: Chuẩn hóa dữ liệu**")
             st.write("Đồng nhất hóa thang đo và mức độ biến thiên của các biến số, nhằm loại bỏ sự thiên lệch do khác biệt về đơn vị hoặc phạm vi giá trị, thực hiện bằng công thức Z-score:")
             st.latex(r"""
             X' = \frac{X - \mu}{\sigma}
@@ -166,7 +166,7 @@ def main():
             st.write("Dữ liệu gốc (trái) có phân bố elip nghiêng. Sau chuẩn hóa (phải), trung bình bằng 0 và phương sai bằng 1, nhưng hình dạng phân bố không thay đổi.")
         
             # Bước 2: Tính ma trận hiệp phương sai (Biểu đồ phân tán với đường hồi quy)
-            st.write("**Bước 2: Tính ma trận hiệp phương sai (Covariance Matrix)**")
+            st.write("- **Bước 2: Tính ma trận hiệp phương sai (Covariance Matrix)**")
             st.write("Ma trận hiệp phương sai biểu diễn mức độ tương quan giữa các biến:")
             st.latex(r"""
             \Sigma = \frac{1}{n-1} X^T X
@@ -203,7 +203,7 @@ def main():
             st.write(f"Đường hồi quy (màu đỏ) cho thấy mức độ tương quan giữa X và Y, với hệ số R² = {r_value**2:.2f}. Ma trận hiệp phương sai sẽ có giá trị ngoài đường chéo (khoảng {covariance_matrix[0, 1]:.2f}) phản ánh tương quan này.")
         
             # Bước 3: Tính toán giá trị riêng và vector riêng
-            st.write("**Bước 3: Tính toán giá trị riêng và vector riêng**")
+            st.write("- **Bước 3: Tính toán giá trị riêng và vector riêng**")
             st.write("Giải phương trình eigenvalue decomposition:")
             st.latex(r"""
             \Sigma v = \lambda v
@@ -247,7 +247,7 @@ def main():
             st.write(f"Giá trị riêng: PC1 = {eigenvalues[0]:.2f}, PC2 = {eigenvalues[1]:.2f}. Vector riêng (PC1, PC2) là các hướng chính, thể hiện độ biến thiên lớn nhất.")
         
             # Bước 4: Chọn số lượng thành phần chính
-            st.write("**Bước 4: Chọn số lượng thành phần chính**")
+            st.write("**- Bước 4: Chọn số lượng thành phần chính**")
             st.write("Chọn số thành phần chính dựa trên tỷ lệ phương sai tích lũy:")
             st.latex(r"""
             \text{Explained Variance Ratio}_i = \frac{\lambda_i}{\sum_{j=1}^{d} \lambda_j}
@@ -277,7 +277,7 @@ def main():
             st.write(f"PC1 giải thích {explained_variance_ratio[0]*100:.2f}% phương sai, PC2 giải thích {explained_variance_ratio[1]*100:.2f}%. Tổng cộng: {cumulative_variance[-1]*100:.2f}%. Trong ví dụ này, chúng ta chọn cả 2 thành phần chính để trực quan hóa.")
         
             # Bước 5: Biến đổi dữ liệu sang không gian mới
-            st.write("**Bước 5: Biến đổi dữ liệu sang không gian mới**")
+            st.write("**- Bước 5: Biến đổi dữ liệu sang không gian mới**")
             st.write("Chuyển dữ liệu sang hệ tọa độ mới bằng cách nhân với ma trận chứa các vector riêng:")
             st.latex(r"""
             X_{\text{new}} = X V_k
