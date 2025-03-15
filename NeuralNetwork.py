@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score
 from streamlit_drawable_canvas import st_canvas
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
 from sklearn.neural_network import MLPClassifier
 import time
 
@@ -35,47 +36,63 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-# 📌 Visualize mạng neural
+# 📌 Visualize mạng neural với cấu trúc funnel
 def visualize_neural_network(model, input_size, output_size):
     hidden_layer_sizes = model.hidden_layer_sizes
     if isinstance(hidden_layer_sizes, int):  # Handle case where hidden_layer_sizes is a single integer
         hidden_layer_sizes = [hidden_layer_sizes]
-    
+    elif isinstance(hidden_layer_sizes, tuple):
+        hidden_layer_sizes = list(hidden_layer_sizes)
+
     # Define layers: input, hidden layers, output
-    layer_sizes = [input_size] + list(hidden_layer_sizes) + [output_size]
-    max_neurons = max(layer_sizes)  # For scaling the plot
+    layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
+    num_layers = len(layer_sizes)
     
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.set_title("Kiến trúc mạng Neural Network")
+    # Create figure
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.set_title("Kiến trúc mạng Neural Network", pad=20, size=14)
     ax.axis('off')
-    
-    # Draw neurons for each layer
-    for layer_idx, n_neurons in enumerate(layer_sizes):
-        x_pos = layer_idx * 2  # Horizontal spacing between layers
-        for neuron_idx in range(n_neurons):
-            y_pos = (max_neurons - n_neurons) / 2 + neuron_idx  # Center neurons vertically
-            circle = plt.Circle((x_pos, y_pos), 0.2, color='skyblue', ec='black')
-            ax.add_patch(circle)
-            # Connect to next layer
-            if layer_idx < len(layer_sizes) - 1:
-                next_layer_neurons = layer_sizes[layer_idx + 1]
-                for next_neuron_idx in range(next_layer_neurons):
-                    next_y_pos = (max_neurons - next_layer_neurons) / 2 + next_neuron_idx
-                    ax.plot([x_pos + 0.2, x_pos + 2 - 0.2], [y_pos, next_y_pos], 'gray', alpha=0.1)
-    
-    # Add layer labels
-    for layer_idx, n_neurons in enumerate(layer_sizes):
-        x_pos = layer_idx * 2
-        label_y = max_neurons + 1
-        if layer_idx == 0:
-            ax.text(x_pos, label_y, "Input\n(784)", ha='center', fontsize=10)
-        elif layer_idx == len(layer_sizes) - 1:
-            ax.text(x_pos, label_y, "Output\n(10)", ha='center', fontsize=10)
+
+    # Define x and y positions for funnel
+    x_positions = np.linspace(0, 10, num_layers)
+    max_neurons = max(layer_sizes)
+    y_positions = np.arange(max_neurons)
+
+    # Draw funnel with gradient
+    for i in range(num_layers - 1):
+        current_size = layer_sizes[i]
+        next_size = layer_sizes[i + 1]
+        y_start = (max_neurons - current_size) / 2
+        y_end = (max_neurons - next_size) / 2
+        
+        # Create funnel segment with gradient
+        verts = [
+            (x_positions[i], y_start),
+            (x_positions[i + 1], y_end),
+            (x_positions[i + 1], y_end + next_size),
+            (x_positions[i], y_start + current_size)
+        ]
+        funnel = Polygon(verts, facecolor='gray', alpha=0.7, edgecolor='black')
+        ax.add_patch(funnel)
+        
+        # Add layer label
+        if i == 0:
+            ax.text(x_positions[i], max_neurons + 2, f"Input\n({current_size})", ha='center', va='top', fontsize=12)
+        elif i == num_layers - 2:
+            ax.text(x_positions[i + 1], max_neurons + 2, f"Output\n({next_size})", ha='center', va='top', fontsize=12)
         else:
-            ax.text(x_pos, label_y, f"Hidden {layer_idx}\n({n_neurons})", ha='center', fontsize=10)
-    
-    ax.set_xlim(-1, (len(layer_sizes) - 1) * 2 + 1)
-    ax.set_ylim(-1, max_neurons + 2)
+            ax.text((x_positions[i] + x_positions[i + 1]) / 2, max_neurons + 2, 
+                    f"Hidden {i}\n({current_size})", ha='center', va='top', fontsize=12)
+
+    # Add vertical bars at layer boundaries for emphasis
+    for i in range(num_layers):
+        y_start = (max_neurons - layer_sizes[i]) / 2
+        ax.plot([x_positions[i], x_positions[i]], [y_start, y_start + layer_sizes[i]], 
+                color='black', lw=2)
+
+    # Set axis limits
+    ax.set_xlim(-1, 11)
+    ax.set_ylim(-1, max_neurons + 4)
     plt.tight_layout()
     return fig
 
