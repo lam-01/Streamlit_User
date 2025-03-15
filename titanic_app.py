@@ -448,9 +448,6 @@ def create_streamlit_app():
             runs["valid_mse"] = runs["metrics.valid_mse"]  # MSE trên tập validation
             runs["test_mse"] = runs["metrics.test_mse"]  # MSE trên tập test
             runs["cv_mse"] = runs["metrics.cv_mse"]  # MSE từ cross-validation
-            runs["train_r2"] = runs["metrics.train_r2"]  # R² trên tập train
-            runs["valid_r2"] = runs["metrics.valid_r2"]  # R² trên tập validation
-            runs["test_r2"] = runs["metrics.test_r2"]  # R² trên tập test
 
             # **Tìm kiếm mô hình**
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
