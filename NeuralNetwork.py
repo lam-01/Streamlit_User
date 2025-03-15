@@ -83,7 +83,7 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
         mlflow.log_metric("val_accuracy", val_accuracy)
         mlflow.log_metric("test_accuracy", test_accuracy)
         mlflow.log_metric("cv_mean_accuracy", cv_mean_accuracy)
-        mlflow.log_metric("cv_std_accuracy", cv_std_accuracy)
+        # mlflow.log_metric("cv_std_accuracy", cv_std_accuracy)
         mlflow.sklearn.log_model(model, "Neural Network")
     
     # Xóa thanh tiến trình và trạng thái sau khi hoàn thành
@@ -271,7 +271,7 @@ def create_streamlit_app():
                     col for col in [
                         "model_custom_name", "params.model_name", "start_time",
                         "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy",
-                        "metrics.cv_mean_accuracy", "metrics.cv_std_accuracy"
+                        "metrics.cv_mean_accuracy"
                     ] if col in filtered_runs.columns
                 ]
                 display_df = filtered_runs[available_columns]
