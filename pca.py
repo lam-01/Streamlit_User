@@ -138,7 +138,7 @@ def main():
             ax[1].grid(True)
             plt.tight_layout()
             st.pyplot(fig)
-            st.write("Dữ liệu gốc (trái) có phân bố elip nghiêng. Sau chuẩn hóa (phải), trung bình bằng 0 và phương sai bằng 1, nhưng hình dạng phân bố không thay đổi.")
+            st.write("Dữ liệu gốc có phân bố elip nghiêng. Sau chuẩn hóa hình dạng phân bố không thay đổi.")
         
             # Bước 2: Tính ma trận hiệp phương sai (Biểu đồ phân tán với đường hồi quy)
             st.write("- **Bước 2: Tính ma trận hiệp phương sai (Covariance Matrix)**")
@@ -172,8 +172,9 @@ def main():
             ax.set_title("Phân tán và đường hồi quy giữa X và Y",fontsize=6)
             ax.set_xlabel("X (chuẩn hóa)",fontsize=6)
             ax.set_ylabel("Y (chuẩn hóa)",fontsize=6)
+            ax.tick_params(axis='both', labelsize=6)  # Giảm kích thước chữ trên các dấu tick
             ax.grid(True)
-            ax.legend()
+            ax.legend(fontsize=6) 
             st.pyplot(fig)
             st.write(f"Đường hồi quy (màu đỏ) cho thấy mức độ tương quan giữa X và Y, với hệ số R² = {r_value**2:.2f}. Ma trận hiệp phương sai sẽ có giá trị ngoài đường chéo (khoảng {covariance_matrix[0, 1]:.2f}) phản ánh tương quan này.")
         
