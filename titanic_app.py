@@ -287,10 +287,10 @@ def create_streamlit_app():
                                 X_train_poly = poly.fit_transform(X_train_scaled)
                                 X_valid_poly = poly.transform(X_valid_scaled)
                                 X_test_poly = poly.transform(X_test_scaled)
-
+                    
                                 model = LinearRegression()
                                 model.fit(X_train_poly, y_train)
-
+                    
                                 y_pred_train = model.predict(X_train_poly)
                                 y_pred_valid = model.predict(X_valid_poly)
                                 y_pred_test = model.predict(X_test_poly)
@@ -300,47 +300,55 @@ def create_streamlit_app():
                             else:
                                 model = LinearRegression()
                                 model.fit(X_train_scaled, y_train)
-
+                    
                                 y_pred_train = model.predict(X_train_scaled)
                                 y_pred_valid = model.predict(X_valid_scaled)
                                 y_pred_test = model.predict(X_test_scaled)
-
+                    
                             # Lưu mô hình vào session_state
                             st.session_state["model"] = model
                             st.session_state["regression_type"] = regression_type
-
+                    
                             # Tính toán metrics
                             mse_train = mean_squared_error(y_train, y_pred_train)
                             mse_valid = mean_squared_error(y_valid, y_pred_valid)
                             mse_test = mean_squared_error(y_test, y_pred_test)
-
+                    
+                            # Tính R² scores
+                            r2_train = r2_score(y_train, y_pred_train)
+                            r2_valid = r2_score(y_valid, y_pred_valid)
+                            r2_test = r2_score(y_test, y_pred_test)
+                    
                             # Cross-validation
                             if regression_type == "Polynomial Regression":
                                 y_pred_cv = cross_val_predict(model, X_train_poly, y_train, cv=cv_folds)
                             else:
                                 y_pred_cv = cross_val_predict(model, X_train_scaled, y_train, cv=cv_folds)
                             mse_cv = mean_squared_error(y_train, y_pred_cv)
-
+                    
                             # Ghi log tên mô hình vào MLflow
                             mlflow.log_param("model_name", model_name)
                             mlflow.log_param("regression_type", regression_type)
                             if regression_type == "Polynomial Regression":
                                 mlflow.log_param("degree", degree)
-
+                    
                             # Ghi log metrics vào MLflow
                             mlflow.log_metrics({
                                 "train_mse": mse_train,
                                 "valid_mse": mse_valid,
                                 "test_mse": mse_test,
-                                "cv_mse": mse_cv
+                                "cv_mse": mse_cv,
+                                "train_r2": r2_train,
+                                "valid_r2": r2_valid,
+                                "test_r2": r2_test
                             })
-
+                    
                             st.write(f"**Loại hồi quy đang sử dụng:** {regression_type}")
                             
                             results_df = pd.DataFrame({
-                                "Metric": ["MSE (Train)", "MSE (Validation)", "MSE (Test)", "MSE (Cross-Validation)"],
-                                "Value": [mse_train, mse_valid, mse_test, mse_cv
-                                    ]
+                                "Metric": ["MSE (Train)", "MSE (Validation)", "MSE (Test)", "MSE (Cross-Validation)", 
+                                           "R² (Train)", "R² (Validation)", "R² (Test)"],
+                                "Value": [mse_train, mse_valid, mse_test, mse_cv, r2_train, r2_valid, r2_test]
                             })
                             
                             st.write("**📌 Kết quả đánh giá mô hình:**")
@@ -439,17 +447,54 @@ def create_streamlit_app():
         runs = mlflow.search_runs(order_by=["start_time desc"])
     
         if not runs.empty:
+            # Debug: Hiển thị các cột có trong runs để kiểm tra
+            st.write("Columns in runs DataFrame:", runs.columns.tolist())
+    
             # Lấy tên mô hình từ tags.mlflow.runName
-            runs["model_name"] = runs["tags.mlflow.runName"]
+            runs["model_name"] = runs.get("tags.mlflow.runName", pd.Series([None] * len(runs))).fillna("Unnamed")
     
-            # Trích xuất regression_type từ params
-            runs["regression_type"] = runs["params"].apply(lambda x: x.get("regression_type", "N/A") if isinstance(x, dict) else "N/A")
+            # Trích xuất regression_type từ params (nếu tồn tại)
+            if "params" in runs.columns:
+                runs["regression_type"] = runs["params"].apply(
+                    lambda x: x.get("regression_type", "N/A") if isinstance(x, dict) else "N/A"
+                )
+            else:
+                runs["regression_type"] = "N/A"
+                st.warning("No 'params' column found in MLflow runs. Parameters may not have been logged.")
     
-            # Trích xuất các metrics từ metrics column
-            runs["train_mse"] = runs["metrics"].apply(lambda x: x.get("train_mse", "N/A") if isinstance(x, dict) else "N/A")
-            runs["valid_mse"] = runs["metrics"].apply(lambda x: x.get("valid_mse", "N/A") if isinstance(x, dict) else "N/A")
-            runs["test_mse"] = runs["metrics"].apply(lambda x: x.get("test_mse", "N/A") if isinstance(x, dict) else "N/A")
-            runs["cv_mse"] = runs["metrics"].apply(lambda x: x.get("cv_mse", "N/A") if isinstance(x, dict) else "N/A")
+            # Trích xuất metrics từ metrics column (nếu tồn tại)
+            if "metrics" in runs.columns:
+                runs["train_mse"] = runs["metrics"].apply(
+                    lambda x: x.get("train_mse", "N/A") if isinstance(x, dict) else "N/A"
+                )
+                runs["valid_mse"] = runs["metrics"].apply(
+                    lambda x: x.get("valid_mse", "N/A") if isinstance(x, dict) else "N/A"
+                )
+                runs["test_mse"] = runs["metrics"].apply(
+                    lambda x: x.get("test_mse", "N/A") if isinstance(x, dict) else "N/A"
+                )
+                runs["cv_mse"] = runs["metrics"].apply(
+                    lambda x: x.get("cv_mse", "N/A") if isinstance(x, dict) else "N/A"
+                )
+                # R² metrics (nếu có)
+                runs["train_r2"] = runs["metrics"].apply(
+                    lambda x: x.get("train_r2", "N/A") if isinstance(x, dict) else "N/A"
+                )
+                runs["valid_r2"] = runs["metrics"].apply(
+                    lambda x: x.get("valid_r2", "N/A") if isinstance(x, dict) else "N/A"
+                )
+                runs["test_r2"] = runs["metrics"].apply(
+                    lambda x: x.get("test_r2", "N/A") if isinstance(x, dict) else "N/A"
+                )
+            else:
+                runs["train_mse"] = "N/A"
+                runs["valid_mse"] = "N/A"
+                runs["test_mse"] = "N/A"
+                runs["cv_mse"] = "N/A"
+                runs["train_r2"] = "N/A"
+                runs["valid_r2"] = "N/A"
+                runs["test_r2"] = "N/A"
+                st.warning("No 'metrics' column found in MLflow runs. Metrics may not have been logged.")
     
             # **Tìm kiếm mô hình**
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
@@ -466,7 +511,9 @@ def create_streamlit_app():
                 display_df = display_df.fillna("N/A")
                 # Làm tròn các giá trị số nếu có
                 for col in ["train_mse", "valid_mse", "test_mse", "cv_mse"]:
-                    display_df[col] = display_df[col].apply(lambda x: round(x, 4) if isinstance(x, (int, float)) and x != "N/A" else x)
+                    display_df[col] = display_df[col].apply(
+                        lambda x: round(x, 4) if isinstance(x, (int, float)) and x != "N/A" else x
+                    )
                 st.dataframe(display_df)
     
                 # **Chọn một mô hình để xem chi tiết**
@@ -480,13 +527,12 @@ def create_streamlit_app():
                     st.write("**Tham số:**")
                     for key, value in run_details.data.params.items():
                         st.write(f"- **{key}**: {value}")
-    
                     st.write("**Metric:**")
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
     
             else:
-                st.write("❌ Không tìm thấy mô hình nào.")
+                st.write("❌ Không tìm thấy mô hình nào khớp với tìm kiếm.")
     
         else:
             st.write("⚠️ Không có phiên làm việc nào được ghi lại.")
