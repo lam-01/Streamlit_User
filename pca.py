@@ -10,6 +10,10 @@ import mlflow.sklearn
 import matplotlib.pyplot as plt
 import os
 import time
+import plotly.graph_objects as go
+import plotly.express as px
+import matplotlib.pyplot as plt
+from scipy.stats import linregress
 
 # Thiết lập logging với MLflow
 mlflow.set_tracking_uri("file:./mlruns")
