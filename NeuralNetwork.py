@@ -40,11 +40,13 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
     progress_bar = st.progress(0)
     status_text = st.empty()
 
+    # Tạo tuple cho hidden_layer_sizes dựa trên số lớp ẩn và số neuron mỗi lớp
+    hidden_layer_sizes = tuple([params["neurons_per_layer"]] * params["num_hidden_layers"])
+
     model = MLPClassifier(
-        hidden_layer_sizes=(params["hidden_layer_size"],),
-        max_iter=params["max_iter"],
+        hidden_layer_sizes=hidden_layer_sizes,
+        max_iter=params["epochs"],
         activation=params["activation"],
-        solver=params["solver"],
         random_state=42,
         warm_start=True  # Cho phép huấn luyện tiếp tục để mô phỏng tiến trình
     )
@@ -52,10 +54,10 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
     # Huấn luyện mô hình
     with mlflow.start_run(run_name=custom_model_name):
         # Mô phỏng tiến trình huấn luyện cho Neural Network
-        for i in range(params["max_iter"]):
+        for i in range(params["epochs"]):
             model.max_iter = i + 1  # Tăng số lần lặp từng bước
             model.fit(X_train, y_train)  # Huấn luyện từng epoch
-            progress = (i + 1) / params["max_iter"]
+            progress = (i + 1) / params["epochs"]
             progress_bar.progress(progress)
             status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
             time.sleep(0.1)  # Giả lập thời gian huấn luyện để thấy tiến trình
@@ -139,10 +141,12 @@ def create_streamlit_app():
         st.write("Ví dụ minh họa với bộ dữ liệu mnist : ")
         st.image("mau.png", caption="Nguồn : https://www.researchgate.net/", width=700)
         st.write("##### 3. Các tham số quan trọng")
-        st.write("""**a. Kích thước tầng ẩn (hidden_layer_size)**:
-        \n- Đây là số lượng nơ-ron trong tầng ẩn của mạng nơ-ron. Tầng ẩn là nơi mà các phép toán phi tuyến được thực hiện, giúp mô hình học được các đặc trưng phức tạp từ dữ liệu. Kích thước của tầng ẩn có thể ảnh hưởng lớn đến khả năng học của mô hình.
-        \n**b. Số lần lặp tối đa (max_iter)**:
-        \n- Đây là số lần mà thuật toán tối ưu sẽ cập nhật trọng số của mô hình trong quá trình huấn luyện.""")
+        st.write("""**a. Số lớp ẩn (num_hidden_layers)**:
+        \n- Đây là số lượng tầng ẩn trong mạng nơ-ron. Nhiều tầng ẩn hơn có thể giúp mô hình học được các đặc trưng phức tạp hơn, nhưng cũng làm tăng độ phức tạp tính toán.
+        \n**b. Số neuron mỗi lớp (neurons_per_layer)**:
+        \n- Đây là số lượng nơ-ron trong mỗi tầng ẩn. Số lượng nơ-ron ảnh hưởng đến khả năng học các đặc trưng từ dữ liệu.
+        \n**c. Epochs**:
+        \n- Đây là số lần toàn bộ dữ liệu huấn luyện được sử dụng để cập nhật trọng số của mô hình.""")
         st.latex(r"w = w - \eta \cdot \nabla L(w)")
         st.markdown(r"""
         Trong đó:
@@ -150,7 +154,7 @@ def create_streamlit_app():
             $$\eta$$ là tốc độ học (learning rate).
             $$\nabla L(w)$$ là gradient của hàm mất mát (loss function) theo trọng số.
         """)
-        st.write("""**c. Hàm kích hoạt (activation)**: 
+        st.write("""**d. Hàm kích hoạt (activation)**: 
         \n- Hàm kích hoạt là một hàm toán học được áp dụng cho đầu ra của mỗi nơ-ron trong tầng ẩn. Nó giúp mô hình học được các mối quan hệ phi tuyến giữa các đặc trưng. Các hàm kích hoạt phổ biến bao gồm:""")
         st.write("**ReLU (Rectified Linear Unit)**: Hàm này trả về giá trị đầu vào nếu nó lớn hơn 0, ngược lại trả về 0. ReLU giúp giảm thiểu vấn đề vanishing gradient.")
         st.latex("f(x) = \max(0, x)")
@@ -158,18 +162,6 @@ def create_streamlit_app():
         st.latex(r" f(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} ")
         st.write("**Logistic (Sigmoid)**: Hàm này trả về giá trị trong khoảng từ 0 đến 1, thường được sử dụng cho các bài toán phân loại nhị phân.")
         st.latex(r"f(x) = \frac{1}{1 + e^{-x}}")
-        st.write("""**d. Bộ giải tối ưu (solver)**:
-        \n- Bộ giải tối ưu là thuật toán được sử dụng để cập nhật trọng số của mô hình trong quá trình huấn luyện. Các bộ giải phổ biến bao gồm:""")
-        st.write("**Adam**: Một trong những bộ giải tối ưu phổ biến nhất, kết hợp các ưu điểm của hai bộ giải khác là AdaGrad và RMSProp. Adam tự động điều chỉnh tốc độ học cho từng trọng số.")
-        st.write("Bước 1: Tính toán gradient")
-        st.latex(r"g_t = \nabla L(w_t)") 
-        st.write("Bước 2: Cập nhật các ước lượng trung bình")
-        st.latex(r"m_t = \beta_1 m_{t-1} + (1 - \beta_1) g_t ] [ v_t = \beta_2 v_{t-1} + (1 - \beta_2) g_t^2 ")
-        st.write("Bước 3: Điều chỉnh bias")
-        st.latex(r"\hat{m}_t = \frac{m_t}{1 - \beta_1^t} ] [ \hat{v}_t = \frac{v_t}{1 - \beta_2^t} ")
-        st.write("Bước 4: Cập nhật trọng số")
-        st.latex(r"w_{t+1} = w_t - \frac{\eta}{\sqrt{\hat{v}_t} + \epsilon} \hat{m}_t ")
-        st.write("**SGD (Stochastic Gradient Descent)**: Một phương pháp đơn giản và hiệu quả, cập nhật trọng số dựa trên một mẫu ngẫu nhiên từ tập dữ liệu. SGD có thể hội tụ nhanh hơn nhưng có thể không ổn định.")
 
     with tab2:
         # Cho phép chọn số mẫu để huấn luyện
@@ -205,10 +197,10 @@ def create_streamlit_app():
         custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", "MyModel")
         params = {}
         
-        params["hidden_layer_size"] = st.slider("Kích thước tầng ẩn", 50, 200, 100, help="Số nơ-ron trong tầng ẩn.")
-        params["max_iter"] = st.slider("Số lần lặp tối đa", 5, 50, 10, help="Số lần lặp tối đa để huấn luyện.")
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 1, help="Số lượng tầng ẩn trong mạng nơ-ron.")
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100, help="Số nơ-ron trong mỗi tầng ẩn.")
+        params["epochs"] = st.slider("Epochs", 5, 50, 10, help="Số lần lặp qua toàn bộ dữ liệu huấn luyện.")
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"], help="Hàm kích hoạt cho các nơ-ron.")
-        params["solver"] = st.selectbox("Bộ giải tối ưu", ["adam", "sgd"], help="Bộ giải tối ưu hóa trọng số.")
         cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5, help="Số lượng fold để đánh giá mô hình bằng cross-validation.")
 
         if st.button("🚀 Huấn luyện mô hình"):
