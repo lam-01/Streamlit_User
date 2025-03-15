@@ -220,7 +220,7 @@ def main():
             &\lambda: \text{Giá trị riêng (số thực, thể hiện phương sai theo hướng } v\text{)}
             \end{aligned}
             """)
-            st.write("Phương trình này được giải bằng phân rã giá trị riêng (eigen decomposition), tìm tất cả \( (\lambda, v) \) sao cho phương trình thỏa mãn.")
+            st.markdown("Phương trình này được giải bằng phân rã giá trị riêng (eigen decomposition), tìm tất cả $$( (\lambda, v) $$) sao cho phương trình thỏa mãn.")
         
             # Tính giá trị riêng và vector riêng
             eigenvalues, eigenvectors = np.linalg.eigh(covariance_matrix)
@@ -281,7 +281,7 @@ def main():
             st.write(f"PC1 giải thích {explained_variance_ratio[0]*100:.2f}% phương sai, PC2 giải thích {explained_variance_ratio[1]*100:.2f}%. Tổng cộng: {cumulative_variance[-1]*100:.2f}%. Trong ví dụ này, chúng ta chọn cả 2 thành phần chính để trực quan hóa.")
         
             # Bước 5: Biến đổi dữ liệu sang không gian mới
-            st.write("**- Bước 5: Biến đổi dữ liệu sang không gian mới**")
+            st.write("- **Bước 5: Biến đổi dữ liệu sang không gian mới**")
             st.write("Chuyển dữ liệu sang hệ tọa độ mới bằng cách nhân với ma trận chứa các vector riêng:")
             st.latex(r"""
             X_{\text{new}} = X V_k
