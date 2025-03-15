@@ -166,7 +166,7 @@ def main():
             line = slope * X_normalized[:, 0] + intercept
         
             # Vẽ biểu đồ phân tán với đường hồi quy
-            fig, ax = plt.subplots(figsize=(4, 3))
+            fig, ax = plt.subplots(figsize=(3, 2))
             ax.scatter(X_normalized[:, 0], X_normalized[:, 1], c=y_sim, cmap="viridis", alpha=0.6)
             ax.plot(X_normalized[:, 0], line, color="red", linestyle="--", label=f"Đường hồi quy (R² = {r_value**2:.2f})")
             ax.set_title("Phân tán và đường hồi quy giữa X và Y")
