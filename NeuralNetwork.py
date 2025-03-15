@@ -257,29 +257,39 @@ def create_streamlit_app():
     with tab4:
         st.header("📊 MLflow Tracking")
         st.write("Xem chi tiết các kết quả đã lưu trong MLflow.")
-
+    
         runs = mlflow.search_runs(order_by=["start_time desc"])
         if not runs.empty:
-            runs["model_custom_name"] = runs["tags.mlflow.runName"]
+            # Safely assign 'model_custom_name' from tags, with a fallback
+            if "tags.mlflow.runName" in runs.columns:
+                runs["model_custom_name"] = runs["tags.mlflow.runName"]
+            else:
+                runs["model_custom_name"] = "Unnamed Model"  # Default value if tag is missing
             model_names = runs["model_custom_name"].dropna().unique().tolist()
-
+    
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
             if search_model_name:
                 filtered_runs = runs[runs["model_custom_name"].str.contains(search_model_name, case=False, na=False)]
             else:
                 filtered_runs = runs
-
+    
             if not filtered_runs.empty:
                 st.write("### 📜 Danh sách mô hình đã lưu:")
-                display_df = filtered_runs[["model_custom_name", "params.model_name", "run_id", "start_time", 
-                                           "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy",
-                                           "metrics.cv_mean_accuracy", "metrics.cv_std_accuracy"]]
+                # Define available columns dynamically
+                available_columns = [
+                    col for col in [
+                        "model_custom_name", "params.model_name", "run_id", "start_time",
+                        "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy",
+                        "metrics.cv_mean_accuracy", "metrics.cv_std_accuracy"
+                    ] if col in filtered_runs.columns
+                ]
+                display_df = filtered_runs[available_columns]
                 display_df = display_df.rename(columns={
                     "model_custom_name": "Custom Model Name",
                     "params.model_name": "Model Type"
                 })
                 st.dataframe(display_df)
-
+    
                 selected_run_id = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["run_id"].tolist())
                 if selected_run_id:
                     run_details = mlflow.get_run(selected_run_id)
@@ -287,23 +297,23 @@ def create_streamlit_app():
                     model_type = run_details.data.params.get('model_name', 'Không xác định')
                     st.write(f"### 🔍 Chi tiết mô hình: `{custom_name}`")
                     st.write(f"**📌 Loại mô hình huấn luyện:** {model_type}")
-
+    
                     st.write("📌 **Tham số:**")
                     for key, value in run_details.data.params.items():
                         if key != 'model_name':
                             st.write(f"- **{key}**: {value}")
-
+    
                     st.write("📊 **Metric:**")
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
-
+    
                     st.write("📂 **Artifacts:**")
                     if run_details.info.artifact_uri:
                         st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
                     else:
                         st.write("- Không có artifacts nào.")
             else:
-                st.write("❌ Không tìm thấy mô hình nào.")
+                st.write("❌ Không tìm thấy mô hình nào khớp với tìm kiếm.")
         else:
             st.write("⚠️ Không có phiên làm việc nào được ghi lại.")
 
