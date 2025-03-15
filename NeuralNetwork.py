@@ -230,8 +230,9 @@ def create_streamlit_app():
     with tab2:
         # Cho phép chọn số mẫu để huấn luyện
         max_samples = 70000  # Tổng số mẫu trong MNIST
-        n_samples = st.slider("Số lượng mẫu để huấn luyện", 1000, max_samples, 10000, step=1000, 
-                              help=f"Chọn số lượng mẫu từ 1,000 đến {max_samples} để huấn luyện.")
+        n_samples = st.number_input(
+            "Số lượng mẫu để huấn luyện", min_value=1000, max_value=max_samples, value=10000, step=1000,
+        )
         
         X, y = load_data(n_samples=n_samples)
         st.write(f"**Số lượng mẫu được chọn để huấn luyện: {X.shape[0]}**")
