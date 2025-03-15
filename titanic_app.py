@@ -350,7 +350,7 @@ def create_streamlit_app():
 
     with tab2:             
         # Prediction interface
-        st.subheader("Giao diện dự đoán")
+        st.write("##### Giao diện dự đoán")
         # Kiểm tra nếu mô hình đã huấn luyện trước khi dự đoán
         if 'model' in st.session_state and 'scaler' in st.session_state:
             analyzer.model = st.session_state['model']
@@ -433,14 +433,14 @@ def create_streamlit_app():
                     st.warning("Đối tượng này không có trong tập dữ liệu gốc.")
 
     with tab3:
-        st.subheader("MLflow Tracking")
+        st.write("##### MLflow Tracking")
     
         # Lấy danh sách các phiên làm việc từ MLflow
         runs = mlflow.search_runs(order_by=["start_time desc"])
     
         if not runs.empty:
-            # Debug: Hiển thị các cột của DataFrame để kiểm tra
-            st.write("Columns in runs DataFrame:", runs.columns.tolist())
+            # # Debug: Hiển thị các cột của DataFrame để kiểm tra
+            # st.write("Columns in runs DataFrame:", runs.columns.tolist())
     
             # Lấy tên mô hình từ tags.mlflow.runName
             runs["model_name"] = runs.get("tags.mlflow.runName", pd.Series([None] * len(runs))).fillna("Unnamed")
@@ -452,7 +452,7 @@ def create_streamlit_app():
                 )
             else:
                 runs["regression_type"] = "N/A"
-                st.warning("No 'params' column found in MLflow runs. Parameters may not have been logged.")
+                # st.warning("No 'params' column found in MLflow runs. Parameters may not have been logged.")
     
             # Trích xuất các metrics từ metrics column (nếu tồn tại)
             if "metrics" in runs.columns:
