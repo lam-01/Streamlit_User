@@ -280,7 +280,7 @@ def create_streamlit_app():
                 # Define available columns dynamically, excluding cv_std_accuracy
                 available_columns = [
                     col for col in [
-                        "model_custom_name", "params.model_name", "run_id", "start_time",
+                        "model_custom_name", "params.model_name", "start_time",
                         "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy",
                         "metrics.cv_mean_accuracy"
                     ] if col in filtered_runs.columns
