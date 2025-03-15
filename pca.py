@@ -251,7 +251,7 @@ def main():
             st.write(f"Giá trị riêng: PC1 = {eigenvalues[0]:.2f}, PC2 = {eigenvalues[1]:.2f}. Vector riêng (PC1, PC2) là các hướng chính, thể hiện độ biến thiên lớn nhất.")
         
             # Bước 4: Chọn số lượng thành phần chính
-            st.write("**- Bước 4: Chọn số lượng thành phần chính**")
+            st.write("- **Bước 4: Chọn số lượng thành phần chính**")
             st.write("Chọn số thành phần chính dựa trên tỷ lệ phương sai tích lũy:")
             st.latex(r"""
             \text{Explained Variance Ratio}_i = \frac{\lambda_i}{\sum_{j=1}^{d} \lambda_j}
