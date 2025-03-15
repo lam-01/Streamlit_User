@@ -52,42 +52,45 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
     )
 
     # Huấn luyện mô hình
-    with mlflow.start_run(run_name=custom_model_name):
-        # Mô phỏng tiến trình huấn luyện cho Neural Network
-        for i in range(params["epochs"]):
-            model.max_iter = i + 1  # Tăng số lần lặp từng bước
-            model.fit(X_train, y_train)  # Huấn luyện từng epoch
-            progress = (i + 1) / params["epochs"]
-            progress_bar.progress(progress)
-            status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
-            time.sleep(0.1)  # Giả lập thời gian huấn luyện để thấy tiến trình
+    try:
+        with mlflow.start_run(run_name=custom_model_name):
+            # Mô phỏng tiến trình huấn luyện cho Neural Network
+            for i in range(params["epochs"]):
+                model.max_iter = i + 1  # Tăng số lần lặp từng bước
+                model.fit(X_train, y_train)  # Huấn luyện từng epoch
+                progress = (i + 1) / params["epochs"]
+                progress_bar.progress(progress)
+                status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
+                time.sleep(0.1)  # Giả lập thời gian huấn luyện để thấy tiến trình
 
-        # Dự đoán và tính toán độ chính xác
-        y_train_pred = model.predict(X_train)
-        y_test_pred = model.predict(X_test)
-        y_val_pred = model.predict(X_val)
-        train_accuracy = accuracy_score(y_train, y_train_pred)
-        val_accuracy = accuracy_score(y_val, y_val_pred)
-        test_accuracy = accuracy_score(y_test, y_test_pred)
+            # Dự đoán và tính toán độ chính xác
+            y_train_pred = model.predict(X_train)
+            y_test_pred = model.predict(X_test)
+            y_val_pred = model.predict(X_val)
+            train_accuracy = accuracy_score(y_train, y_train_pred)
+            val_accuracy = accuracy_score(y_val, y_val_pred)
+            test_accuracy = accuracy_score(y_test, y_test_pred)
 
-        # Thực hiện cross-validation
-        cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds)
-        cv_mean_accuracy = np.mean(cv_scores)
-        # cv_std_accuracy = np.std(cv_scores)
+            # Thực hiện cross-validation
+            cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds)
+            cv_mean_accuracy = np.mean(cv_scores)
 
-        # Ghi log tham số và metric vào MLflow
-        mlflow.log_param("model_name", "Neural Network")
-        mlflow.log_params(params)  # Ghi toàn bộ tham số
-        mlflow.log_param("cv_folds", cv_folds)  # Ghi số lượng fold
-        mlflow.log_metric("train_accuracy", train_accuracy)
-        mlflow.log_metric("val_accuracy", val_accuracy)
-        mlflow.log_metric("test_accuracy", test_accuracy)
-        mlflow.log_metric("cv_mean_accuracy", cv_mean_accuracy)
-        # mlflow.log_metric("cv_std_accuracy", cv_std_accuracy)
-        mlflow.sklearn.log_model(model, "Neural Network")
-    
+            # Ghi log tham số và metric vào MLflow
+            mlflow.log_param("model_name", "Neural Network")
+            mlflow.log_params(params)  # Ghi toàn bộ tham số
+            mlflow.log_param("cv_folds", cv_folds)  # Ghi số lượng fold
+            mlflow.log_metric("train_accuracy", train_accuracy)
+            mlflow.log_metric("val_accuracy", val_accuracy)
+            mlflow.log_metric("test_accuracy", test_accuracy)
+            mlflow.log_metric("cv_mean_accuracy", cv_mean_accuracy)
+            mlflow.sklearn.log_model(model, "Neural Network")
+    except Exception as e:
+        st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
+        return None, None, None, None, None
+
     # Xóa thanh tiến trình và trạng thái sau khi hoàn thành
-    status_text.text("Hoàn thành huấn luyện!")
+    progress_bar.empty()
+    status_text.empty()
     return model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy
 
 # 📌 Xử lý ảnh tải lên
@@ -205,14 +208,18 @@ def create_streamlit_app():
 
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
-                model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy, cv_std_accuracy = train_model(
+                result = train_model(
                     custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds
                 )
-            st.success(f"✅ Huấn luyện xong!")
-            st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
-            st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
-            st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
-            st.write(f"🎯 **Độ chính xác trung bình Cross-Validation: {cv_mean_accuracy:.4f} (±{cv_std_accuracy:.4f})**")
+                if result[0] is not None:  # Check if model was returned successfully
+                    model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
+                    st.success(f"✅ Huấn luyện xong!")
+                    st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
+                    st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
+                    st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
+                    st.write(f"🎯 **Độ chính xác trung bình Cross-Validation: {cv_mean_accuracy:.4f}**")
+                else:
+                    st.error("Huấn luyện thất bại. Vui lòng kiểm tra lỗi ở trên.")
 
     with tab3:
         option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
@@ -223,13 +230,15 @@ def create_streamlit_app():
                 processed_image = preprocess_uploaded_image(image)
                 st.image(image, caption="📷 Ảnh tải lên", use_column_width=True)
                 if st.button("🔮 Dự đoán"):
-                    model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy, cv_std_accuracy = train_model(
+                    result = train_model(
                         custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds
                     )
-                    prediction = model.predict(processed_image)[0]
-                    probabilities = model.predict_proba(processed_image)[0]
-                    st.write(f"🎯 **Dự đoán: {prediction}**")
-                    st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                    if result[0] is not None:
+                        model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
+                        prediction = model.predict(processed_image)[0]
+                        probabilities = model.predict_proba(processed_image)[0]
+                        st.write(f"🎯 **Dự đoán: {prediction}**")
+                        st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
         elif option == "✏️ Vẽ số":
             canvas_result = st_canvas(
                 fill_color="white", stroke_width=15, stroke_color="black",
@@ -238,16 +247,19 @@ def create_streamlit_app():
             if st.button("🔮 Dự đoán"):
                 if canvas_result.image_data is not None:
                     processed_canvas = preprocess_canvas_image(canvas_result.image_data)
-                    model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy, cv_std_accuracy = train_model(
+                    result = train_model(
                         custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds
                     )
-                    prediction = model.predict(processed_canvas)[0]
-                    probabilities = model.predict_proba(processed_canvas)[0]
-                    st.write(f"🎯 **Dự đoán: {prediction}**")
-                    st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                    if result[0] is not None:
+                        model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
+                        prediction = model.predict(processed_canvas)[0]
+                        probabilities = model.predict_proba(processed_canvas)[0]
+                        st.write(f"🎯 **Dự đoán: {prediction}**")
+                        st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
 
     with tab4:
-        st.write("##### 📊 MLflow Tracking")
+        st.header("📊 MLflow Tracking")
+        st.write("Xem chi tiết các kết quả đã lưu trong MLflow.")
         
         runs = mlflow.search_runs(order_by=["start_time desc"])
         if not runs.empty:
@@ -265,11 +277,11 @@ def create_streamlit_app():
                 filtered_runs = runs
         
             if not filtered_runs.empty:
-                st.write("##### 📜 Danh sách mô hình đã lưu:")
-                # Define available columns dynamically
+                st.write("### 📜 Danh sách mô hình đã lưu:")
+                # Define available columns dynamically, excluding cv_std_accuracy
                 available_columns = [
                     col for col in [
-                        "model_custom_name", "params.model_name", "start_time",
+                        "model_custom_name", "params.model_name", "run_id", "start_time",
                         "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy",
                         "metrics.cv_mean_accuracy"
                     ] if col in filtered_runs.columns
@@ -291,7 +303,7 @@ def create_streamlit_app():
                     run_details = mlflow.get_run(selected_run_id)
                     custom_name = run_details.data.tags.get('mlflow.runName', 'Không có tên')
                     model_type = run_details.data.params.get('model_name', 'Không xác định')
-                    st.write(f"##### 🔍 Chi tiết mô hình: `{custom_name}`")
+                    st.write(f"### 🔍 Chi tiết mô hình: `{custom_name}`")
                     st.write(f"**📌 Loại mô hình huấn luyện:** {model_type}")
         
                     st.write("📌 **Tham số:**")
@@ -301,8 +313,14 @@ def create_streamlit_app():
         
                     st.write("📊 **Metric:**")
                     for key, value in run_details.data.metrics.items():
-                        st.write(f"- **{key}**: {value}")
-
+                        if key != "cv_std_accuracy":  # Exclude cv_std_accuracy from display
+                            st.write(f"- **{key}**: {value}")
+        
+                    st.write("📂 **Artifacts:**")
+                    if run_details.info.artifact_uri:
+                        st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
+                    else:
+                        st.write("- Không có artifacts nào.")
             else:
                 st.write("❌ Không tìm thấy mô hình nào khớp với tìm kiếm.")
         else:
