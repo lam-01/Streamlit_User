@@ -350,7 +350,7 @@ def create_streamlit_app():
 
     with tab2:             
         # Prediction interface
-        st.subheader("Giao diện dự đoán")
+        st.write("##### Giao diện dự đoán")
         # Kiểm tra nếu mô hình đã huấn luyện trước khi dự đoán
         if 'model' in st.session_state and 'scaler' in st.session_state:
             analyzer.model = st.session_state['model']
@@ -433,14 +433,14 @@ def create_streamlit_app():
                     st.warning("Đối tượng này không có trong tập dữ liệu gốc.")
 
     with tab3:
-        st.subheader("MLflow Tracking")
+        st.write("##### MLflow Tracking")
 
         # Lấy danh sách các phiên làm việc từ MLflow
         runs = mlflow.search_runs(order_by=["start_time desc"])
 
         if not runs.empty:
             # Lấy danh sách tên mô hình
-            runs["model_name"] = runs["tags.mlflow.runName"]  # Tên mô hình từ tag `mlflow.runName`
+            runs["model_name"] = runs["tags.mlflow.runName"]  
             
             # Thêm các cột thông tin từ params và metrics
             runs["regression_type"] = runs["params.regression_type"]  # Loại hồi quy từ params
