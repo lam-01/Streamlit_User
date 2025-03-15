@@ -36,37 +36,39 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 # 📌 Visualize Neural Network Architecture
-def visualize_neural_network(num_hidden_layers, neurons_per_layer):
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.set_title("Cấu trúc mạng Neural Network")
-    ax.axis('off')
+def visualize_neural_network(num_hidden_layers, neurons_per_layer, example_image):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5), gridspec_kw={'width_ratios': [1, 2]})
 
-    # Define layer sizes
-    input_size = 784  # MNIST input size (28x28)
-    output_size = 10  # Number of classes (digits 0-9)
-    layer_sizes = [input_size] + [neurons_per_layer] * num_hidden_layers + [output_size]
+    # Plot example MNIST image
+    ax1.imshow(example_image.reshape(28, 28), cmap='gray')
+    ax1.set_title("Ví dụ ảnh đầu vào (28x28)")
+    ax1.axis('off')
 
-    # Calculate spacing
-    max_nodes = max(layer_sizes)
+    # Neural network schematic
+    layers = [784] + [neurons_per_layer] * num_hidden_layers + [10]  # Input: 784, Hidden: user-defined, Output: 10
+    max_neurons = max(layers)
     layer_spacing = 1.5
-    node_spacing = max_nodes / (max_nodes + 1)
+    neuron_spacing = 1.0
 
-    # Draw neurons and connections
-    for layer_idx, layer_size in enumerate(layer_sizes):
-        x = layer_idx * layer_spacing
-        for node_idx in range(layer_size):
-            y = (node_idx - (layer_size - 1) / 2) * node_spacing
-            ax.plot(x, y, 'o', markersize=10, color='skyblue')
-            # Connect to next layer
-            if layer_idx < len(layer_sizes) - 1:
-                next_layer_size = layer_sizes[layer_idx + 1]
-                for next_node_idx in range(next_layer_size):
-                    next_y = (next_node_idx - (next_layer_size - 1) / 2) * node_spacing
-                    ax.plot([x, x + layer_spacing], [y, next_y], 'gray', alpha=0.1)
+    for i, layer_size in enumerate(layers):
+        x = i * layer_spacing
+        for j in range(layer_size):
+            y = (j - layer_size / 2) * neuron_spacing
+            ax2.plot(x, y, 'o', color='blue' if i == 0 else 'green' if i == len(layers)-1 else 'red', markersize=5)
+            # Connect neurons to the next layer
+            if i < len(layers) - 1:
+                next_layer_size = layers[i + 1]
+                for k in range(next_layer_size):
+                    next_y = (k - next_layer_size / 2) * neuron_spacing
+                    ax2.plot([x, x + layer_spacing], [y, next_y], 'gray', alpha=0.1)
 
-        # Add layer labels
-        ax.text(x, max_nodes / 2 + 0.5, f"Tầng {'Input' if layer_idx == 0 else 'Output' if layer_idx == len(layer_sizes) - 1 else f'Ẩn {layer_idx}'} \n({layer_size} nơ-ron)", 
-                ha='center', va='bottom')
+    # Customize plot
+    ax2.set_title(f"Cấu trúc mạng Neural Network\n({num_hidden_layers} tầng ẩn, {neurons_per_layer} neuron/tầng)")
+    ax2.set_xticks([i * layer_spacing for i in range(len(layers))])
+    ax2.set_xticklabels(['Input\n(784)', *[f'Hidden {i+1}\n({neurons_per_layer})' for i in range(num_hidden_layers)], 'Output\n(10)'])
+    ax2.set_yticks([])
+    ax2.set_xlabel("Tầng")
+    ax2.set_ylabel("Neuron")
 
     plt.tight_layout()
     return fig
@@ -76,30 +78,25 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
     progress_bar = st.progress(0)
     status_text = st.empty()
 
-    # Tạo tuple cho hidden_layer_sizes dựa trên số lớp ẩn và số neuron mỗi lớp
     hidden_layer_sizes = tuple([params["neurons_per_layer"]] * params["num_hidden_layers"])
-
     model = MLPClassifier(
         hidden_layer_sizes=hidden_layer_sizes,
         max_iter=params["epochs"],
         activation=params["activation"],
         random_state=42,
-        warm_start=True  # Cho phép huấn luyện tiếp tục để mô phỏng tiến trình
+        warm_start=True
     )
 
-    # Huấn luyện mô hình
     try:
         with mlflow.start_run(run_name=custom_model_name):
-            # Mô phỏng tiến trình huấn luyện cho Neural Network
             for i in range(params["epochs"]):
-                model.max_iter = i + 1  # Tăng số lần lặp từng bước
-                model.fit(X_train, y_train)  # Huấn luyện từng epoch
+                model.max_iter = i + 1
+                model.fit(X_train, y_train)
                 progress = (i + 1) / params["epochs"]
                 progress_bar.progress(progress)
                 status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
-                time.sleep(0.1)  # Giả lập thời gian huấn luyện để thấy tiến trình
+                time.sleep(0.1)
 
-            # Dự đoán và tính toán độ chính xác
             y_train_pred = model.predict(X_train)
             y_test_pred = model.predict(X_test)
             y_val_pred = model.predict(X_val)
@@ -107,14 +104,12 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
 
-            # Thực hiện cross-validation
             cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds)
             cv_mean_accuracy = np.mean(cv_scores)
 
-            # Ghi log tham số và metric vào MLflow
             mlflow.log_param("model_name", "Neural Network")
-            mlflow.log_params(params)  # Ghi toàn bộ tham số
-            mlflow.log_param("cv_folds", cv_folds)  # Ghi số lượng fold
+            mlflow.log_params(params)
+            mlflow.log_param("cv_folds", cv_folds)
             mlflow.log_metric("train_accuracy", train_accuracy)
             mlflow.log_metric("val_accuracy", val_accuracy)
             mlflow.log_metric("test_accuracy", test_accuracy)
@@ -124,7 +119,6 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
         st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
         return None, None, None, None, None
 
-    # Xóa thanh tiến trình và trạng thái sau khi hoàn thành
     progress_bar.empty()
     status_text.empty()
     return model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy
@@ -177,8 +171,19 @@ def create_streamlit_app():
         \n- Hidden Layer (tầng ẩn): Nằm ở giữa tầng đầu vào và đầu ra, thể hiện quá trình suy luận và xử lý thông tin của hệ thống.    
         """)
         st.image("neural_networks.png", caption="Cấu trúc mạng Neural Network", width=500)
+        
+        # Visualize Neural Network with example
+        st.write("##### Ví dụ minh họa cấu trúc mạng với bộ dữ liệu MNIST")
+        X, y = load_data(n_samples=1)  # Load one sample for visualization
+        example_image = X[0]
+        num_hidden_layers_example = 2  # Example value
+        neurons_per_layer_example = 100  # Example value
+        fig = visualize_neural_network(num_hidden_layers_example, neurons_per_layer_example, example_image)
+        st.pyplot(fig)
+        
         st.write("Ví dụ minh họa với bộ dữ liệu mnist : ")
         st.image("mau.png", caption="Nguồn : https://www.researchgate.net/", width=700)
+        
         st.write("##### 3. Các tham số quan trọng")
         st.write("""**a. Số lớp ẩn (num_hidden_layers)**:
         \n- Đây là số lượng tầng ẩn trong mạng nơ-ron. Nhiều tầng ẩn hơn có thể giúp mô hình học được các đặc trưng phức tạp hơn, nhưng cũng làm tăng độ phức tạp tính toán.
@@ -203,8 +208,7 @@ def create_streamlit_app():
         st.latex(r"f(x) = \frac{1}{1 + e^{-x}}")
 
     with tab2:
-        # Cho phép chọn số mẫu để huấn luyện
-        max_samples = 70000  # Tổng số mẫu trong MNIST
+        max_samples = 70000
         n_samples = st.slider("Số lượng mẫu để huấn luyện", 1000, max_samples, 10000, step=1000, 
                               help=f"Chọn số lượng mẫu từ 1,000 đến {max_samples} để huấn luyện.")
         
@@ -242,17 +246,12 @@ def create_streamlit_app():
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"], help="Hàm kích hoạt cho các nơ-ron.")
         cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5, help="Số lượng fold để đánh giá mô hình bằng cross-validation.")
 
-        # Visualize the neural network architecture
-        st.write("**🖼️ Cấu trúc mạng Neural Network**")
-        fig = visualize_neural_network(params["num_hidden_layers"], params["neurons_per_layer"])
-        st.pyplot(fig)
-
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
                 result = train_model(
                     custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds
                 )
-                if result[0] is not None:  # Check if model was returned successfully
+                if result[0] is not None:
                     model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
                     st.success(f"✅ Huấn luyện xong!")
                     st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
@@ -304,11 +303,10 @@ def create_streamlit_app():
         
         runs = mlflow.search_runs(order_by=["start_time desc"])
         if not runs.empty:
-            # Safely assign 'model_custom_name' from tags, with a fallback
             if "tags.mlflow.runName" in runs.columns:
                 runs["model_custom_name"] = runs["tags.mlflow.runName"]
             else:
-                runs["model_custom_name"] = "Unnamed Model"  # Default value if tag is missing
+                runs["model_custom_name"] = "Unnamed Model"
             model_names = runs["model_custom_name"].dropna().unique().tolist()
         
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
@@ -319,7 +317,6 @@ def create_streamlit_app():
         
             if not filtered_runs.empty:
                 st.write("### 📜 Danh sách mô hình đã lưu:")
-                # Define available columns dynamically
                 available_columns = [
                     col for col in [
                         "model_custom_name", "params.model_name", "run_id", "start_time",
@@ -334,10 +331,8 @@ def create_streamlit_app():
                 })
                 st.dataframe(display_df)
         
-                # Use custom_model_name in selectbox instead of run_id
                 selected_model_name = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", model_names)
                 if selected_model_name:
-                    # Get the run_id corresponding to the selected custom_model_name
                     selected_run = filtered_runs[filtered_runs["model_custom_name"] == selected_model_name].iloc[0]
                     selected_run_id = selected_run["run_id"]
                     
