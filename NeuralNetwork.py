@@ -258,8 +258,7 @@ def create_streamlit_app():
                         st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
 
     with tab4:
-        st.header("📊 MLflow Tracking")
-        st.write("Xem chi tiết các kết quả đã lưu trong MLflow.")
+        st.write("##### 📊 MLflow Tracking")
         
         runs = mlflow.search_runs(order_by=["start_time desc"])
         if not runs.empty:
@@ -277,7 +276,7 @@ def create_streamlit_app():
                 filtered_runs = runs
         
             if not filtered_runs.empty:
-                st.write("### 📜 Danh sách mô hình đã lưu:")
+                st.write("##### 📜 Danh sách mô hình đã lưu:")
                 # Define available columns dynamically, excluding cv_std_accuracy
                 available_columns = [
                     col for col in [
@@ -303,7 +302,7 @@ def create_streamlit_app():
                     run_details = mlflow.get_run(selected_run_id)
                     custom_name = run_details.data.tags.get('mlflow.runName', 'Không có tên')
                     model_type = run_details.data.params.get('model_name', 'Không xác định')
-                    st.write(f"### 🔍 Chi tiết mô hình: `{custom_name}`")
+                    st.write(f"##### 🔍 Chi tiết mô hình: `{custom_name}`")
                     st.write(f"**📌 Loại mô hình huấn luyện:** {model_type}")
         
                     st.write("📌 **Tham số:**")
@@ -315,12 +314,6 @@ def create_streamlit_app():
                     for key, value in run_details.data.metrics.items():
                         if key != "cv_std_accuracy":  # Exclude cv_std_accuracy from display
                             st.write(f"- **{key}**: {value}")
-        
-                    st.write("📂 **Artifacts:**")
-                    if run_details.info.artifact_uri:
-                        st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
-                    else:
-                        st.write("- Không có artifacts nào.")
             else:
                 st.write("❌ Không tìm thấy mô hình nào khớp với tìm kiếm.")
         else:
