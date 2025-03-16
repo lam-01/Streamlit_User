@@ -10,5 +10,6 @@ numpy
 pandas
 matplotlib
 openml
+tensorflow
 pillow
 
