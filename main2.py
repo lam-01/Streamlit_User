@@ -4,7 +4,7 @@ import streamlit as st
 # Tạo selectbox để chọn dự án
 option = st.sidebar.selectbox(
     "📌 Chọn một dự án để thực hiện:",
-    ["Phân tích Titanic", "MNIST","Clustering Algorithms","PCA & t-SNE","Neural Network"]
+    ["Phân tích Titanic", "MNIST","Clustering Algorithms","PCA & t-SNE","Neural Network","Pseudo Labelling"]
 )
 
 # Hiển thị nội dung tương ứng với lựa chọn
@@ -28,6 +28,10 @@ elif option=="PCA & t-SNE":
         exec(code)
 elif option=="Neural Network":
     with open("NeuralNetwork.py", "r", encoding="utf-8") as file:
+        code = file.read()
+        exec(code)
+elif option=="Pseudo Labelling":
+    with open("Pseudo.py", "r", encoding="utf-8") as file:
         code = file.read()
         exec(code)
 
