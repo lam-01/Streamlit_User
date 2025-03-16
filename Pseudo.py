@@ -196,20 +196,52 @@ def create_streamlit_app():
     with tab1:
         st.write("##### Pseudo Labelling với Neural Network")
         st.write(""" 
-        Ứng dụng này thực hiện thuật toán **Pseudo Labelling** trên tập dữ liệu MNIST:
-        - (0) Chia tập train/test.
-        - (1) Lấy tỉ lệ dữ liệu có nhãn ban đầu (mặc định 1% mỗi class).
-        - (2) Huấn luyện NN trên tập dữ liệu labeled.
-        - (3) Dự đoán nhãn cho dữ liệu unlabeled.
-        - (4) Gán nhãn giả dựa trên ngưỡng tin cậy.
-        - (5) Lặp lại từ bước (2) với tập dữ liệu mới.
-        Quá trình dừng khi gán hết nhãn hoặc sau số vòng lặp tối đa.
+        1. Khái niệm cơ bản
+        Pseudo Labelling là một kỹ thuật học bán giám sát (semi-supervised learning) nhằm tận dụng cả dữ liệu có nhãn (labeled data) và dữ liệu không nhãn (unlabeled data) để cải thiện hiệu suất của mô hình học máy, đặc biệt khi lượng dữ liệu có nhãn ban đầu rất hạn chế. Phương pháp này dựa trên ý tưởng sử dụng mô hình để dự đoán nhãn cho dữ liệu không nhãn, sau đó chọn các dự đoán có độ tin cậy cao để bổ sung vào tập dữ liệu có nhãn, từ đó huấn luyện lại mô hình.
+        2. Cơ chế hoạt động
+        Phương pháp Pseudo Labelling với Neural Network bao gồm các bước chính sau:
+        
+        (1) Chuẩn bị dữ liệu ban đầu
+        Tập dữ liệu có nhãn (Labeled Data): Một tập nhỏ dữ liệu đã được gán nhãn chính xác, thường chiếm tỉ lệ rất thấp (ví dụ: 1%) so với tổng dữ liệu.
+        Tập dữ liệu không nhãn (Unlabeled Data): Phần lớn dữ liệu còn lại, không có nhãn ban đầu, chiếm tỉ lệ lớn (ví dụ: 99%).
+        Tập kiểm tra (Test Data): Một tập dữ liệu riêng biệt để đánh giá hiệu suất cuối cùng của mô hình.
+        Ví dụ: Với tập MNIST (60,000 ảnh chữ số viết tay):
+        
+        Chia 80% làm tập train (48,000 ảnh) và 20% làm tập test (12,000 ảnh).
+        Từ tập train, lấy 1% (~480 ảnh) làm tập labeled, 99% (~47,520 ảnh) làm tập unlabeled.
+        (2) Huấn luyện mô hình ban đầu
+        Sử dụng một mạng nơ-ron (NN), chẳng hạn mạng Multi-Layer Perceptron (MLP) hoặc Convolutional Neural Network (CNN), để huấn luyện trên tập labeled ban đầu.
+        Quá trình huấn luyện:
+        Chuẩn hóa dữ liệu: Đưa giá trị pixel về khoảng [0, 1] (ví dụ: chia cho 255).
+        Hàm mất mát: Sử dụng sparse_categorical_crossentropy cho bài toán phân loại nhiều lớp.
+        Tối ưu hóa: Dùng thuật toán như Adam để cập nhật trọng số mạng.
+        Mô hình học được các đặc trưng cơ bản từ tập labeled nhỏ này, dù hiệu suất ban đầu có thể chưa cao do thiếu dữ liệu.
+        (3) Dự đoán nhãn cho dữ liệu không nhãn
+        Sử dụng mô hình đã huấn luyện để dự đoán nhãn cho toàn bộ tập unlabeled.
+        Kết quả dự đoán là một phân phối xác suất cho mỗi mẫu dữ liệu (ví dụ: [0.05, 0.02, 0.90, ..., 0.01] cho 10 lớp).
+        Độ tin cậy của dự đoán được đo bằng xác suất tối đa (max probability) trong phân phối này.
+        (4) Gán nhãn giả (Pseudo Label)
+        Đặt một ngưỡng tin cậy (threshold), ví dụ 0.95, để lọc các dự đoán đáng tin cậy.
+        Quy tắc:
+        Nếu xác suất tối đa ≥ threshold, mẫu đó được gán nhãn giả dựa trên lớp có xác suất cao nhất.
+        Nếu xác suất tối đa < threshold, mẫu đó vẫn giữ trạng thái không nhãn.
+        Ví dụ: Một ảnh trong tập unlabeled được dự đoán với xác suất [0.02, 0.01, 0.96, ..., 0.01]. Nếu threshold = 0.95, ảnh này được gán nhãn giả là lớp 2 (vì 0.96 > 0.95).
+        (5) Mở rộng tập labeled và huấn luyện lại
+        Tập labeled mới = tập labeled ban đầu + các mẫu vừa được gán nhãn giả.
+        Huấn luyện lại mô hình NN trên tập labeled mở rộng này.
+        Quá trình dự đoán (bước 3) và gán nhãn giả (bước 4) được lặp lại trên phần unlabeled còn lại.
+        (6) Lặp lại cho đến khi đạt điều kiện dừng
+        Điều kiện dừng:
+        Toàn bộ tập unlabeled được gán nhãn giả và chuyển sang tập labeled.
+        Không còn mẫu nào trong tập unlabeled có dự đoán vượt ngưỡng tin cậy.
+        Đạt số vòng lặp tối đa do người dùng đặt (ví dụ: 5, 10, hoặc 20 vòng).
+        Sau mỗi vòng lặp, mô hình thường trở nên chính xác hơn do được huấn luyện trên tập labeled lớn hơn.
         """)
-        x_train, y_train, _, _ = load_data()
-        show_sample_images(x_train, y_train)
     
     # Tab 2: Huấn luyện
     with tab2:
+        x_train, y_train, _, _ = load_data()
+        show_sample_images(x_train, y_train)
         st.write("##### Chia tập dữ liệu")
         
         train_split = st.slider("Tỉ lệ dữ liệu train/test", 0.5, 0.95, 0.8, 0.05,
