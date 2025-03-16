@@ -37,63 +37,63 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 # 📌 Visualize mạng neural với cấu trúc funnel
-def visualize_neural_network(model, input_size, output_size):
-    hidden_layer_sizes = model.hidden_layer_sizes
-    if isinstance(hidden_layer_sizes, int):  # Handle case where hidden_layer_sizes is a single integer
-        hidden_layer_sizes = [hidden_layer_sizes]
-    elif isinstance(hidden_layer_sizes, tuple):
-        hidden_layer_sizes = list(hidden_layer_sizes)
+# def visualize_neural_network(model, input_size, output_size):
+#     hidden_layer_sizes = model.hidden_layer_sizes
+#     if isinstance(hidden_layer_sizes, int):  # Handle case where hidden_layer_sizes is a single integer
+#         hidden_layer_sizes = [hidden_layer_sizes]
+#     elif isinstance(hidden_layer_sizes, tuple):
+#         hidden_layer_sizes = list(hidden_layer_sizes)
 
-    # Define layers: input, hidden layers, output
-    layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
-    num_layers = len(layer_sizes)
+#     # Define layers: input, hidden layers, output
+#     layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
+#     num_layers = len(layer_sizes)
     
-    # Create figure
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.set_title("Kiến trúc mạng Neural Network", pad=20, size=14)
-    ax.axis('off')
+#     # Create figure
+#     fig, ax = plt.subplots(figsize=(12, 6))
+#     ax.set_title("Kiến trúc mạng Neural Network", pad=20, size=14)
+#     ax.axis('off')
 
-    # Define x positions for funnel
-    x_positions = np.linspace(0, 10, num_layers)
-    max_neurons = max(layer_sizes)
+#     # Define x positions for funnel
+#     x_positions = np.linspace(0, 10, num_layers)
+#     max_neurons = max(layer_sizes)
 
-    # Draw funnel with gradient
-    for i in range(num_layers - 1):
-        current_size = layer_sizes[i]
-        next_size = layer_sizes[i + 1]
-        y_start = (max_neurons - current_size) / 2
-        y_end = (max_neurons - next_size) / 2
+#     # Draw funnel with gradient
+#     for i in range(num_layers - 1):
+#         current_size = layer_sizes[i]
+#         next_size = layer_sizes[i + 1]
+#         y_start = (max_neurons - current_size) / 2
+#         y_end = (max_neurons - next_size) / 2
         
-        # Create funnel segment with gradient
-        verts = [
-            (x_positions[i], y_start),
-            (x_positions[i + 1], y_end),
-            (x_positions[i + 1], y_end + next_size),
-            (x_positions[i], y_start + current_size)
-        ]
-        funnel = Polygon(verts, facecolor='gray', alpha=0.7, edgecolor='black')
-        ax.add_patch(funnel)
+#         # Create funnel segment with gradient
+#         verts = [
+#             (x_positions[i], y_start),
+#             (x_positions[i + 1], y_end),
+#             (x_positions[i + 1], y_end + next_size),
+#             (x_positions[i], y_start + current_size)
+#         ]
+#         funnel = Polygon(verts, facecolor='gray', alpha=0.7, edgecolor='black')
+#         ax.add_patch(funnel)
 
-    # Add vertical bars at layer boundaries for emphasis
-    for i in range(num_layers):
-        y_start = (max_neurons - layer_sizes[i]) / 2
-        ax.plot([x_positions[i], x_positions[i]], [y_start, y_start + layer_sizes[i]], 
-                color='black', lw=2)
+#     # Add vertical bars at layer boundaries for emphasis
+#     for i in range(num_layers):
+#         y_start = (max_neurons - layer_sizes[i]) / 2
+#         ax.plot([x_positions[i], x_positions[i]], [y_start, y_start + layer_sizes[i]], 
+#                 color='black', lw=2)
 
-    # Add layer labels
-    for i in range(num_layers):
-        if i == 0:
-            ax.text(x_positions[i], max_neurons + 2, f"Input\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
-        elif i == num_layers - 1:
-            ax.text(x_positions[i], max_neurons + 2, f"Output\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
-        else:
-            ax.text(x_positions[i], max_neurons + 2, f"Hidden {i}\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
+#     # Add layer labels
+#     for i in range(num_layers):
+#         if i == 0:
+#             ax.text(x_positions[i], max_neurons + 2, f"Input\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
+#         elif i == num_layers - 1:
+#             ax.text(x_positions[i], max_neurons + 2, f"Output\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
+#         else:
+#             ax.text(x_positions[i], max_neurons + 2, f"Hidden {i}\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
 
-    # Set axis limits
-    ax.set_xlim(-1, 11)
-    ax.set_ylim(-1, max_neurons + 4)
-    plt.tight_layout()
-    return fig
+#     # Set axis limits
+#     ax.set_xlim(-1, 11)
+#     ax.set_ylim(-1, max_neurons + 4)
+#     plt.tight_layout()
+#     return fig
 
 # 📌 Visualize mạng nơ-ron với kết quả dự đoán (tương tự hình ảnh ban đầu)
 def visualize_neural_network_prediction(model, input_image, predicted_label):
@@ -365,12 +365,12 @@ def create_streamlit_app():
                     st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
                     st.write(f"🎯 **Độ chính xác trung bình Cross-Validation: {cv_mean_accuracy:.4f}**")
                     
-                    # Visualize neural network
-                    st.write("##### 📉 Kiến trúc mạng Neural Network")
-                    fig = visualize_neural_network(model, input_size=784, output_size=10)
-                    st.pyplot(fig)
-                else:
-                    st.error("Huấn luyện thất bại. Vui lòng kiểm tra lỗi ở trên.")
+                #     # Visualize neural network
+                #     st.write("##### 📉 Kiến trúc mạng Neural Network")
+                #     fig = visualize_neural_network(model, input_size=784, output_size=10)
+                #     st.pyplot(fig)
+                # else:
+                #     st.error("Huấn luyện thất bại. Vui lòng kiểm tra lỗi ở trên.")
 
     with tab3:
         option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
