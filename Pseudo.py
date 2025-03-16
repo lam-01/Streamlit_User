@@ -59,13 +59,14 @@ def select_initial_data(x_train, y_train, percentage):
     return x_labeled, y_labeled, x_unlabeled, unlabeled_idx
 
 # Thuật toán Pseudo Labelling với MLflow và hiển thị chi tiết
-def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_test, threshold, max_iterations, custom_model_name):
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    log_container = st.empty()  # Container để hiển thị log chi tiết
-    
-    # Khởi tạo log
-    log_text = ""
+def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_test, threshold, max_iterations, custom_model_name, show_details=False):
+    if show_details:
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        log_container = st.empty()
+        log_text = ""
+    else:
+        log_text = ""  # Vẫn giữ log để tính toán nhưng không hiển thị
     
     with mlflow.start_run(run_name=custom_model_name):
         model = create_model()
@@ -81,18 +82,21 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_tes
         
         # Bước 0: Chia tập train/test (đã thực hiện trước)
         log_text += "✅ **Bước 0**: Chia tập train/test hoàn tất.\n"
-        log_container.text(log_text)
-        progress_bar.progress(0.1)
-        status_text.text("Đang khởi tạo mô hình... (10%)")
+        if show_details:
+            log_container.text(log_text)
+            progress_bar.progress(0.1)
+            status_text.text("Đang khởi tạo mô hình... (10%)")
         
         # Bước 1: Lấy dữ liệu labeled ban đầu (đã thực hiện trước)
         log_text += f"✅ **Bước 1**: Đã chọn {len(x_labeled)} mẫu làm tập labeled ban đầu ({percentage*100:.1f}% mỗi class).\n"
-        log_container.text(log_text)
+        if show_details:
+            log_container.text(log_text)
         
         for iteration in range(max_iterations):
             # Bước 2: Huấn luyện model trên tập dữ liệu hiện tại
             log_text += f"🔄 **Bước 2 (Iteration {iteration+1})**: Huấn luyện model với {len(x_train_current)} mẫu.\n"
-            log_container.text(log_text)
+            if show_details:
+                log_container.text(log_text)
             history = model.fit(x_train_current, y_train_current,
                               epochs=5,
                               batch_size=32,
@@ -104,11 +108,13 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_tes
             mlflow.log_metric("train_accuracy", train_acc, step=iteration)
             mlflow.log_metric("val_accuracy", val_acc, step=iteration)
             log_text += f"📊 Độ chính xác train: {train_acc:.4f}, validation: {val_acc:.4f}\n"
-            log_container.text(log_text)
+            if show_details:
+                log_container.text(log_text)
             
             # Bước 3: Dự đoán nhãn cho dữ liệu unlabeled
             log_text += f"🔮 **Bước 3 (Iteration {iteration+1})**: Dự đoán nhãn cho {len(remaining_unlabeled)} mẫu unlabeled.\n"
-            log_container.text(log_text)
+            if show_details:
+                log_container.text(log_text)
             predictions = model.predict(remaining_unlabeled, verbose=0)
             max_probs = np.max(predictions, axis=1)
             pseudo_labels = np.argmax(predictions, axis=1)
@@ -116,14 +122,17 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_tes
             # Bước 4: Lấy ngưỡng để gán Pseudo Label
             confident_idx = np.where(max_probs >= threshold)[0]
             log_text += f"📌 **Bước 4 (Iteration {iteration+1})**: Gán nhãn giả cho {len(confident_idx)} mẫu với ngưỡng {threshold}.\n"
-            log_container.text(log_text)
+            if show_details:
+                log_container.text(log_text)
             
-            progress_bar.progress(0.5 + 0.4 * (iteration + 1) / max_iterations)
-            status_text.text(f"Iteration {iteration + 1}: Đã gán nhãn cho {len(confident_idx)} mẫu ({int(50 + 40 * (iteration + 1) / max_iterations)}%)")
+            if show_details:
+                progress_bar.progress(0.5 + 0.4 * (iteration + 1) / max_iterations)
+                status_text.text(f"Iteration {iteration + 1}: Đã gán nhãn cho {len(confident_idx)} mẫu ({int(50 + 40 * (iteration + 1) / max_iterations)}%)")
             
             if len(confident_idx) == 0:
                 log_text += "⛔ Không còn mẫu nào vượt ngưỡng. Dừng thuật toán.\n"
-                log_container.text(log_text)
+                if show_details:
+                    log_container.text(log_text)
                 break
                 
             # Bước 5: Cập nhật tập dữ liệu huấn luyện
@@ -132,26 +141,29 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_tes
             remaining_unlabeled = np.delete(remaining_unlabeled, confident_idx, axis=0)
             mlflow.log_metric("labeled_samples", len(confident_idx), step=iteration)
             log_text += f"🔄 **Bước 5 (Iteration {iteration+1})**: Tập huấn luyện mới có {len(x_train_current)} mẫu.\n"
-            log_container.text(log_text)
+            if show_details:
+                log_container.text(log_text)
             
             if len(remaining_unlabeled) == 0:
                 log_text += "✅ Đã gán nhãn hết dữ liệu unlabeled. Dừng thuật toán.\n"
-                log_container.text(log_text)
+                if show_details:
+                    log_container.text(log_text)
                 break
         
         # Đánh giá cuối cùng
-        progress_bar.progress(0.9)
-        status_text.text("Đang đánh giá trên test set... (90%)")
+        if show_details:
+            progress_bar.progress(0.9)
+            status_text.text("Đang đánh giá trên test set... (90%)")
         test_loss, test_accuracy = model.evaluate(x_test, y_test, verbose=0)
         mlflow.log_metric("test_accuracy", test_accuracy)
         mlflow.keras.log_model(model, "final_model")
         log_text += f"✅ **Đánh giá cuối**: Độ chính xác trên test set: {test_accuracy:.4f}\n"
-        log_container.text(log_text)
+        if show_details:
+            log_container.text(log_text)
+            progress_bar.progress(1.0)
+            status_text.text("Hoàn tất! (100%)")
         
-        progress_bar.progress(1.0)
-        status_text.text("Hoàn tất! (100%)")
-        
-    return model, test_accuracy
+    return model, test_accuracy, log_text  # Trả về log để hiển thị nếu cần
 
 # Xử lý ảnh tải lên
 def preprocess_uploaded_image(image):
@@ -218,8 +230,11 @@ def create_streamlit_app():
         threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.95, 0.01)
         max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 5)
         
+        # Checkbox để hiển thị chi tiết
+        show_details = st.checkbox("Hiển thị chi tiết quá trình huấn luyện", value=False)
+        
         if st.button("🚀 Chạy Pseudo Labelling"):
-            global percentage  # Để sử dụng trong pseudo_labeling_with_mlflow
+            global percentage
             percentage = labeled_percentage / 100
             x_labeled, y_labeled, x_unlabeled, _ = select_initial_data(x_train, y_train, percentage)
             
@@ -231,13 +246,18 @@ def create_streamlit_app():
             st.write(f"Tập unlabeled: {len(x_unlabeled)} mẫu ({len(x_unlabeled)/len(x_train)*100:.1f}% của train)")
             
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
-                model, test_accuracy = pseudo_labeling_with_mlflow(
+                model, test_accuracy, log_text = pseudo_labeling_with_mlflow(
                     x_labeled, y_labeled, x_unlabeled, x_test, y_test,
-                    threshold, max_iterations, custom_model_name
+                    threshold, max_iterations, custom_model_name, show_details
                 )
                 st.session_state['model'] = model
             
             st.success(f"✅ Huấn luyện xong! Độ chính xác trên test: {test_accuracy:.4f}")
+            
+            # Hiển thị chi tiết trong expander nếu người dùng chọn
+            if show_details:
+                with st.expander("📜 Xem chi tiết quá trình huấn luyện"):
+                    st.text(log_text)
     
     # Tab 3: Dự đoán
     with tab3:
