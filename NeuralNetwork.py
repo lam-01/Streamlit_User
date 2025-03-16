@@ -35,67 +35,8 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
         X_train, y_train, test_size=val_size / (train_size + val_size), random_state=random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
-
-# 📌 Visualize mạng neural với cấu trúc funnel
-def visualize_neural_network(model, input_size, output_size):
-    hidden_layer_sizes = model.hidden_layer_sizes
-    if isinstance(hidden_layer_sizes, int):  # Handle case where hidden_layer_sizes is a single integer
-        hidden_layer_sizes = [hidden_layer_sizes]
-    elif isinstance(hidden_layer_sizes, tuple):
-        hidden_layer_sizes = list(hidden_layer_sizes)
-
-    # Define layers: input, hidden layers, output
-    layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
-    num_layers = len(layer_sizes)
     
-    # Create figure
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.set_title("Kiến trúc mạng Neural Network", pad=20, size=14)
-    ax.axis('off')
-
-    # Define x positions for funnel
-    x_positions = np.linspace(0, 10, num_layers)
-    max_neurons = max(layer_sizes)
-
-    # Draw funnel with gradient
-    for i in range(num_layers - 1):
-        current_size = layer_sizes[i]
-        next_size = layer_sizes[i + 1]
-        y_start = (max_neurons - current_size) / 2
-        y_end = (max_neurons - next_size) / 2
-        
-        # Create funnel segment with gradient
-        verts = [
-            (x_positions[i], y_start),
-            (x_positions[i + 1], y_end),
-            (x_positions[i + 1], y_end + next_size),
-            (x_positions[i], y_start + current_size)
-        ]
-        funnel = Polygon(verts, facecolor='gray', alpha=0.7, edgecolor='black')
-        ax.add_patch(funnel)
-
-    # Add vertical bars at layer boundaries for emphasis
-    for i in range(num_layers):
-        y_start = (max_neurons - layer_sizes[i]) / 2
-        ax.plot([x_positions[i], x_positions[i]], [y_start, y_start + layer_sizes[i]], 
-                color='black', lw=2)
-
-    # Add layer labels
-    for i in range(num_layers):
-        if i == 0:
-            ax.text(x_positions[i], max_neurons + 2, f"Input\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
-        elif i == num_layers - 1:
-            ax.text(x_positions[i], max_neurons + 2, f"Output\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
-        else:
-            ax.text(x_positions[i], max_neurons + 2, f"Hidden {i}\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
-
-    # Set axis limits
-    ax.set_xlim(-1, 11)
-    ax.set_ylim(-1, max_neurons + 4)
-    plt.tight_layout()
-    return fig
-
-# 📌 Visualize mạng nơ-ron với kết quả dự đoán (đã chỉnh sửa để giống hình mới)
+# 📌 Visualize mạng nơ-ron với kết quả dự đoán (đã chỉnh sửa để kết nối dễ nhìn hơn)
 def visualize_neural_network_prediction(model, input_image, predicted_label):
     hidden_layer_sizes = model.hidden_layer_sizes
     if isinstance(hidden_layer_sizes, int):
@@ -157,15 +98,36 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
         x, y = pos[('dots', 0)]
         ax2.text(x, y, "...", fontsize=12, color='white', ha='center', va='center')
 
-    # Vẽ các kết nối giữa các tầng
+    # Vẽ các kết nối giữa các tầng (cải tiến để dễ nhìn hơn)
     for layer_idx in range(len(layer_sizes) - 1):
-        for neuron1 in range(layer_sizes[layer_idx]):
-            if layer_sizes[layer_idx] > 20 and layer_idx == 0 and neuron1 >= 10 and neuron1 < layer_sizes[layer_idx] - 10:
-                continue
-            for neuron2 in range(layer_sizes[layer_idx + 1]):
+        # Chỉ chọn một số nơ-ron đại diện để vẽ kết nối
+        current_layer_size = layer_sizes[layer_idx]
+        next_layer_size = layer_sizes[layer_idx + 1]
+
+        # Nếu là tầng đầu vào, chỉ chọn 10 nơ-ron đại diện (5 ở đầu, 5 ở cuối)
+        if layer_idx == 0 and current_layer_size > 20:
+            neuron_indices_1 = list(range(5)) + list(range(current_layer_size - 5, current_layer_size))
+        else:
+            neuron_indices_1 = range(current_layer_size)
+
+        # Chỉ vẽ kết nối đến nơ-ron dự đoán ở tầng đầu ra (nếu là tầng cuối)
+        if layer_idx == len(layer_sizes) - 2:  # Tầng trước tầng đầu ra
+            neuron_indices_2 = [predicted_label]  # Chỉ vẽ đến nơ-ron dự đoán
+        else:
+            # Nếu là tầng ẩn, chọn 5 nơ-ron đại diện (hoặc tất cả nếu tầng nhỏ)
+            if next_layer_size > 10:
+                neuron_indices_2 = list(range(5)) + list(range(next_layer_size - 5, next_layer_size))
+            else:
+                neuron_indices_2 = range(next_layer_size)
+
+        # Sử dụng màu gradient từ xanh đến đỏ
+        for idx1, neuron1 in enumerate(neuron_indices_1):
+            for idx2, neuron2 in enumerate(neuron_indices_2):
                 x1, y1 = pos[(layer_idx, neuron1)]
                 x2, y2 = pos[(layer_idx + 1, neuron2)]
-                ax2.plot([x1, x2], [y1, y2], color=np.random.rand(3,), alpha=0.3)
+                # Tạo màu gradient dựa trên vị trí nơ-ron
+                color = plt.cm.coolwarm(idx2 / max(len(neuron_indices_2), 1))  # Gradient từ xanh đến đỏ
+                ax2.plot([x1, x2], [y1, y2], color=color, alpha=0.5, linewidth=1)
 
     # Thiết lập trục
     ax2.set_xlim(-0.5, num_layers - 0.5)
@@ -366,10 +328,6 @@ def create_streamlit_app():
                     st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
                     st.write(f"🎯 **Độ chính xác trung bình Cross-Validation: {cv_mean_accuracy:.4f}**")
                     
-                    # Visualize neural network
-                    st.write("##### 📉 Kiến trúc mạng Neural Network")
-                    fig = visualize_neural_network(model, input_size=784, output_size=10)
-                    st.pyplot(fig)
                 else:
                     st.error("Huấn luyện thất bại. Vui lòng kiểm tra lỗi ở trên.")
 
