@@ -187,9 +187,9 @@ def create_streamlit_app():
         if st.button("🚀 Chạy Pseudo Labelling"):
             x_labeled, y_labeled, x_unlabeled, _ = select_initial_data(x_train, y_train)
             
-            st.write("Kích thước tập dữ liệu:")
-            st.write(f"Tập train: {len(x_train)} mẫu")
-            st.write(f"Tập test: {len(x_test)} mẫu")
+            # st.write("Kích thước tập dữ liệu:")
+            # st.write(f"Tập train: {len(x_train)} mẫu")
+            # st.write(f"Tập test: {len(x_test)} mẫu")
             st.write(f"Tập labeled ban đầu: {len(x_labeled)} mẫu")
             st.write(f"Tập unlabeled: {len(x_unlabeled)} mẫu")
             
