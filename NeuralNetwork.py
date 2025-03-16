@@ -9,6 +9,7 @@ from sklearn.metrics import accuracy_score
 from streamlit_drawable_canvas import st_canvas
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.patches import Circle, Polygon
 from sklearn.neural_network import MLPClassifier
 import time
 
@@ -35,6 +36,152 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
 
+# 📌 Visualize mạng neural với cấu trúc funnel
+def visualize_neural_network(model, input_size, output_size):
+    hidden_layer_sizes = model.hidden_layer_sizes
+    if isinstance(hidden_layer_sizes, int):  # Handle case where hidden_layer_sizes is a single integer
+        hidden_layer_sizes = [hidden_layer_sizes]
+    elif isinstance(hidden_layer_sizes, tuple):
+        hidden_layer_sizes = list(hidden_layer_sizes)
+
+    # Define layers: input, hidden layers, output
+    layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
+    num_layers = len(layer_sizes)
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.set_title("Kiến trúc mạng Neural Network", pad=20, size=14)
+    ax.axis('off')
+
+    # Define x positions for funnel
+    x_positions = np.linspace(0, 10, num_layers)
+    max_neurons = max(layer_sizes)
+
+    # Draw funnel with gradient
+    for i in range(num_layers - 1):
+        current_size = layer_sizes[i]
+        next_size = layer_sizes[i + 1]
+        y_start = (max_neurons - current_size) / 2
+        y_end = (max_neurons - next_size) / 2
+        
+        # Create funnel segment with gradient
+        verts = [
+            (x_positions[i], y_start),
+            (x_positions[i + 1], y_end),
+            (x_positions[i + 1], y_end + next_size),
+            (x_positions[i], y_start + current_size)
+        ]
+        funnel = Polygon(verts, facecolor='gray', alpha=0.7, edgecolor='black')
+        ax.add_patch(funnel)
+
+    # Add vertical bars at layer boundaries for emphasis
+    for i in range(num_layers):
+        y_start = (max_neurons - layer_sizes[i]) / 2
+        ax.plot([x_positions[i], x_positions[i]], [y_start, y_start + layer_sizes[i]], 
+                color='black', lw=2)
+
+    # Add layer labels
+    for i in range(num_layers):
+        if i == 0:
+            ax.text(x_positions[i], max_neurons + 2, f"Input\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
+        elif i == num_layers - 1:
+            ax.text(x_positions[i], max_neurons + 2, f"Output\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
+        else:
+            ax.text(x_positions[i], max_neurons + 2, f"Hidden {i}\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
+
+    # Set axis limits
+    ax.set_xlim(-1, 11)
+    ax.set_ylim(-1, max_neurons + 4)
+    plt.tight_layout()
+    return fig
+
+# 📌 Visualize mạng nơ-ron với kết quả dự đoán (tương tự hình ảnh ban đầu)
+def visualize_neural_network_prediction(model, input_image, predicted_label):
+    hidden_layer_sizes = model.hidden_layer_sizes
+    if isinstance(hidden_layer_sizes, int):
+        hidden_layer_sizes = [hidden_layer_sizes]
+    elif isinstance(hidden_layer_sizes, tuple):
+        hidden_layer_sizes = list(hidden_layer_sizes)
+
+    # Define layers: input, hidden layers, output
+    input_layer_size = 784  # 28x28 pixel
+    output_layer_size = 10  # 10 chữ số (0-9)
+    layer_sizes = [input_layer_size] + hidden_layer_sizes + [output_layer_size]
+    num_layers = len(layer_sizes)
+
+    # Create figure with two subplots: input image and neural network
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={'width_ratios': [1, 3]})
+
+    # --- Phần 1: Vẽ hình ảnh đầu vào (chữ số) ---
+    ax1.imshow(input_image.reshape(28, 28), cmap='gray')
+    ax1.set_title("Input Image")
+    ax1.axis('off')
+
+    # --- Phần 2: Vẽ sơ đồ mạng nơ-ron ---
+    # Tạo vị trí cho các nơ-ron
+    pos = {}
+    layer_names = ['Input', 'Hidden 1', 'Hidden 2', 'Output'] if len(hidden_layer_sizes) == 2 else ['Input'] + [f'Hidden {i+1}' for i in range(len(hidden_layer_sizes))] + ['Output']
+
+    # Đặt vị trí cho các nơ-ron trong từng tầng
+    for layer_idx, layer_size in enumerate(layer_sizes):
+        for neuron_idx in range(layer_size):
+            if layer_size > 20 and layer_idx == 0:  # Đơn giản hóa tầng đầu vào
+                if neuron_idx < 10 or neuron_idx >= layer_size - 10:
+                    pos[(layer_idx, neuron_idx)] = (layer_idx, neuron_idx / layer_size)
+                elif neuron_idx == 10:
+                    pos[('dots', layer_idx)] = (layer_idx, 0.5)  # Thêm dấu "..."
+            else:
+                pos[(layer_idx, neuron_idx)] = (layer_idx, neuron_idx / (layer_size - 1) if layer_size > 1 else 0.5)
+
+    # Vẽ các nơ-ron
+    for layer_idx, layer_size in enumerate(layer_sizes):
+        for neuron_idx in range(layer_size):
+            if layer_size > 20 and layer_idx == 0 and neuron_idx >= 10 and neuron_idx < layer_size - 10:
+                continue  # Bỏ qua các nơ-ron ở giữa để đơn giản hóa
+            
+            x, y = pos[(layer_idx, neuron_idx)]
+            # Tô đậm nơ-ron dự đoán ở tầng đầu ra
+            if layer_idx == num_layers - 1 and neuron_idx == predicted_label:
+                circle = Circle((x, y), 0.07, color='red', ec='black')  # Tô đậm bằng màu đỏ và kích thước lớn hơn
+            else:
+                circle = Circle((x, y), 0.05, color='white', ec='black')
+            ax2.add_patch(circle)
+            
+            # Gắn nhãn cho tầng đầu ra
+            if layer_idx == num_layers - 1:
+                ax2.text(x + 0.2, y, f"{neuron_idx}", fontsize=12, color='white')
+
+    # Vẽ dấu "..." cho tầng đầu vào
+    if ('dots', 0) in pos:
+        x, y = pos[('dots', 0)]
+        ax2.text(x, y, "...", fontsize=12, color='white', ha='center', va='center')
+
+    # Vẽ các kết nối giữa các tầng
+    for layer_idx in range(len(layer_sizes) - 1):
+        for neuron1 in range(layer_sizes[layer_idx]):
+            if layer_sizes[layer_idx] > 20 and layer_idx == 0 and neuron1 >= 10 and neuron1 < layer_sizes[layer_idx] - 10:
+                continue
+            for neuron2 in range(layer_sizes[layer_idx + 1]):
+                x1, y1 = pos[(layer_idx, neuron1)]
+                x2, y2 = pos[(layer_idx + 1, neuron2)]
+                ax2.plot([x1, x2], [y1, y2], color=np.random.rand(3,), alpha=0.3)
+
+    # Thiết lập trục
+    ax2.set_xlim(-0.5, num_layers - 0.5)
+    ax2.set_ylim(-0.1, 1.1)
+    ax2.set_xticks(range(num_layers))
+    ax2.set_xticklabels(layer_names)
+    ax2.set_yticks([])
+    ax2.set_title(f"Neural Network Prediction: {predicted_label}")
+    ax2.set_facecolor('black')
+
+    # Thêm biểu tượng pi (π) dễ thương
+    pi_symbol = Circle((0, -0.2), 0.05, color='cyan', ec='black')
+    ax2.add_patch(pi_symbol)
+    ax2.text(0, -0.2, "π", fontsize=20, color='black', ha='center', va='center')
+
+    return fig
+
 # 📌 Huấn luyện mô hình với thanh tiến trình và cross-validation
 def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds):
     progress_bar = st.progress(0)
@@ -48,20 +195,19 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
         max_iter=params["epochs"],
         activation=params["activation"],
         random_state=42,
-        warm_start=True  # Cho phép huấn luyện tiếp tục để mô phỏng tiến trình
+        warm_start=True
     )
 
     # Huấn luyện mô hình
     try:
         with mlflow.start_run(run_name=custom_model_name):
-            # Mô phỏng tiến trình huấn luyện cho Neural Network
             for i in range(params["epochs"]):
-                model.max_iter = i + 1  # Tăng số lần lặp từng bước
-                model.fit(X_train, y_train)  # Huấn luyện từng epoch
+                model.max_iter = i + 1
+                model.fit(X_train, y_train)
                 progress = (i + 1) / params["epochs"]
                 progress_bar.progress(progress)
                 status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
-                time.sleep(0.1)  # Giả lập thời gian huấn luyện để thấy tiến trình
+                time.sleep(0.1)
 
             # Dự đoán và tính toán độ chính xác
             y_train_pred = model.predict(X_train)
@@ -77,8 +223,8 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
 
             # Ghi log tham số và metric vào MLflow
             mlflow.log_param("model_name", "Neural Network")
-            mlflow.log_params(params)  # Ghi toàn bộ tham số
-            mlflow.log_param("cv_folds", cv_folds)  # Ghi số lượng fold
+            mlflow.log_params(params)
+            mlflow.log_param("cv_folds", cv_folds)
             mlflow.log_metric("train_accuracy", train_accuracy)
             mlflow.log_metric("val_accuracy", val_accuracy)
             mlflow.log_metric("test_accuracy", test_accuracy)
@@ -88,7 +234,6 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
         st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
         return None, None, None, None, None
 
-    # Xóa thanh tiến trình và trạng thái sau khi hoàn thành
     progress_bar.empty()
     status_text.empty()
     return model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy
@@ -138,7 +283,7 @@ def create_streamlit_app():
         st.write("##### 2. Cấu trúc mạng Neural Network")
         st.write("""- Input Layer (tầng đầu vào): Nằm bên trái của hệ thống, bao gồm dữ liệu thông tin đầu vào. 
         \n- Output Layer (tầng đầu ra): Nằm bên phải của hệ thống, bao gồm dữ liệu thông tin đầu ra. 
-        \n- Hidden Layer (tầng ẩn): Nằm ở giữa tầng đầu vào và đầu ra, thể hiện quá trình suy luận và xử lý thôngtin của hệ thống.    
+        \n- Hidden Layer (tầng ẩn): Nằm ở giữa tầng đầu vào và đầu ra, thể hiện quá trình suy luận và xử lý thông tin của hệ thống.    
         """)
         st.image("neural_networks.png", caption="Cấu trúc mạng Neural Network", width=500)
         st.write("Ví dụ minh họa với bộ dữ liệu mnist : ")
@@ -167,15 +312,10 @@ def create_streamlit_app():
         st.latex(r"f(x) = \frac{1}{1 + e^{-x}}")
 
     with tab2:
-        # Cho phép nhập số mẫu để huấn luyện
-        max_samples = 70000  # Tổng số mẫu trong MNIST
+        # Cho phép chọn số mẫu để huấn luyện
+        max_samples = 70000
         n_samples = st.number_input(
-            "Số lượng mẫu để huấn luyện",
-            min_value=1000,
-            max_value=max_samples,
-            value=10000,
-            step=1000,
-            help=f"Nhập số lượng mẫu từ 1,000 đến {max_samples} để huấn luyện."
+            "Số lượng mẫu để huấn luyện", min_value=1000, max_value=max_samples, value=10000, step=1000,
         )
         
         X, y = load_data(n_samples=n_samples)
@@ -217,13 +357,18 @@ def create_streamlit_app():
                 result = train_model(
                     custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds
                 )
-                if result[0] is not None:  # Check if model was returned successfully
+                if result[0] is not None:
                     model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
                     st.success(f"✅ Huấn luyện xong!")
                     st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
                     st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
                     st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
                     st.write(f"🎯 **Độ chính xác trung bình Cross-Validation: {cv_mean_accuracy:.4f}**")
+                    
+                    # Visualize neural network
+                    st.write("##### 📉 Kiến trúc mạng Neural Network")
+                    fig = visualize_neural_network(model, input_size=784, output_size=10)
+                    st.pyplot(fig)
                 else:
                     st.error("Huấn luyện thất bại. Vui lòng kiểm tra lỗi ở trên.")
 
@@ -245,6 +390,10 @@ def create_streamlit_app():
                         probabilities = model.predict_proba(processed_image)[0]
                         st.write(f"🎯 **Dự đoán: {prediction}**")
                         st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                        # Visualize neural network prediction
+                        st.write("##### 📉 Biểu diễn mạng Neural Network với kết quả dự đoán")
+                        fig = visualize_neural_network_prediction(model, processed_image, prediction)
+                        st.pyplot(fig)
         elif option == "✏️ Vẽ số":
             canvas_result = st_canvas(
                 fill_color="white", stroke_width=15, stroke_color="black",
@@ -262,18 +411,21 @@ def create_streamlit_app():
                         probabilities = model.predict_proba(processed_canvas)[0]
                         st.write(f"🎯 **Dự đoán: {prediction}**")
                         st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                        # Visualize neural network prediction
+                        st.write("##### 📉 Biểu diễn mạng Neural Network với kết quả dự đoán")
+                        fig = visualize_neural_network_prediction(model, processed_canvas, prediction)
+                        st.pyplot(fig)
 
     with tab4:
-        st.header("📊 MLflow Tracking")
+        st.write("##### 📊 MLflow Tracking")
         st.write("Xem chi tiết các kết quả đã lưu trong MLflow.")
         
         runs = mlflow.search_runs(order_by=["start_time desc"])
         if not runs.empty:
-            # Safely assign 'model_custom_name' from tags, with a fallback
             if "tags.mlflow.runName" in runs.columns:
                 runs["model_custom_name"] = runs["tags.mlflow.runName"]
             else:
-                runs["model_custom_name"] = "Unnamed Model"  # Default value if tag is missing
+                runs["model_custom_name"] = "Unnamed Model"
             model_names = runs["model_custom_name"].dropna().unique().tolist()
         
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
@@ -283,11 +435,10 @@ def create_streamlit_app():
                 filtered_runs = runs
         
             if not filtered_runs.empty:
-                st.write("### 📜 Danh sách mô hình đã lưu:")
-                # Define available columns dynamically
+                st.write("##### 📜 Danh sách mô hình đã lưu:")
                 available_columns = [
                     col for col in [
-                        "model_custom_name", "params.model_name", "run_id", "start_time",
+                        "model_custom_name", "params.model_name", "start_time",
                         "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy",
                         "metrics.cv_mean_accuracy"
                     ] if col in filtered_runs.columns
@@ -299,17 +450,15 @@ def create_streamlit_app():
                 })
                 st.dataframe(display_df)
         
-                # Use custom_model_name in selectbox instead of run_id
                 selected_model_name = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", model_names)
                 if selected_model_name:
-                    # Get the run_id corresponding to the selected custom_model_name
                     selected_run = filtered_runs[filtered_runs["model_custom_name"] == selected_model_name].iloc[0]
                     selected_run_id = selected_run["run_id"]
                     
                     run_details = mlflow.get_run(selected_run_id)
                     custom_name = run_details.data.tags.get('mlflow.runName', 'Không có tên')
                     model_type = run_details.data.params.get('model_name', 'Không xác định')
-                    st.write(f"### 🔍 Chi tiết mô hình: `{custom_name}`")
+                    st.write(f"##### 🔍 Chi tiết mô hình: `{custom_name}`")
                     st.write(f"**📌 Loại mô hình huấn luyện:** {model_type}")
         
                     st.write("📌 **Tham số:**")
@@ -320,12 +469,6 @@ def create_streamlit_app():
                     st.write("📊 **Metric:**")
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
-        
-                    st.write("📂 **Artifacts:**")
-                    if run_details.info.artifact_uri:
-                        st.write(f"- **Artifact URI**: {run_details.info.artifact_uri}")
-                    else:
-                        st.write("- Không có artifacts nào.")
             else:
                 st.write("❌ Không tìm thấy mô hình nào khớp với tìm kiếm.")
         else:
