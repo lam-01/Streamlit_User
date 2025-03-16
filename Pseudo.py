@@ -246,8 +246,7 @@ def create_streamlit_app():
         threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.95, 0.01)
         max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 5)
         
-        with st.expander("Tùy chọn hiển thị chi tiết", expanded=False):
-            show_details = st.checkbox("Hiển thị chi tiết quá trình huấn luyện", value=False)
+        show_details = st.checkbox("Hiển thị chi tiết quá trình huấn luyện", value=False)
         
         if st.button("🚀 Chạy Pseudo Labelling"):
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
@@ -259,7 +258,6 @@ def create_streamlit_app():
             
             st.success(f"✅ Huấn luyện xong! Độ chính xác trên test: {test_accuracy:.4f}")
             
-            show_details = st.checkbox("Hiển thị chi tiết quá trình huấn luyện", value=False)
     
     # Tab 3: Dự đoán
     with tab3:
