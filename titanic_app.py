@@ -206,7 +206,7 @@ def create_streamlit_app():
                     X_valid, X_test, y_valid, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
                     
                     st.write("##### 📊 **Huấn luyện mô hình hồi quy**")
-                    st.info("Lưu ý: Mô hình chỉ sử dụng các cột 'Pclass', 'SibSp', 'Parch', 'Fare', 'Sex', 'Embarked' để huấn luyện.")
+                    # st.info("Lưu ý: Mô hình chỉ sử dụng các cột 'Pclass', 'SibSp', 'Parch', 'Fare', 'Sex', 'Embarked' để huấn luyện.")
 
                     model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:")
                     regression_type = st.radio("Chọn loại hồi quy:", ["Multiple Regression", "Polynomial Regression"])
