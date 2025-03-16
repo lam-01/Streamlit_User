@@ -8,6 +8,7 @@ import cv2
 from streamlit_drawable_canvas import st_canvas
 import matplotlib.pyplot as plt
 import time
+import pandas as pd
 
 # Hàm xây dựng model NN
 def create_model():
@@ -66,12 +67,11 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_tes
         log_container = st.empty()
         log_text = ""
     else:
-        log_text = ""  # Vẫn giữ log để tính toán nhưng không hiển thị
+        log_text = ""
     
     with mlflow.start_run(run_name=custom_model_name):
         model = create_model()
         
-        # Log parameters
         mlflow.log_param("threshold", threshold)
         mlflow.log_param("max_iterations", max_iterations)
         mlflow.log_param("initial_labeled_percentage", percentage * 100)
@@ -80,20 +80,17 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_tes
         y_train_current = y_labeled.copy()
         remaining_unlabeled = x_unlabeled.copy()
         
-        # Bước 0: Chia tập train/test (đã thực hiện trước)
         log_text += "✅ **Bước 0**: Chia tập train/test hoàn tất.\n"
         if show_details:
             log_container.text(log_text)
             progress_bar.progress(0.1)
             status_text.text("Đang khởi tạo mô hình... (10%)")
         
-        # Bước 1: Lấy dữ liệu labeled ban đầu (đã thực hiện trước)
         log_text += f"✅ **Bước 1**: Đã chọn {len(x_labeled)} mẫu làm tập labeled ban đầu ({percentage*100:.1f}% mỗi class).\n"
         if show_details:
             log_container.text(log_text)
         
         for iteration in range(max_iterations):
-            # Bước 2: Huấn luyện model trên tập dữ liệu hiện tại
             log_text += f"🔄 **Bước 2 (Iteration {iteration+1})**: Huấn luyện model với {len(x_train_current)} mẫu.\n"
             if show_details:
                 log_container.text(log_text)
@@ -111,7 +108,6 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_tes
             if show_details:
                 log_container.text(log_text)
             
-            # Bước 3: Dự đoán nhãn cho dữ liệu unlabeled
             log_text += f"🔮 **Bước 3 (Iteration {iteration+1})**: Dự đoán nhãn cho {len(remaining_unlabeled)} mẫu unlabeled.\n"
             if show_details:
                 log_container.text(log_text)
@@ -119,7 +115,6 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_tes
             max_probs = np.max(predictions, axis=1)
             pseudo_labels = np.argmax(predictions, axis=1)
             
-            # Bước 4: Lấy ngưỡng để gán Pseudo Label
             confident_idx = np.where(max_probs >= threshold)[0]
             log_text += f"📌 **Bước 4 (Iteration {iteration+1})**: Gán nhãn giả cho {len(confident_idx)} mẫu với ngưỡng {threshold}.\n"
             if show_details:
@@ -135,7 +130,6 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_tes
                     log_container.text(log_text)
                 break
                 
-            # Bước 5: Cập nhật tập dữ liệu huấn luyện
             x_train_current = np.concatenate([x_train_current, remaining_unlabeled[confident_idx]])
             y_train_current = np.concatenate([y_train_current, pseudo_labels[confident_idx]])
             remaining_unlabeled = np.delete(remaining_unlabeled, confident_idx, axis=0)
@@ -150,7 +144,6 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_tes
                     log_container.text(log_text)
                 break
         
-        # Đánh giá cuối cùng
         if show_details:
             progress_bar.progress(0.9)
             status_text.text("Đang đánh giá trên test set... (90%)")
@@ -163,7 +156,7 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_tes
             progress_bar.progress(1.0)
             status_text.text("Hoàn tất! (100%)")
         
-    return model, test_accuracy, log_text  # Trả về log để hiển thị nếu cần
+    return model, test_accuracy, log_text
 
 # Xử lý ảnh tải lên
 def preprocess_uploaded_image(image):
@@ -225,7 +218,13 @@ def create_streamlit_app():
         
         labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1,
                                       help="Chọn phần trăm dữ liệu có nhãn ban đầu trong tập train.")
-        # Tạo bảng dữ liệu
+        
+        # Chia dữ liệu labeled và unlabeled ngay sau khi chọn tỉ lệ
+        global percentage
+        percentage = labeled_percentage / 100
+        x_labeled, y_labeled, x_unlabeled, _ = select_initial_data(x_train, y_train, percentage)
+        
+        # Tạo và hiển thị bảng dữ liệu
         total_samples = len(x_train) + len(x_test)
         data = {
             "Tập dữ liệu": ["Tập train", "Tập test", "Tập labeled ban đầu", "Tập unlabeled"],
@@ -238,29 +237,19 @@ def create_streamlit_app():
             ]
         }
         df = pd.DataFrame(data)
-        st.write("Kích thước tập dữ liệu sau khi chia:")
+        st.write("**Kích thước tập dữ liệu sau khi chia:**")
         st.table(df)
         
-        st.write("**🚀 Huấn luyện mô hình Pseudo Labelling**")
         custom_model_name = st.text_input("Nhập tên mô hình:")
         if not custom_model_name:
             custom_model_name = "Default_model"
         threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.95, 0.01)
         max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 5)
         
-        # Checkbox để hiển thị chi tiết
-        # show_details = st.checkbox("Hiển thị chi tiết quá trình huấn luyện", value=False)
         with st.expander("Tùy chọn hiển thị chi tiết", expanded=False):
             show_details = st.checkbox("Hiển thị chi tiết quá trình huấn luyện", value=False)
-            
+        
         if st.button("🚀 Chạy Pseudo Labelling"):
-            global percentage
-            percentage = labeled_percentage / 100
-            x_labeled, y_labeled, x_unlabeled, _ = select_initial_data(x_train, y_train, percentage)
-            
-            st.write(f"Tập labeled ban đầu: {len(x_labeled)} mẫu ({len(x_labeled)/len(x_train)*100:.1f}% của train)")
-            st.write(f"Tập unlabeled: {len(x_unlabeled)} mẫu ({len(x_unlabeled)/len(x_train)*100:.1f}% của train)")
-            
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
                 model, test_accuracy, log_text = pseudo_labeling_with_mlflow(
                     x_labeled, y_labeled, x_unlabeled, x_test, y_test,
@@ -270,6 +259,9 @@ def create_streamlit_app():
             
             st.success(f"✅ Huấn luyện xong! Độ chính xác trên test: {test_accuracy:.4f}")
             
+            if show_details:
+                with st.expander("📜 Xem chi tiết quá trình huấn luyện"):
+                    st.text(log_text)
     
     # Tab 3: Dự đoán
     with tab3:
