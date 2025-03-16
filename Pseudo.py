@@ -259,9 +259,7 @@ def create_streamlit_app():
             
             st.success(f"✅ Huấn luyện xong! Độ chính xác trên test: {test_accuracy:.4f}")
             
-            if show_details:
-                with st.expander("📜 Xem chi tiết quá trình huấn luyện"):
-                    st.text(log_text)
+            show_details = st.checkbox("Hiển thị chi tiết quá trình huấn luyện", value=False)
     
     # Tab 3: Dự đoán
     with tab3:
