@@ -324,8 +324,7 @@ def create_streamlit_app():
     
     # Tab 4: MLflow Tracking
     with tab4:
-        st.header("📊 MLflow Tracking")
-        st.write("Xem chi tiết các kết quả đã lưu trong MLflow.")
+        st.write("##### MLflow Tracking")
         
         runs = mlflow.search_runs(order_by=["start_time desc"])
         if not runs.empty:
@@ -338,7 +337,7 @@ def create_streamlit_app():
                 filtered_runs = runs
             
             if not filtered_runs.empty:
-                st.write("### 📜 Danh sách mô hình đã lưu:")
+                st.write("##### 📜 Danh sách mô hình đã lưu:")
                 available_columns = [col for col in [
                     "model_custom_name", "start_time",
                     "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy",
@@ -354,7 +353,7 @@ def create_streamlit_app():
                     selected_run = filtered_runs[filtered_runs["model_custom_name"] == selected_model_name].iloc[0]
                     run_details = mlflow.get_run(selected_run["run_id"])
                     custom_name = run_details.data.tags.get('mlflow.runName', 'Không có tên')
-                    st.write(f"### 🔍 Chi tiết mô hình: `{custom_name}`")
+                    st.write(f"##### 🔍 Chi tiết mô hình: `{custom_name}`")
                     
                     st.write("📌 **Tham số:**")
                     for key, value in run_details.data.params.items():
