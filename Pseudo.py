@@ -225,23 +225,39 @@ def create_streamlit_app():
         
         labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1,
                                       help="Chọn phần trăm dữ liệu có nhãn ban đầu trong tập train.")
+        # Tạo bảng dữ liệu
+        total_samples = len(x_train) + len(x_test)
+        data = {
+            "Tập dữ liệu": ["Tập train", "Tập test", "Tập labeled ban đầu", "Tập unlabeled"],
+            "Số mẫu": [len(x_train), len(x_test), len(x_labeled), len(x_unlabeled)],
+            "Tỷ lệ (%)": [
+                f"{len(x_train)/total_samples*100:.1f}%",
+                f"{len(x_test)/total_samples*100:.1f}%",
+                f"{len(x_labeled)/len(x_train)*100:.1f}% của train",
+                f"{len(x_unlabeled)/len(x_train)*100:.1f}% của train"
+            ]
+        }
+        df = pd.DataFrame(data)
+        st.write("Kích thước tập dữ liệu sau khi chia:")
+        st.table(df)
         
-        custom_model_name = st.text_input("Nhập tên mô hình:", "Pseudo_Model")
+        st.write("**🚀 Huấn luyện mô hình Pseudo Labelling**")
+        custom_model_name = st.text_input("Nhập tên mô hình:")
+        if not custom_model_name:
+            custom_model_name = "Default_model"
         threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.95, 0.01)
         max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 5)
         
         # Checkbox để hiển thị chi tiết
-        show_details = st.checkbox("Hiển thị chi tiết quá trình huấn luyện", value=False)
-        
+        # show_details = st.checkbox("Hiển thị chi tiết quá trình huấn luyện", value=False)
+        with st.expander("Tùy chọn hiển thị chi tiết", expanded=False):
+            show_details = st.checkbox("Hiển thị chi tiết quá trình huấn luyện", value=False)
+            
         if st.button("🚀 Chạy Pseudo Labelling"):
             global percentage
             percentage = labeled_percentage / 100
             x_labeled, y_labeled, x_unlabeled, _ = select_initial_data(x_train, y_train, percentage)
             
-            st.write("Kích thước tập dữ liệu:")
-            total_samples = len(x_train) + len(x_test)
-            st.write(f"Tập train: {len(x_train)} mẫu ({len(x_train)/total_samples*100:.1f}%)")
-            st.write(f"Tập test: {len(x_test)} mẫu ({len(x_test)/total_samples*100:.1f}%)")
             st.write(f"Tập labeled ban đầu: {len(x_labeled)} mẫu ({len(x_labeled)/len(x_train)*100:.1f}% của train)")
             st.write(f"Tập unlabeled: {len(x_unlabeled)} mẫu ({len(x_unlabeled)/len(x_train)*100:.1f}% của train)")
             
@@ -254,10 +270,6 @@ def create_streamlit_app():
             
             st.success(f"✅ Huấn luyện xong! Độ chính xác trên test: {test_accuracy:.4f}")
             
-            # Hiển thị chi tiết trong expander nếu người dùng chọn
-            if show_details:
-                with st.expander("📜 Xem chi tiết quá trình huấn luyện"):
-                    st.text(log_text)
     
     # Tab 3: Dự đoán
     with tab3:
