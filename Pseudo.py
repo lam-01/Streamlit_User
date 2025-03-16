@@ -23,15 +23,29 @@ def create_model():
                  metrics=['accuracy'])
     return model
 
-# Tải và xử lý dữ liệu MNIST
+# Tải và xử lý dữ liệu MNIST với tỉ lệ train/test tùy chỉnh
 @st.cache_data
-def load_data():
-    (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
-    x_train = x_train.astype('float32') / 255
-    x_test = x_test.astype('float32') / 255
+def load_data(train_split=0.8):
+    (x_full, y_full), _ = keras.datasets.mnist.load_data()  # Tải toàn bộ dữ liệu
+    x_full = x_full.astype('float32') / 255
+    
+    # Chia dữ liệu thành train và test dựa trên tỉ lệ train_split
+    total_samples = len(x_full)
+    train_size = int(total_samples * train_split)
+    
+    # Đảm bảo các chỉ số được chọn ngẫu nhiên để tránh thiên lệch
+    indices = np.random.permutation(total_samples)
+    train_indices = indices[:train_size]
+    test_indices = indices[train_size:]
+    
+    x_train = x_full[train_indices]
+    y_train = y_full[train_indices]
+    x_test = x_full[test_indices]
+    y_test = y_full[test_indices]
+    
     return x_train, y_train, x_test, y_test
 
-# Chọn tỉ lệ dữ liệu cho mỗi class
+# Chọn 1% dữ liệu cho mỗi class
 def select_initial_data(x_train, y_train, percentage=0.01):
     labeled_idx = []
     for i in range(10):
@@ -59,7 +73,7 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_test, y_tes
         # Log parameters
         mlflow.log_param("threshold", threshold)
         mlflow.log_param("max_iterations", max_iterations)
-        mlflow.log_param("initial_labeled_percentage", len(x_labeled) / len(x_train))  # Ghi lại tỉ lệ thực tế
+        mlflow.log_param("initial_labeled_percentage", 0.01)
         
         x_train_current = x_labeled.copy()
         y_train_current = y_labeled.copy()
@@ -148,29 +162,34 @@ def create_streamlit_app():
     # Tab 1: Giới thiệu
     with tab1:
         st.write("##### Pseudo Labelling với Neural Network")
-        st.write("""
+        st.write(""" 
         Ứng dụng này thực hiện thuật toán **Pseudo Labelling** trên tập dữ liệu MNIST sử dụng Neural Network:
-        - Sử dụng tỉ lệ dữ liệu có nhãn ban đầu do người dùng chọn để huấn luyện.
+        - Sử dụng 1% dữ liệu có nhãn ban đầu để huấn luyện.
         - Dự đoán nhãn cho dữ liệu không nhãn và thêm vào tập huấn luyện dựa trên ngưỡng tin cậy.
         - Lặp lại quá trình cho đến khi đạt số vòng lặp tối đa hoặc không còn dữ liệu không nhãn.
         """)
-        x_train, y_train, _, _ = load_data()
+        x_train, y_train, _, _ = load_data()  # Tỉ lệ mặc định là 0.8
         show_sample_images(x_train, y_train)
     
     # Tab 2: Huấn luyện
     with tab2:
-        x_train, y_train, x_test, y_test = load_data()
-        
         st.write("**🚀 Huấn luyện mô hình Pseudo Labelling**")
+        
+        # Thêm slider để người dùng chọn tỉ lệ train/test
+        train_split = st.slider("Tỉ lệ dữ liệu train/test", 0.5, 0.95, 0.8, 0.05,
+                                help="Chọn tỉ lệ dữ liệu dùng để huấn luyện (phần còn lại là test).")
+        x_train, y_train, x_test, y_test = load_data(train_split)
+        
         custom_model_name = st.text_input("Nhập tên mô hình:", "Pseudo_Model")
         threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.95, 0.01)
         max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 5)
-        labeled_percentage = st.slider("Tỉ lệ dữ liệu có nhãn ban đầu (%)", 1, 50, 1, 1)  # Thêm slider cho tỉ lệ
         
         if st.button("🚀 Chạy Pseudo Labelling"):
-            x_labeled, y_labeled, x_unlabeled, _ = select_initial_data(x_train, y_train, percentage=labeled_percentage / 100)
+            x_labeled, y_labeled, x_unlabeled, _ = select_initial_data(x_train, y_train)
             
             st.write("Kích thước tập dữ liệu:")
+            st.write(f"Tập train: {len(x_train)} mẫu")
+            st.write(f"Tập test: {len(x_test)} mẫu")
             st.write(f"Tập labeled ban đầu: {len(x_labeled)} mẫu")
             st.write(f"Tập unlabeled: {len(x_unlabeled)} mẫu")
             
