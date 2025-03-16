@@ -47,66 +47,6 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
         X_train, y_train, test_size=val_size / (train_size + val_size), random_state=random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
-
-# 📌 Visualize mạng neural với cấu trúc funnel
-def visualize_neural_network(model, input_size, output_size):
-    hidden_layer_sizes = model.hidden_layer_sizes
-    if isinstance(hidden_layer_sizes, int):  # Handle case where hidden_layer_sizes is a single integer
-        hidden_layer_sizes = [hidden_layer_sizes]
-    elif isinstance(hidden_layer_sizes, tuple):
-        hidden_layer_sizes = list(hidden_layer_sizes)
-
-    # Define layers: input, hidden layers, output
-    layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
-    num_layers = len(layer_sizes)
-    
-    # Create figure
-    fig, ax = plt.subplots(figsize=(12, 6))
-    ax.set_title("Kiến trúc mạng Neural Network", pad=20, size=14)
-    ax.axis('off')
-
-    # Define x positions for funnel
-    x_positions = np.linspace(0, 10, num_layers)
-    max_neurons = max(layer_sizes)
-
-    # Draw funnel with gradient
-    for i in range(num_layers - 1):
-        current_size = layer_sizes[i]
-        next_size = layer_sizes[i + 1]
-        y_start = (max_neurons - current_size) / 2
-        y_end = (max_neurons - next_size) / 2
-        
-        # Create funnel segment with gradient
-        verts = [
-            (x_positions[i], y_start),
-            (x_positions[i + 1], y_end),
-            (x_positions[i + 1], y_end + next_size),
-            (x_positions[i], y_start + current_size)
-        ]
-        funnel = Polygon(verts, facecolor='gray', alpha=0.7, edgecolor='black')
-        ax.add_patch(funnel)
-
-    # Add vertical bars at layer boundaries for emphasis
-    for i in range(num_layers):
-        y_start = (max_neurons - layer_sizes[i]) / 2
-        ax.plot([x_positions[i], x_positions[i]], [y_start, y_start + layer_sizes[i]], 
-                color='black', lw=2)
-
-    # Add layer labels
-    for i in range(num_layers):
-        if i == 0:
-            ax.text(x_positions[i], max_neurons + 2, f"Input\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
-        elif i == num_layers - 1:
-            ax.text(x_positions[i], max_neurons + 2, f"Output\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
-        else:
-            ax.text(x_positions[i], max_neurons + 2, f"Hidden {i}\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
-
-    # Set axis limits
-    ax.set_xlim(-1, 11)
-    ax.set_ylim(-1, max_neurons + 4)
-    plt.tight_layout()
-    return fig
-
 # 📌 Visualize mạng nơ-ron với kết quả dự đoán
 def visualize_neural_network_prediction(model, input_image, predicted_label):
     hidden_layer_sizes = model.hidden_layer_sizes
@@ -347,9 +287,9 @@ def create_streamlit_app():
 
     with tab2:
         # Cho phép chọn số mẫu để huấn luyện
-        max_samples = 70000
+        max_samples = 70000  # Tổng số mẫu trong MNIST
         n_samples = st.number_input(
-            "Số lượng mẫu để huấn luyện", min_value=1000, max_value=max_samples, value=10000, step=1000,
+            "Số lượng mẫu để huấn luyện", min_value=1000, max_value=max_samples, value=9000, step=1000,
         )
         
         X, y = load_data(n_samples=n_samples)
@@ -366,16 +306,26 @@ def create_streamlit_app():
         if val_ratio >= 1.0:
             st.error("Tỷ lệ Validation quá lớn so với Train! Vui lòng điều chỉnh lại.")
         else:
-            X_train, X_val, X_test, y_train, y_val, y_test = split_data(X, y, train_size=train_size/100, val_size=val_size/100, test_size=test_size/100)
+            # Chia dữ liệu với tỷ lệ chính xác
+            X_temp, X_test, y_temp, y_test = train_test_split(
+                X, y, test_size=test_size/100, random_state=42
+            )
+            # Tính toán tỷ lệ validation dựa trên tập còn lại (train + val)
+            val_ratio_adjusted = val_size / (train_size)  # Tỷ lệ val trên tập (train + val)
+            X_train, X_val, y_train, y_val = train_test_split(
+                X_temp, y_temp, test_size=val_ratio_adjusted, random_state=42
+            )
+            
+            # Kiểm tra số lượng mẫu
             st.session_state.data_split = (X_train, X_val, X_test, y_train, y_val, y_test)
-        
+            
             data_ratios = pd.DataFrame({
                 "Tập dữ liệu": ["Train", "Validation", "Test"],
                 "Tỷ lệ (%)": [train_size - val_size, val_size, test_size],
                 "Số lượng mẫu": [len(X_train), len(X_val), len(X_test)]
             })
             st.table(data_ratios)
-
+    
         st.write("**🚀 Huấn luyện mô hình Neural Network**")
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
@@ -385,7 +335,7 @@ def create_streamlit_app():
         params["epochs"] = st.slider("Epochs", 5, 50, 10, help="Số lần lặp qua toàn bộ dữ liệu huấn luyện.")
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"], help="Hàm kích hoạt cho các nơ-ron.")
         st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5, help="Số lượng fold để đánh giá mô hình bằng cross-validation.")
-
+    
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
                 st.session_state.params = params
@@ -402,10 +352,6 @@ def create_streamlit_app():
                     st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
                     st.write(f"🎯 **Độ chính xác trung bình Cross-Validation: {cv_mean_accuracy:.4f}**")
                     
-                    # Visualize neural network
-                    st.write("##### 📉 Kiến trúc mạng Neural Network")
-                    fig = visualize_neural_network(model, input_size=784, output_size=10)
-                    st.pyplot(fig)
                 else:
                     st.error("Huấn luyện thất bại. Vui lòng kiểm tra lỗi ở trên.")
 
