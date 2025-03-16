@@ -210,7 +210,7 @@ def create_streamlit_app():
     
     # Tab 2: Huấn luyện
     with tab2:
-        st.write("**🚀 Huấn luyện mô hình Pseudo Labelling**")
+        st.write("##### Chia tập dữ liệu")
         
         train_split = st.slider("Tỉ lệ dữ liệu train/test", 0.5, 0.95, 0.8, 0.05,
                                 help="Chọn tỉ lệ dữ liệu dùng để huấn luyện (phần còn lại là test).")
@@ -239,7 +239,7 @@ def create_streamlit_app():
         df = pd.DataFrame(data)
         st.write("**Kích thước tập dữ liệu sau khi chia:**")
         st.table(df)
-        
+        st.write("##### Huấn luyện mô hình Pseudo Labelling")
         custom_model_name = st.text_input("Nhập tên mô hình:")
         if not custom_model_name:
             custom_model_name = "Default_model"
