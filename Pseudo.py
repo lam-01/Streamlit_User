@@ -201,21 +201,16 @@ def create_streamlit_app():
         \n Phương pháp Pseudo Labelling với Neural Network bao gồm các bước chính sau:
         
         \n **(1) Chuẩn bị dữ liệu ban đầu**
-        \n- Tập dữ liệu có nhãn (Labeled Data): Một tập nhỏ dữ liệu đã được gán nhãn chính xác, thường chiếm tỉ lệ rất thấp (ví dụ: 1%) so với tổng dữ liệu.
-        \n- Tập dữ liệu không nhãn (Unlabeled Data): Phần lớn dữ liệu còn lại, không có nhãn ban đầu, chiếm tỉ lệ lớn (ví dụ: 99%).
-        \n- Tập kiểm tra (Test Data): Một tập dữ liệu riêng biệt để đánh giá hiệu suất cuối cùng của mô hình.
-        \n- Ví dụ: Với tập MNIST (60,000 ảnh chữ số viết tay):
+        \nTập dữ liệu có nhãn (Labeled Data): Một tập nhỏ dữ liệu đã được gán nhãn chính xác, thường chiếm tỉ lệ rất thấp (ví dụ: 1%) so với tổng dữ liệu.
+        \nTập dữ liệu không nhãn (Unlabeled Data): Phần lớn dữ liệu còn lại, không có nhãn ban đầu, chiếm tỉ lệ lớn (ví dụ: 99%).
+        \nTập kiểm tra (Test Data): Một tập dữ liệu riêng biệt để đánh giá hiệu suất cuối cùng của mô hình.
+        \nVí dụ: Với tập MNIST (60,000 ảnh chữ số viết tay):
         
         Chia 80% làm tập train (48,000 ảnh) và 20% làm tập test (12,000 ảnh).
         Từ tập train, lấy 1% (~480 ảnh) làm tập labeled, 99% (~47,520 ảnh) làm tập unlabeled.
-        (2) Huấn luyện mô hình ban đầu
-        Sử dụng một mạng nơ-ron (NN), chẳng hạn mạng Multi-Layer Perceptron (MLP) hoặc Convolutional Neural Network (CNN), để huấn luyện trên tập labeled ban đầu.
-        Quá trình huấn luyện:
-        Chuẩn hóa dữ liệu: Đưa giá trị pixel về khoảng [0, 1] (ví dụ: chia cho 255).
-        Hàm mất mát: Sử dụng sparse_categorical_crossentropy cho bài toán phân loại nhiều lớp.
-        Tối ưu hóa: Dùng thuật toán như Adam để cập nhật trọng số mạng.
-        Mô hình học được các đặc trưng cơ bản từ tập labeled nhỏ này, dù hiệu suất ban đầu có thể chưa cao do thiếu dữ liệu.
-        (3) Dự đoán nhãn cho dữ liệu không nhãn
+        \n **(2) Huấn luyện mô hình ban đầu**
+        Sử dụng một mạng nơ-ron (NN) để huấn luyện trên tập labeled ban đầu.
+        \n **(3) Dự đoán nhãn cho dữ liệu không nhãn**
         Sử dụng mô hình đã huấn luyện để dự đoán nhãn cho toàn bộ tập unlabeled.
         Kết quả dự đoán là một phân phối xác suất cho mỗi mẫu dữ liệu (ví dụ: [0.05, 0.02, 0.90, ..., 0.01] cho 10 lớp).
         Độ tin cậy của dự đoán được đo bằng xác suất tối đa (max probability) trong phân phối này.
