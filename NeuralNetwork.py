@@ -13,6 +13,18 @@ from matplotlib.patches import Circle, Polygon, Rectangle
 from sklearn.neural_network import MLPClassifier
 import time
 
+# Khởi tạo session state để lưu mô hình và dữ liệu đã huấn luyện
+if 'model' not in st.session_state:
+    st.session_state.model = None
+if 'data_split' not in st.session_state:
+    st.session_state.data_split = None
+if 'params' not in st.session_state:
+    st.session_state.params = None
+if 'cv_folds' not in st.session_state:
+    st.session_state.cv_folds = 5
+if 'custom_model_name' not in st.session_state:
+    st.session_state.custom_model_name = "MyModel"
+
 # 📌 Tải và xử lý dữ liệu MNIST từ OpenML
 @st.cache_data
 def load_data(n_samples=None):
@@ -35,8 +47,67 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
         X_train, y_train, test_size=val_size / (train_size + val_size), random_state=random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
+
+# 📌 Visualize mạng neural với cấu trúc funnel
+def visualize_neural_network(model, input_size, output_size):
+    hidden_layer_sizes = model.hidden_layer_sizes
+    if isinstance(hidden_layer_sizes, int):  # Handle case where hidden_layer_sizes is a single integer
+        hidden_layer_sizes = [hidden_layer_sizes]
+    elif isinstance(hidden_layer_sizes, tuple):
+        hidden_layer_sizes = list(hidden_layer_sizes)
+
+    # Define layers: input, hidden layers, output
+    layer_sizes = [input_size] + hidden_layer_sizes + [output_size]
+    num_layers = len(layer_sizes)
     
-# 📌 Visualize mạng nơ-ron với kết quả dự đoán (đã chỉnh sửa để kết nối dễ nhìn hơn)
+    # Create figure
+    fig, ax = plt.subplots(figsize=(12, 6))
+    ax.set_title("Kiến trúc mạng Neural Network", pad=20, size=14)
+    ax.axis('off')
+
+    # Define x positions for funnel
+    x_positions = np.linspace(0, 10, num_layers)
+    max_neurons = max(layer_sizes)
+
+    # Draw funnel with gradient
+    for i in range(num_layers - 1):
+        current_size = layer_sizes[i]
+        next_size = layer_sizes[i + 1]
+        y_start = (max_neurons - current_size) / 2
+        y_end = (max_neurons - next_size) / 2
+        
+        # Create funnel segment with gradient
+        verts = [
+            (x_positions[i], y_start),
+            (x_positions[i + 1], y_end),
+            (x_positions[i + 1], y_end + next_size),
+            (x_positions[i], y_start + current_size)
+        ]
+        funnel = Polygon(verts, facecolor='gray', alpha=0.7, edgecolor='black')
+        ax.add_patch(funnel)
+
+    # Add vertical bars at layer boundaries for emphasis
+    for i in range(num_layers):
+        y_start = (max_neurons - layer_sizes[i]) / 2
+        ax.plot([x_positions[i], x_positions[i]], [y_start, y_start + layer_sizes[i]], 
+                color='black', lw=2)
+
+    # Add layer labels
+    for i in range(num_layers):
+        if i == 0:
+            ax.text(x_positions[i], max_neurons + 2, f"Input\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
+        elif i == num_layers - 1:
+            ax.text(x_positions[i], max_neurons + 2, f"Output\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
+        else:
+            ax.text(x_positions[i], max_neurons + 2, f"Hidden {i}\n({layer_sizes[i]})", ha='center', va='top', fontsize=12)
+
+    # Set axis limits
+    ax.set_xlim(-1, 11)
+    ax.set_ylim(-1, max_neurons + 4)
+    plt.tight_layout()
+    return fig
+
+# 📌 Visualize mạng nơ-ron với kết quả dự đoán
 def visualize_neural_network_prediction(model, input_image, predicted_label):
     hidden_layer_sizes = model.hidden_layer_sizes
     if isinstance(hidden_layer_sizes, int):
@@ -295,8 +366,8 @@ def create_streamlit_app():
         if val_ratio >= 1.0:
             st.error("Tỷ lệ Validation quá lớn so với Train! Vui lòng điều chỉnh lại.")
         else:
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
-            X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=val_ratio, random_state=42)
+            X_train, X_val, X_test, y_train, y_val, y_test = split_data(X, y, train_size=train_size/100, val_size=val_size/100, test_size=test_size/100)
+            st.session_state.data_split = (X_train, X_val, X_test, y_train, y_val, y_test)
         
             data_ratios = pd.DataFrame({
                 "Tập dữ liệu": ["Train", "Validation", "Test"],
@@ -306,74 +377,81 @@ def create_streamlit_app():
             st.table(data_ratios)
 
         st.write("**🚀 Huấn luyện mô hình Neural Network**")
-        custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", "MyModel")
+        st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
         
         params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2, help="Số lượng tầng ẩn trong mạng nơ-ron.")
         params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100, help="Số nơ-ron trong mỗi tầng ẩn.")
         params["epochs"] = st.slider("Epochs", 5, 50, 10, help="Số lần lặp qua toàn bộ dữ liệu huấn luyện.")
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"], help="Hàm kích hoạt cho các nơ-ron.")
-        cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5, help="Số lượng fold để đánh giá mô hình bằng cross-validation.")
+        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5, help="Số lượng fold để đánh giá mô hình bằng cross-validation.")
 
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
+                st.session_state.params = params
+                X_train, X_val, X_test, y_train, y_val, y_test = st.session_state.data_split
                 result = train_model(
-                    custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds
+                    st.session_state.custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, st.session_state.cv_folds
                 )
                 if result[0] is not None:
                     model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
+                    st.session_state.model = model  # Lưu mô hình vào session state
                     st.success(f"✅ Huấn luyện xong!")
                     st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
                     st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
                     st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
                     st.write(f"🎯 **Độ chính xác trung bình Cross-Validation: {cv_mean_accuracy:.4f}**")
                     
+                    # Visualize neural network
+                    st.write("##### 📉 Kiến trúc mạng Neural Network")
+                    fig = visualize_neural_network(model, input_size=784, output_size=10)
+                    st.pyplot(fig)
                 else:
                     st.error("Huấn luyện thất bại. Vui lòng kiểm tra lỗi ở trên.")
 
     with tab3:
-        option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
-        if option == "📂 Tải ảnh lên":
-            uploaded_file = st.file_uploader("📤 Tải ảnh số viết tay (PNG, JPG)", type=["png", "jpg", "jpeg"])
-            if uploaded_file is not None:
-                image = cv2.imdecode(np.frombuffer(uploaded_file.read(), np.uint8), cv2.IMREAD_COLOR)
-                processed_image = preprocess_uploaded_image(image)
-                st.image(image, caption="📷 Ảnh tải lên", use_column_width=True)
-                if st.button("🔮 Dự đoán"):
-                    result = train_model(
-                        custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds
-                    )
-                    if result[0] is not None:
-                        model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
+        if st.session_state.model is None:
+            st.warning("⚠️ Vui lòng huấn luyện mô hình trước khi dự đoán!")
+        else:
+            option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
+            show_visualization = st.checkbox("Hiển thị biểu đồ mạng nơ-ron", value=True)
+
+            if option == "📂 Tải ảnh lên":
+                uploaded_file = st.file_uploader("📤 Tải ảnh số viết tay (PNG, JPG)", type=["png", "jpg", "jpeg"])
+                if uploaded_file is not None:
+                    image = cv2.imdecode(np.frombuffer(uploaded_file.read(), np.uint8), cv2.IMREAD_COLOR)
+                    processed_image = preprocess_uploaded_image(image)
+                    st.image(image, caption="📷 Ảnh tải lên", use_column_width=True)
+                    if st.button("🔮 Dự đoán"):
+                        model = st.session_state.model
                         prediction = model.predict(processed_image)[0]
                         probabilities = model.predict_proba(processed_image)[0]
                         st.write(f"🎯 **Dự đoán: {prediction}**")
                         st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
-                        # Visualize neural network prediction
-                        st.write("##### 📉 Biểu diễn mạng Neural Network với kết quả dự đoán")
-                        fig = visualize_neural_network_prediction(model, processed_image, prediction)
-                        st.pyplot(fig)
-        elif option == "✏️ Vẽ số":
-            canvas_result = st_canvas(
-                fill_color="white", stroke_width=15, stroke_color="black",
-                background_color="white", width=280, height=280, drawing_mode="freedraw", key="canvas"
-            )
-            if st.button("🔮 Dự đoán"):
-                if canvas_result.image_data is not None:
-                    processed_canvas = preprocess_canvas_image(canvas_result.image_data)
-                    result = train_model(
-                        custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds
-                    )
-                    if result[0] is not None:
-                        model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
+                        # Visualize neural network prediction (nếu được chọn)
+                        if show_visualization:
+                            st.write("##### 📉 Biểu diễn mạng Neural Network với kết quả dự đoán")
+                            fig = visualize_neural_network_prediction(model, processed_image, prediction)
+                            st.pyplot(fig)
+
+            elif option == "✏️ Vẽ số":
+                canvas_result = st_canvas(
+                    fill_color="white", stroke_width=15, stroke_color="black",
+                    background_color="white", width=280, height=280, drawing_mode="freedraw", key="canvas"
+                )
+                if st.button("🔮 Dự đoán"):
+                    if canvas_result.image_data is not None:
+                        processed_canvas = preprocess_canvas_image(canvas_result.image_data)
+                        model = st.session_state.model
                         prediction = model.predict(processed_canvas)[0]
                         probabilities = model.predict_proba(processed_canvas)[0]
                         st.write(f"🎯 **Dự đoán: {prediction}**")
                         st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
-                        # Visualize neural network prediction
-                        st.write("##### 📉 Biểu diễn mạng Neural Network với kết quả dự đoán")
-                        fig = visualize_neural_network_prediction(model, processed_canvas, prediction)
-                        st.pyplot(fig)
+                        # Visualize neural network prediction (nếu được chọn)
+                        if show_visualization:
+                            st.write("##### 📉 Biểu diễn mạng Neural Network với kết quả dự đoán")
+                            fig = visualize_neural_network_prediction(model, processed_canvas, prediction)
+                            st.pyplot(fig)
 
     with tab4:
         st.write("##### 📊 MLflow Tracking")
