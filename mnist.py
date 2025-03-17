@@ -60,19 +60,16 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
 
     try:
         with mlflow.start_run(run_name=custom_model_name):
-            # Bước 1: Khởi tạo mô hình
             progress_bar.progress(0.1)
             status_text.text("Đang huấn luyện mô hình... (10%)")
             start_time = time.time()
 
-            # Bước 2: Huấn luyện mô hình
             model.fit(X_train, y_train)
             train_end_time = time.time()
             train_duration = train_end_time - start_time
-            progress_bar.progress(0.5)  # Giả định huấn luyện chiếm 40% tổng tiến trình
+            progress_bar.progress(0.5)
             status_text.text(f"Đã huấn luyện xong... (50%)")
 
-            # Bước 3: Dự đoán trên các tập dữ liệu
             y_train_pred = model.predict(X_train)
             progress_bar.progress(0.6)
             status_text.text("Đang dự đoán trên tập train... (60%)")
@@ -87,12 +84,10 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             progress_bar.progress(0.8)
             status_text.text("Đã dự đoán xong... (80%)")
 
-            # Tính toán độ chính xác
             train_accuracy = accuracy_score(y_train, y_train_pred)
             val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
 
-            # Bước 4: Ghi log vào MLflow
             status_text.text("Đang ghi log vào MLflow... (90%)")
             mlflow.log_param("model_name", model_name)
             mlflow.log_params(params)
@@ -101,7 +96,7 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             mlflow.log_metric("test_accuracy", test_accuracy)
             
             input_example = X_train[:1]
-            mlflow.sklearn.log_model(model, model_name, input_example=input_example)
+            mlflow.sklearn.log_model(model, custom_model_name, input_example=input_example)
             progress_bar.progress(1.0)
             status_text.text("Hoàn tất! (100%)")
     except Exception as e:
@@ -109,6 +104,17 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
         return None, None, None, None
 
     return model, train_accuracy, val_accuracy, test_accuracy
+
+# 📌 Hàm tải mô hình từ MLflow dựa trên custom_model_name
+def load_model_from_mlflow(custom_model_name):
+    runs = mlflow.search_runs(order_by=["start_time desc"])
+    if not runs.empty:
+        run = runs[runs["tags.mlflow.runName"] == custom_model_name]
+        if not run.empty:
+            run_id = run.iloc[0]["run_id"]
+            model_uri = f"runs:/{run_id}/{custom_model_name}"
+            return mlflow.sklearn.load_model(model_uri)
+    return None
 
 # 📌 Xử lý ảnh tải lên
 def preprocess_uploaded_image(image):
@@ -147,19 +153,16 @@ def create_streamlit_app():
         if algorithm == "Decision Tree":
             st.write("##### Decision Tree")
             st.write("###### Các tiêu chí đánh giá phân chia trong Decision Tree")
-            # Tiêu chí Gini
             st.write("**1. Gini Index (Chỉ số Gini)**")
             st.write("- **Định nghĩa**: Đo lường mức độ 'không thuần khiết' của tập dữ liệu. Giá trị nhỏ hơn nghĩa là dữ liệu thuần khiết hơn (chỉ chứa một lớp).")
             st.latex(r"Gini = 1 - \sum_{i=1}^{n} p_i^2")
             st.markdown("Với $$( p_i $$) là tỷ lệ của lớp $$( i $$) trong tập dữ liệu.")
     
-            # Tiêu chí Entropy
             st.write("**2. Entropy**")
             st.write("- **Định nghĩa**: Đo lường mức độ hỗn loạn (uncertainty) trong tập dữ liệu, dựa trên lý thuyết thông tin.")
             st.latex(r"Entropy = - \sum_{i=1}^{n} p_i \log_2(p_i)")
             st.write("Với $$( p_i $$) là tỷ lệ của lớp $$( i $$), và nếu $$( p_i = 0 $$) thì $$( p_i \log_2(p_i) = 0 $$) .")
     
-            # Tiêu chí Log Loss
             st.write("**3. Log Loss (Hàm mất mát Logarit)**")
             st.write("- **Định nghĩa**: Đo lường sai lệch giữa xác suất dự đoán và nhãn thực tế, thường dùng trong các mô hình xác suất.")
             st.latex(r"Log\ Loss = - \frac{1}{N} \sum_{i=1}^{N} [y_i \log(p_i) + (1 - y_i) \log(1 - p_i)]")
@@ -167,13 +170,10 @@ def create_streamlit_app():
         elif algorithm == "SVM":
             st.write("##### Support Vector Machine (SVM)")
             st.write("###### Các kernel trong SVM")
-    
-            # Kernel Linear
             st.write("**1. Linear Kernel (Kernel Tuyến tính)**")
             st.write("- **Định nghĩa**: Không biến đổi dữ liệu mà sử dụng trực tiếp tích vô hướng giữa các vector dữ liệu.")
             st.latex(r"K(x, x') = x \cdot x'")
             st.write("Với $$( x $$) và $$( x' $$) là hai vector dữ liệu.")
-            st.write("- **Minh họa**: Biểu đồ giá trị kernel theo tích vô hướng.")
             x = np.linspace(-2, 2, 100)
             k_linear = x
             fig, ax = plt.subplots(figsize=(3, 2))
@@ -184,12 +184,10 @@ def create_streamlit_app():
             ax.grid(True)
             st.pyplot(fig)
         
-            # Kernel RBF
             st.write("**2. RBF Kernel (Radial Basis Function)**")
             st.write("- **Định nghĩa**: Dựa trên khoảng cách Euclidean, biến đổi dữ liệu dựa trên độ tương tự theo phân bố Gaussian.")
             st.latex(r"K(x, x') = \exp\left(-\frac{||x - x'||^2}{2\sigma^2}\right)")
             st.write("Với $$( ||x - x'|| $$) là khoảng cách Euclidean, $$( \sigma $$) là tham số điều chỉnh độ rộng của Gaussian.")
-            st.write("- **Minh họa**: Biểu đồ giá trị kernel theo khoảng cách.")
             dist = np.linspace(0, 3, 100)
             sigma = 1.0
             k_rbf = np.exp(-dist**2 / (2 * sigma**2))
@@ -197,16 +195,14 @@ def create_streamlit_app():
             ax.plot(dist, k_rbf, label="RBF Kernel (σ=1)")
             ax.set_xlabel("||x - x'||", fontsize=6)
             ax.set_ylabel("K(x, x')", fontsize=6)
-            ax.legend(loc='upper right', fontsize=6)  # Đặt ở góc trên bên phải vì đường cong giảm
+            ax.legend(loc='upper right', fontsize=6)
             ax.grid(True)
             st.pyplot(fig)
     
-            # Kernel Polynomial
             st.write("**3. Polynomial Kernel (Kernel Đa thức)**")
             st.write("- **Định nghĩa**: Biến đổi dữ liệu bằng cách sử dụng hàm đa thức của tích vô hướng.")
             st.latex(r"K(x, x') = (x \cdot x' + c)^d")
             st.write("Với $$( c $$) là hằng số (thường $$( c \geq 0 $$)), $$( d $$) là bậc của đa thức.")
-            st.write("- **Minh họa**: Biểu đồ giá trị kernel với bậc khác nhau.")
             x = np.linspace(-2, 2, 100)
             k_poly_d2 = (x + 1)**2
             k_poly_d3 = (x + 1)**3
@@ -220,10 +216,9 @@ def create_streamlit_app():
             st.pyplot(fig)
             
             st.write("**4. Sigmoid Kernel**")
-            st.write("- **Định nghĩa**: Dựa trên hàm sigmoid, tương tự như hàm kích hoạt trong mạng nơ-ron, biến đổi dữ liệu theo dạng phi tuyến.")
+            st.write("- **Định nghĩa**: Dựa trên hàm sigmoid, tương tự như hàm kích hoạt trong mạng nơ-ron.")
             st.latex(r"K(x, x') = \tanh(\alpha \cdot (x \cdot x') + c)")
             st.write("Với $$( \alpha $$) là tham số độ dốc, $$( c $$) là hằng số dịch chuyển (bias).")
-            st.write("- **Minh họa**: Biểu đồ giá trị kernel theo tích vô hướng.")
             x = np.linspace(-2, 2, 100)
             alpha, c = 1.0, 0.0
             k_sigmoid = np.tanh(alpha * x + c)
@@ -293,6 +288,13 @@ def create_streamlit_app():
                 st.error("Huấn luyện thất bại, không có kết quả để hiển thị.")
 
     with tab3:
+        # Lấy danh sách các mô hình đã huấn luyện từ MLflow
+        runs = mlflow.search_runs(order_by=["start_time desc"])
+        model_names = runs["tags.mlflow.runName"].dropna().unique().tolist() if not runs.empty else ["Không có mô hình nào"]
+        
+        st.write("**📝 Chọn mô hình để dự đoán**")
+        selected_model_name = st.selectbox("Chọn tên mô hình:", model_names)
+
         option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
         if option == "📂 Tải ảnh lên":
             uploaded_file = st.file_uploader("📤 Tải ảnh số viết tay (PNG, JPG)", type=["png", "jpg", "jpeg"])
@@ -301,14 +303,17 @@ def create_streamlit_app():
                 processed_image = preprocess_uploaded_image(image)
                 st.image(image, caption="📷 Ảnh tải lên", use_column_width=True)
                 if st.button("🔮 Dự đoán"):
-                    model, train_accuracy, val_accuracy, test_accuracy = train_model(
-                        custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test
-                    )
-                    if model is not None:
-                        prediction = model.predict(processed_image)[0]
-                        probabilities = model.predict_proba(processed_image)[0]
-                        st.write(f"🎯 **Dự đoán: {prediction}**")
-                        st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                    if selected_model_name != "Không có mô hình nào":
+                        model = load_model_from_mlflow(selected_model_name)
+                        if model is not None:
+                            prediction = model.predict(processed_image)[0]
+                            probabilities = model.predict_proba(processed_image)[0]
+                            st.write(f"🎯 **Dự đoán: {prediction}**")
+                            st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                        else:
+                            st.error("Không thể tải mô hình đã chọn!")
+                    else:
+                        st.error("Vui lòng chọn một mô hình hợp lệ để dự đoán.")
         elif option == "✏️ Vẽ số":
             canvas_result = st_canvas(
                 fill_color="white", stroke_width=15, stroke_color="black",
@@ -317,14 +322,17 @@ def create_streamlit_app():
             if st.button("🔮 Dự đoán"):
                 if canvas_result.image_data is not None:
                     processed_canvas = preprocess_canvas_image(canvas_result.image_data)
-                    model, train_accuracy, val_accuracy, test_accuracy = train_model(
-                        custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test
-                    )
-                    if model is not None:
-                        prediction = model.predict(processed_canvas)[0]
-                        probabilities = model.predict_proba(processed_canvas)[0]
-                        st.write(f"🎯 **Dự đoán: {prediction}**")
-                        st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                    if selected_model_name != "Không có mô hình nào":
+                        model = load_model_from_mlflow(selected_model_name)
+                        if model is not None:
+                            prediction = model.predict(processed_canvas)[0]
+                            probabilities = model.predict_proba(processed_canvas)[0]
+                            st.write(f"🎯 **Dự đoán: {prediction}**")
+                            st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                        else:
+                            st.error("Không thể tải mô hình đã chọn!")
+                    else:
+                        st.error("Vui lòng chọn một mô hình hợp lệ để dự đoán.")
 
     with tab4:
         st.write("##### 📊 MLflow Tracking")
