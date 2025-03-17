@@ -281,7 +281,7 @@ def create_streamlit_app():
             params["C"] = st.slider("🔧 Tham số C ", 0.1, 10.0, 1.0)
 
         # Thêm tùy chọn số fold cho cross-validation
-        cv_folds = st.selectbox("🔢 Số fold cho Cross-Validation", [3, 5, 10], index=1)
+        cv_folds = st.silder("🔢 Số fold cho Cross-Validation", 3, 10, 5 )
 
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
