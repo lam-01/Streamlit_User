@@ -151,19 +151,19 @@ def create_streamlit_app():
             st.write("**1. Gini Index (Chỉ số Gini)**")
             st.write("- **Định nghĩa**: Đo lường mức độ 'không thuần khiết' của tập dữ liệu. Giá trị nhỏ hơn nghĩa là dữ liệu thuần khiết hơn (chỉ chứa một lớp).")
             st.latex(r"Gini = 1 - \sum_{i=1}^{n} p_i^2")
-            st.markdown("Với $$( p_i $$) là tỷ lệ của lớp \( i \) trong tập dữ liệu.")
+            st.markdown("Với $$( p_i $$) là tỷ lệ của lớp $$( i $$) trong tập dữ liệu.")
     
             # Tiêu chí Entropy
             st.write("**2. Entropy**")
             st.write("- **Định nghĩa**: Đo lường mức độ hỗn loạn (uncertainty) trong tập dữ liệu, dựa trên lý thuyết thông tin.")
             st.latex(r"Entropy = - \sum_{i=1}^{n} p_i \log_2(p_i)")
-            st.write("Với \( p_i \) là tỷ lệ của lớp \( i \), và nếu \( p_i = 0 \) thì \( p_i \log_2(p_i) = 0 \) (theo quy ước).")
+            st.write("Với $$( p_i $$) là tỷ lệ của lớp $$( i $$), và nếu $$( p_i = 0 $$) thì $$( p_i $$log_2(p_i) = 0 $$) .")
     
             # Tiêu chí Log Loss
             st.write("**3. Log Loss (Hàm mất mát Logarit)**")
             st.write("- **Định nghĩa**: Đo lường sai lệch giữa xác suất dự đoán và nhãn thực tế, thường dùng trong các mô hình xác suất.")
             st.latex(r"Log\ Loss = - \frac{1}{N} \sum_{i=1}^{N} [y_i \log(p_i) + (1 - y_i) \log(1 - p_i)]")
-            st.write("Với \( N \) là số mẫu, \( y_i \) là nhãn thực tế (0 hoặc 1), \( p_i \) là xác suất dự đoán cho lớp 1.")
+            st.write("Với $$( N $$) là số mẫu, $$( y_i $$) là nhãn thực tế (0 hoặc 1), $$( p_i $$) là xác suất dự đoán cho lớp 1.")
         elif algorithm == "SVM":
             st.write("##### Support Vector Machine (SVM)")
             st.write("###### Các kernel trong SVM")
