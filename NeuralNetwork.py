@@ -301,12 +301,12 @@ def create_streamlit_app():
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
         
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2, help="Số lượng tầng ẩn trong mạng nơ-ron.")
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100, help="Số nơ-ron trong mỗi tầng ẩn.")
-        params["epochs"] = st.slider("Epochs", 5, 50, 10, help="Số lần lặp qua toàn bộ dữ liệu huấn luyện.")
-        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"], help="Hàm kích hoạt cho các nơ-ron.")
-        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.01, 0.001, 0.0001, help="Tốc độ học ban đầu cho bộ tối ưu hóa SGD.")
-        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5, help="Số lượng fold để đánh giá mô hình bằng cross-validation.")
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100)
+        params["epochs"] = st.slider("Epochs", 5, 50, 10)
+        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"])
+        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.01, 0.001, 0.0001)
+        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5)
         
         # Hiển thị giá trị thực tế để kiểm tra
         st.write(f"Tốc độ học đã chọn: {params['learning_rate']:.4f}")
