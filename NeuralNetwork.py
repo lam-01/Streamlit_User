@@ -149,11 +149,6 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
     ax2.set_title(f"Neural Network Prediction: {predicted_label}")
     ax2.set_facecolor('black')
 
-    # Thêm biểu tượng pi (π) dễ thương
-    pi_symbol = Circle((0, -0.2), 0.05, color='cyan', ec='black')
-    ax2.add_patch(pi_symbol)
-    ax2.text(0, -0.2, "π", fontsize=20, color='black', ha='center', va='center')
-
     return fig
 
 # 📌 Huấn luyện mô hình với thanh tiến trình và cross-validation
