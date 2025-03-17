@@ -222,7 +222,7 @@ def create_streamlit_app():
             st.write("**4. Sigmoid Kernel**")
             st.write("- **Định nghĩa**: Dựa trên hàm sigmoid, tương tự như hàm kích hoạt trong mạng nơ-ron, biến đổi dữ liệu theo dạng phi tuyến.")
             st.latex(r"K(x, x') = \tanh(\alpha \cdot (x \cdot x') + c)")
-            st.write("Với $$( \alpha$$) là tham số độ dốc, $$( c $$) là hằng số dịch chuyển (bias).")
+            st.write("Với $$( \alpha \) là tham số độ dốc, $$( c $$) là hằng số dịch chuyển (bias).")
             st.write("- **Minh họa**: Biểu đồ giá trị kernel theo tích vô hướng.")
             x = np.linspace(-2, 2, 100)
             alpha, c = 1.0, 0.0
