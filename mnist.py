@@ -35,7 +35,7 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-# 📌 Huấn luyện mô hình với cross-validation
+# 📌 Huấn luyện mô hình với cross-validation (chỉ giữ mean)
 def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds):
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -65,10 +65,9 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             status_text.text("Đang thực hiện cross-validation... (10%)")
             start_time = time.time()
 
-            # Bước 2: Cross-validation
+            # Bước 2: Cross-validation (chỉ tính mean)
             cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds, scoring="accuracy")
             cv_mean = np.mean(cv_scores)
-            cv_std = np.std(cv_scores)
             progress_bar.progress(0.3)
             status_text.text(f"Cross-validation hoàn tất ({cv_folds} folds)... (30%)")
 
@@ -108,7 +107,6 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             mlflow.log_metric("val_accuracy", val_accuracy)
             mlflow.log_metric("test_accuracy", test_accuracy)
             mlflow.log_metric("cv_mean_accuracy", cv_mean)
-            mlflow.log_metric("cv_std_accuracy", cv_std)
             
             input_example = X_train[:1]
             mlflow.sklearn.log_model(model, custom_model_name, input_example=input_example)
@@ -116,9 +114,9 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             status_text.text("Hoàn tất! (100%)")
     except Exception as e:
         st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
-        return None, None, None, None, None, None
+        return None, None, None, None, None
 
-    return model, train_accuracy, val_accuracy, test_accuracy, cv_mean, cv_std
+    return model, train_accuracy, val_accuracy, test_accuracy, cv_mean
 
 # 📌 Hàm tải mô hình từ MLflow dựa trên custom_model_name
 def load_model_from_mlflow(custom_model_name):
@@ -280,12 +278,12 @@ def create_streamlit_app():
             params["kernel"] = st.selectbox("⚙️ Kernel", ["linear", "rbf", "poly", "sigmoid"])
             params["C"] = st.slider("🔧 Tham số C ", 0.1, 10.0, 1.0)
 
-        # Thêm tùy chọn số fold cho cross-validation
-        cv_folds = st.silder("🔢 Số fold cho Cross-Validation", 3, 10, 5 )
+        # Sử dụng slider cho số fold
+        cv_folds = st.slider("🔢 Số fold cho Cross-Validation", 3, 10, 5)
 
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
-                model, train_accuracy, val_accuracy, test_accuracy, cv_mean, cv_std = train_model(
+                model, train_accuracy, val_accuracy, test_accuracy, cv_mean = train_model(
                     custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds
                 )
             
@@ -294,7 +292,7 @@ def create_streamlit_app():
                 st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
                 st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
                 st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
-                st.write(f"📊 **Cross-Validation ({cv_folds} folds) - Độ chính xác trung bình: {cv_mean:.4f} (± {cv_std:.4f})**")
+                st.write(f"📊 **Cross-Validation ({cv_folds} folds) - Độ chính xác trung bình: {cv_mean:.4f}**")
             else:
                 st.error("Huấn luyện thất bại, không có kết quả để hiển thị.")
 
@@ -367,8 +365,7 @@ def create_streamlit_app():
                 st.write("##### 📜 Danh sách mô hình đã lưu:")
                 available_columns = [col for col in ["model_custom_name", "params.model_name", "start_time", 
                                                      "metrics.train_accuracy", "metrics.val_accuracy", 
-                                                     "metrics.test_accuracy", "metrics.cv_mean_accuracy", 
-                                                     "metrics.cv_std_accuracy"] 
+                                                     "metrics.test_accuracy", "metrics.cv_mean_accuracy"] 
                                      if col in runs.columns]
                 display_df = filtered_runs[available_columns]
                 
@@ -379,8 +376,7 @@ def create_streamlit_app():
                 display_df = display_df.rename(columns={
                     "model_custom_name": "Custom Model Name",
                     "params.model_name": "Model Type",
-                    "metrics.cv_mean_accuracy": "CV Mean Accuracy",
-                    "metrics.cv_std_accuracy": "CV Std Accuracy"
+                    "metrics.cv_mean_accuracy": "CV Mean Accuracy"
                 })
                 st.dataframe(display_df)
 
