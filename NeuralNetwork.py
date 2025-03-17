@@ -337,29 +337,49 @@ def create_streamlit_app():
                     st.error("Huấn luyện thất bại. Vui lòng kiểm tra lỗi ở trên.")  # Error message for training failure
 
     with tab3:
-        if st.session_state.model is None:
-            st.warning("⚠️ Vui lòng huấn luyện mô hình trước khi dự đoán!")  # Warning if model is not trained
+        if not st.session_state.trained_models:
+            st.warning("⚠️ Vui lòng huấn luyện ít nhất một mô hình trước khi dự đoán!")
         else:
-            option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])  # Radio button for input method
-            show_visualization = st.checkbox("Hiển thị biểu đồ mạng nơ-ron", value=True)  # Checkbox for visualization
-
-            if option == "📂 Tải ảnh lên":  # If upload option is selected
-                uploaded_file = st.file_uploader("📤 Tải ảnh số viết tay (PNG, JPG)", type=["png", "jpg", "jpeg"])  # File uploader for images
+            # Hiển thị selectbox để chọn mô hình
+            model_names = list(st.session_state.trained_models.keys())
+            selected_model_name = st.selectbox("📝 Chọn mô hình để dự đoán:", model_names)
+            selected_model = st.session_state.trained_models[selected_model_name]
+    
+            option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
+            show_visualization = st.checkbox("Hiển thị biểu đồ mạng nơ-ron", value=True)
+    
+            if option == "📂 Tải ảnh lên":
+                uploaded_file = st.file_uploader("📤 Tải ảnh số viết tay (PNG, JPG)", type=["png", "jpg", "jpeg"])
                 if uploaded_file is not None:
-                    image = cv2.imdecode(np.frombuffer(uploaded_file.read(), np.uint8), cv2.IMREAD_COLOR)  # Decode uploaded image
-                    processed_image = preprocess_uploaded_image(image)  # Preprocess image for prediction
-                    st.image(image, caption="📷 Ảnh tải lên", use_column_width=True)  # Display uploaded image
-                    if st.button("🔮 Dự đoán"):  # Button to make prediction
-                        model = st.session_state.model  # Retrieve trained model
-                        prediction = model.predict(processed_image)[0]  # Make prediction
-                        probabilities = model.predict_proba(processed_image)[0]  # Get prediction probabilities
-                        st.write(f"🎯 **Dự đoán: {prediction}**")  # Display prediction
-                        st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")  # Display confidence
+                    image = cv2.imdecode(np.frombuffer(uploaded_file.read(), np.uint8), cv2.IMREAD_COLOR)
+                    processed_image = preprocess_uploaded_image(image)
+                    st.image(image, caption="📷 Ảnh tải lên", use_column_width=True)
+                    if st.button("🔮 Dự đoán"):
+                        prediction = selected_model.predict(processed_image)[0]
+                        probabilities = selected_model.predict_proba(processed_image)[0]
+                        st.write(f"🎯 **Dự đoán: {prediction}**")
+                        st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
                         if show_visualization:
-                            st.write("##### 📉 Biểu diễn mạng Neural Network với kết quả dự đoán")  # Visualization header
-                            fig = visualize_neural_network_prediction(model, processed_image, prediction)  # Visualize prediction
-                            st.pyplot(fig)  # Show visualization
-
+                            st.write("##### 📉 Biểu diễn mạng Neural Network với kết quả dự đoán")
+                            fig = visualize_neural_network_prediction(selected_model, processed_image, prediction)
+                            st.pyplot(fig)
+    
+            elif option == "✏️ Vẽ số":
+                canvas_result = st_canvas(
+                    fill_color="white", stroke_width=15, stroke_color="black",
+                    background_color="white", width=280, height=280, drawing_mode="freedraw", key="canvas"
+                )
+                if st.button("🔮 Dự đoán"):
+                    if canvas_result.image_data is not None:
+                        processed_canvas = preprocess_canvas_image(canvas_result.image_data)
+                        prediction = selected_model.predict(processed_canvas)[0]
+                        probabilities = selected_model.predict_proba(processed_canvas)[0]
+                        st.write(f"🎯 **Dự đoán: {prediction}**")
+                        st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
+                        if show_visualization:
+                            st.write("##### 📉 Biểu diễn mạng Neural Network với kết quả dự đoán")
+                            fig = visualize_neural_network_prediction(selected_model, processed_canvas, prediction)
+                            st.pyplot(fig)
             elif option == "✏️ Vẽ số":  # If draw option is selected
                 canvas_result = st_canvas(
                     fill_color="white", stroke_width=15, stroke_color="black",
