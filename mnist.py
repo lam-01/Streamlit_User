@@ -151,7 +151,7 @@ def create_streamlit_app():
             st.write("**1. Gini Index (Chỉ số Gini)**")
             st.write("- **Định nghĩa**: Đo lường mức độ 'không thuần khiết' của tập dữ liệu. Giá trị nhỏ hơn nghĩa là dữ liệu thuần khiết hơn (chỉ chứa một lớp).")
             st.latex(r"Gini = 1 - \sum_{i=1}^{n} p_i^2")
-            st.write("Với \( p_i \) là tỷ lệ của lớp \( i \) trong tập dữ liệu.")
+            st.markdown("Với $$( p_i \)$$ là tỷ lệ của lớp \( i \) trong tập dữ liệu.")
     
             # Tiêu chí Entropy
             st.write("**2. Entropy**")
@@ -166,6 +166,33 @@ def create_streamlit_app():
             st.write("Với \( N \) là số mẫu, \( y_i \) là nhãn thực tế (0 hoặc 1), \( p_i \) là xác suất dự đoán cho lớp 1.")
         elif algorithm == "SVM":
             st.write("##### Support Vector Machine (SVM)")
+            st.write("###### Các kernel trong SVM")
+    
+            # Kernel Linear
+            st.write("**1. Linear Kernel (Kernel Tuyến tính)**")
+            st.write("- **Định nghĩa**: Không biến đổi dữ liệu mà sử dụng trực tiếp tích vô hướng giữa các vector dữ liệu.")
+            st.latex(r"K(x, x') = x \cdot x'")
+            st.write("Với \( x \) và \( x' \) là hai vector dữ liệu.")
+            st.write("- **Đặc điểm**:")
+            st.write("  - Đơn giản, tính toán nhanh.")
+            st.write("  - Phù hợp khi dữ liệu có thể phân tách tuyến tính.")
+            st.write("  - Ít hiệu quả với dữ liệu phi tuyến tính.")
+    
+            # Kernel RBF
+            st.write("**2. RBF Kernel (Radial Basis Function)**")
+            st.write("- **Định nghĩa**: Dựa trên khoảng cách Euclidean, biến đổi dữ liệu dựa trên độ tương tự theo phân bố Gaussian.")
+            st.latex(r"K(x, x') = \exp\left(-\frac{||x - x'||^2}{2\sigma^2}\right)")
+            st.write("Với \( ||x - x'|| \) là khoảng cách Euclidean, \( \sigma \) là tham số điều chỉnh độ rộng của Gaussian.")
+            st.write("- **Đặc điểm**:")
+            st.write("  - Linh hoạt, hiệu quả với dữ liệu phi tuyến tính.")
+            st.write("  - Phụ thuộc vào tham số \( \sigma \) (hoặc \( \gamma = 1/(2\sigma^2) \) trong thực tế).")
+            st.write("  - Là kernel mặc định trong nhiều thư viện SVM.")
+    
+            # Kernel Polynomial
+            st.write("**3. Polynomial Kernel (Kernel Đa thức)**")
+            st.write("- **Định nghĩa**: Biến đổi dữ liệu bằng cách sử dụng hàm đa thức của tích vô hướng.")
+            st.latex(r"K(x, x') = (x \cdot x' + c)^d")
+            st.write("Với \( c \) là hằng số (thường \( c \geq 0 \)), \( d \) là bậc của đa thức.")
 
     with tab2:
         sample_size = st.number_input("**Chọn cỡ mẫu để huấn luyện**", 1000, 70000, 10000, step=1000)
