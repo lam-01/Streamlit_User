@@ -146,7 +146,7 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
         max_iter=params["epochs"],
         activation=params["activation"],
         learning_rate_init=params["learning_rate"],
-        solver='sgd',
+        solver='adam',
         random_state=42,
         warm_start=True
     )
