@@ -175,12 +175,12 @@ def create_streamlit_app():
             st.write("Với $$( x $$) và $$( x' $$) là hai vector dữ liệu.")
             st.write("- **Minh họa**: Biểu đồ giá trị kernel theo tích vô hướng.")
             x = np.linspace(-2, 2, 100)
-            k_linear = x  # K(x, x') = x * x', giả sử x' = 1 để minh họa
-            fig, ax = plt.subplots(figsize=(3, 2))  # Giảm kích thước
+            k_linear = x
+            fig, ax = plt.subplots(figsize=(3, 2))
             ax.plot(x, k_linear, label="Linear Kernel")
-            ax.set_xlabel("x")
-            ax.set_ylabel("K(x, x')")
-            ax.legend()
+            ax.set_xlabel("x", fontsize=6)
+            ax.set_ylabel("K(x, x')", fontsize=6)
+            ax.legend(loc='upper left', fontsize=6)
             ax.grid(True)
             st.pyplot(fig)
         
@@ -193,11 +193,11 @@ def create_streamlit_app():
             dist = np.linspace(0, 3, 100)
             sigma = 1.0
             k_rbf = np.exp(-dist**2 / (2 * sigma**2))
-            fig, ax = plt.subplots(figsize=(3, 2))  
+            fig, ax = plt.subplots(figsize=(3, 2))
             ax.plot(dist, k_rbf, label="RBF Kernel (σ=1)")
-            ax.set_xlabel("||x - x'||")
-            ax.set_ylabel("K(x, x')")
-            ax.legend()
+            ax.set_xlabel("||x - x'||", fontsize=6)
+            ax.set_ylabel("K(x, x')", fontsize=6)
+            ax.legend(loc='upper right', fontsize=6)  # Đặt ở góc trên bên phải vì đường cong giảm
             ax.grid(True)
             st.pyplot(fig)
     
@@ -208,14 +208,14 @@ def create_streamlit_app():
             st.write("Với $$( c $$) là hằng số (thường $$( c \geq 0 $$)), $$( d $$) là bậc của đa thức.")
             st.write("- **Minh họa**: Biểu đồ giá trị kernel với bậc khác nhau.")
             x = np.linspace(-2, 2, 100)
-            k_poly_d2 = (x + 1)**2  # c=1, d=2
-            k_poly_d3 = (x + 1)**3  # c=1, d=3
-            fig, ax = plt.subplots(figsize=(3, 2))  # Giảm kích thước
+            k_poly_d2 = (x + 1)**2
+            k_poly_d3 = (x + 1)**3
+            fig, ax = plt.subplots(figsize=(3, 2))
             ax.plot(x, k_poly_d2, label="Poly Kernel (d=2, c=1)")
             ax.plot(x, k_poly_d3, label="Poly Kernel (d=3, c=1)")
-            ax.set_xlabel("x")
-            ax.set_ylabel("K(x, x')")
-            ax.legend()
+            ax.set_xlabel("x", fontsize=6)
+            ax.set_ylabel("K(x, x')", fontsize=6)
+            ax.legend(loc='upper left', fontsize=6)
             ax.grid(True)
             st.pyplot(fig)
             
@@ -229,8 +229,8 @@ def create_streamlit_app():
             k_sigmoid = np.tanh(alpha * x + c)
             fig, ax = plt.subplots(figsize=(3, 2))
             ax.plot(x, k_sigmoid, label="Sigmoid Kernel (α=1, c=0)")
-            ax.set_xlabel("x", fontsize=8)
-            ax.set_ylabel("K(x, x')", fontsize=8)
+            ax.set_xlabel("x", fontsize=6)
+            ax.set_ylabel("K(x, x')", fontsize=6)
             ax.legend(loc='upper left', fontsize=6)
             ax.grid(True)
             st.pyplot(fig)
