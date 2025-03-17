@@ -305,7 +305,7 @@ def create_streamlit_app():
         params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100)
         params["epochs"] = st.slider("Epochs", 5, 50, 10)
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"])
-        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.01, 0.001, 0.0001)
+        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1,0.001)
         st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5)
         
         # Hiển thị giá trị thực tế để kiểm tra
