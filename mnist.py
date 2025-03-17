@@ -173,6 +173,16 @@ def create_streamlit_app():
             st.write("- **Định nghĩa**: Không biến đổi dữ liệu mà sử dụng trực tiếp tích vô hướng giữa các vector dữ liệu.")
             st.latex(r"K(x, x') = x \cdot x'")
             st.write("Với $$( x $$) và $$( x' $$) là hai vector dữ liệu.")
+            st.write("- **Minh họa**: Biểu đồ giá trị kernel theo tích vô hướng.")
+            x = np.linspace(-2, 2, 100)
+            k_linear = x  # K(x, x') = x * x', giả sử x' = 1 để minh họa
+            fig, ax = plt.subplots(figsize=(5, 3))
+            ax.plot(x, k_linear, label="Linear Kernel")
+            ax.set_xlabel("x")
+            ax.set_ylabel("K(x, x')")
+            ax.legend()
+            ax.grid(True)
+            st.pyplot(fig)
     
             # Kernel RBF
             st.write("**2. RBF Kernel (Radial Basis Function)**")
