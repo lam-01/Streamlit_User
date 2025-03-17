@@ -4,7 +4,7 @@ import mlflow.sklearn
 import numpy as np
 import cv2
 from sklearn.datasets import fetch_openml
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
@@ -35,8 +35,8 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-# 📌 Huấn luyện mô hình với thanh tiến trình phản ánh tiến độ thực tế
-def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test):
+# 📌 Huấn luyện mô hình với cross-validation
+def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds):
     progress_bar = st.progress(0)
     status_text = st.empty()
     status_text.text("Đang khởi tạo mô hình... (0%)")
@@ -60,16 +60,26 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
 
     try:
         with mlflow.start_run(run_name=custom_model_name):
+            # Bước 1: Khởi tạo mô hình
             progress_bar.progress(0.1)
-            status_text.text("Đang huấn luyện mô hình... (10%)")
+            status_text.text("Đang thực hiện cross-validation... (10%)")
             start_time = time.time()
 
+            # Bước 2: Cross-validation
+            cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds, scoring="accuracy")
+            cv_mean = np.mean(cv_scores)
+            cv_std = np.std(cv_scores)
+            progress_bar.progress(0.3)
+            status_text.text(f"Cross-validation hoàn tất ({cv_folds} folds)... (30%)")
+
+            # Bước 3: Huấn luyện mô hình trên toàn bộ tập train
             model.fit(X_train, y_train)
             train_end_time = time.time()
             train_duration = train_end_time - start_time
             progress_bar.progress(0.5)
-            status_text.text(f"Đã huấn luyện xong... (50%)")
+            status_text.text("Đã huấn luyện xong... (50%)")
 
+            # Bước 4: Dự đoán trên các tập dữ liệu
             y_train_pred = model.predict(X_train)
             progress_bar.progress(0.6)
             status_text.text("Đang dự đoán trên tập train... (60%)")
@@ -84,16 +94,21 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             progress_bar.progress(0.8)
             status_text.text("Đã dự đoán xong... (80%)")
 
+            # Tính toán độ chính xác
             train_accuracy = accuracy_score(y_train, y_train_pred)
             val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
 
+            # Bước 5: Ghi log vào MLflow
             status_text.text("Đang ghi log vào MLflow... (90%)")
             mlflow.log_param("model_name", model_name)
+            mlflow.log_param("cv_folds", cv_folds)
             mlflow.log_params(params)
             mlflow.log_metric("train_accuracy", train_accuracy)
             mlflow.log_metric("val_accuracy", val_accuracy)
             mlflow.log_metric("test_accuracy", test_accuracy)
+            mlflow.log_metric("cv_mean_accuracy", cv_mean)
+            mlflow.log_metric("cv_std_accuracy", cv_std)
             
             input_example = X_train[:1]
             mlflow.sklearn.log_model(model, custom_model_name, input_example=input_example)
@@ -101,9 +116,9 @@ def train_model(custom_model_name, model_name, params, X_train, X_val, X_test, y
             status_text.text("Hoàn tất! (100%)")
     except Exception as e:
         st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
-        return None, None, None, None
+        return None, None, None, None, None, None
 
-    return model, train_accuracy, val_accuracy, test_accuracy
+    return model, train_accuracy, val_accuracy, test_accuracy, cv_mean, cv_std
 
 # 📌 Hàm tải mô hình từ MLflow dựa trên custom_model_name
 def load_model_from_mlflow(custom_model_name):
@@ -154,26 +169,24 @@ def create_streamlit_app():
             st.write("##### Decision Tree")
             st.write("###### Các tiêu chí đánh giá phân chia trong Decision Tree")
             st.write("**1. Gini Index (Chỉ số Gini)**")
-            st.write("- **Định nghĩa**: Đo lường mức độ 'không thuần khiết' của tập dữ liệu. Giá trị nhỏ hơn nghĩa là dữ liệu thuần khiết hơn (chỉ chứa một lớp).")
+            st.write("- **Định nghĩa**: Đo lường mức độ 'không thuần khiết' của tập dữ liệu.")
             st.latex(r"Gini = 1 - \sum_{i=1}^{n} p_i^2")
             st.markdown("Với $$( p_i $$) là tỷ lệ của lớp $$( i $$) trong tập dữ liệu.")
     
             st.write("**2. Entropy**")
-            st.write("- **Định nghĩa**: Đo lường mức độ hỗn loạn (uncertainty) trong tập dữ liệu, dựa trên lý thuyết thông tin.")
+            st.write("- **Định nghĩa**: Đo lường mức độ hỗn loạn (uncertainty) trong tập dữ liệu.")
             st.latex(r"Entropy = - \sum_{i=1}^{n} p_i \log_2(p_i)")
-            st.write("Với $$( p_i $$) là tỷ lệ của lớp $$( i $$), và nếu $$( p_i = 0 $$) thì $$( p_i \log_2(p_i) = 0 $$) .")
+            st.write("Với $$( p_i $$) là tỷ lệ của lớp $$( i $$).")
     
             st.write("**3. Log Loss (Hàm mất mát Logarit)**")
-            st.write("- **Định nghĩa**: Đo lường sai lệch giữa xác suất dự đoán và nhãn thực tế, thường dùng trong các mô hình xác suất.")
+            st.write("- **Định nghĩa**: Đo lường sai lệch giữa xác suất dự đoán và nhãn thực tế.")
             st.latex(r"Log\ Loss = - \frac{1}{N} \sum_{i=1}^{N} [y_i \log(p_i) + (1 - y_i) \log(1 - p_i)]")
-            st.write("Với $$( N $$) là số mẫu, $$( y_i $$) là nhãn thực tế (0 hoặc 1), $$( p_i $$) là xác suất dự đoán cho lớp 1.")
+            st.write("Với $$( N $$) là số mẫu, $$( y_i $$) là nhãn thực tế, $$( p_i $$) là xác suất dự đoán.")
         elif algorithm == "SVM":
             st.write("##### Support Vector Machine (SVM)")
             st.write("###### Các kernel trong SVM")
             st.write("**1. Linear Kernel (Kernel Tuyến tính)**")
-            st.write("- **Định nghĩa**: Không biến đổi dữ liệu mà sử dụng trực tiếp tích vô hướng giữa các vector dữ liệu.")
             st.latex(r"K(x, x') = x \cdot x'")
-            st.write("Với $$( x $$) và $$( x' $$) là hai vector dữ liệu.")
             x = np.linspace(-2, 2, 100)
             k_linear = x
             fig, ax = plt.subplots(figsize=(3, 2))
@@ -185,9 +198,7 @@ def create_streamlit_app():
             st.pyplot(fig)
         
             st.write("**2. RBF Kernel (Radial Basis Function)**")
-            st.write("- **Định nghĩa**: Dựa trên khoảng cách Euclidean, biến đổi dữ liệu dựa trên độ tương tự theo phân bố Gaussian.")
             st.latex(r"K(x, x') = \exp\left(-\frac{||x - x'||^2}{2\sigma^2}\right)")
-            st.write("Với $$( ||x - x'|| $$) là khoảng cách Euclidean, $$( \sigma $$) là tham số điều chỉnh độ rộng của Gaussian.")
             dist = np.linspace(0, 3, 100)
             sigma = 1.0
             k_rbf = np.exp(-dist**2 / (2 * sigma**2))
@@ -200,9 +211,7 @@ def create_streamlit_app():
             st.pyplot(fig)
     
             st.write("**3. Polynomial Kernel (Kernel Đa thức)**")
-            st.write("- **Định nghĩa**: Biến đổi dữ liệu bằng cách sử dụng hàm đa thức của tích vô hướng.")
             st.latex(r"K(x, x') = (x \cdot x' + c)^d")
-            st.write("Với $$( c $$) là hằng số (thường $$( c \geq 0 $$)), $$( d $$) là bậc của đa thức.")
             x = np.linspace(-2, 2, 100)
             k_poly_d2 = (x + 1)**2
             k_poly_d3 = (x + 1)**3
@@ -216,9 +225,7 @@ def create_streamlit_app():
             st.pyplot(fig)
             
             st.write("**4. Sigmoid Kernel**")
-            st.write("- **Định nghĩa**: Dựa trên hàm sigmoid, tương tự như hàm kích hoạt trong mạng nơ-ron.")
             st.latex(r"K(x, x') = \tanh(\alpha \cdot (x \cdot x') + c)")
-            st.write("Với $$( \alpha $$) là tham số độ dốc, $$( c $$) là hằng số dịch chuyển (bias).")
             x = np.linspace(-2, 2, 100)
             alpha, c = 1.0, 0.0
             k_sigmoid = np.tanh(alpha * x + c)
@@ -273,10 +280,13 @@ def create_streamlit_app():
             params["kernel"] = st.selectbox("⚙️ Kernel", ["linear", "rbf", "poly", "sigmoid"])
             params["C"] = st.slider("🔧 Tham số C ", 0.1, 10.0, 1.0)
 
+        # Thêm tùy chọn số fold cho cross-validation
+        cv_folds = st.selectbox("🔢 Số fold cho Cross-Validation", [3, 5, 10], index=1)
+
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
-                model, train_accuracy, val_accuracy, test_accuracy = train_model(
-                    custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test
+                model, train_accuracy, val_accuracy, test_accuracy, cv_mean, cv_std = train_model(
+                    custom_model_name, model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds
                 )
             
             if model is not None:
@@ -284,11 +294,11 @@ def create_streamlit_app():
                 st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
                 st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
                 st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
+                st.write(f"📊 **Cross-Validation ({cv_folds} folds) - Độ chính xác trung bình: {cv_mean:.4f} (± {cv_std:.4f})**")
             else:
                 st.error("Huấn luyện thất bại, không có kết quả để hiển thị.")
 
     with tab3:
-        # Lấy danh sách các mô hình đã huấn luyện từ MLflow
         runs = mlflow.search_runs(order_by=["start_time desc"])
         model_names = runs["tags.mlflow.runName"].dropna().unique().tolist() if not runs.empty else ["Không có mô hình nào"]
         
@@ -356,7 +366,9 @@ def create_streamlit_app():
             if not filtered_runs.empty:
                 st.write("##### 📜 Danh sách mô hình đã lưu:")
                 available_columns = [col for col in ["model_custom_name", "params.model_name", "start_time", 
-                                                     "metrics.train_accuracy", "metrics.val_accuracy", "metrics.test_accuracy"] 
+                                                     "metrics.train_accuracy", "metrics.val_accuracy", 
+                                                     "metrics.test_accuracy", "metrics.cv_mean_accuracy", 
+                                                     "metrics.cv_std_accuracy"] 
                                      if col in runs.columns]
                 display_df = filtered_runs[available_columns]
                 
@@ -366,7 +378,9 @@ def create_streamlit_app():
                 
                 display_df = display_df.rename(columns={
                     "model_custom_name": "Custom Model Name",
-                    "params.model_name": "Model Type"
+                    "params.model_name": "Model Type",
+                    "metrics.cv_mean_accuracy": "CV Mean Accuracy",
+                    "metrics.cv_std_accuracy": "CV Std Accuracy"
                 })
                 st.dataframe(display_df)
 
