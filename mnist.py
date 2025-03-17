@@ -176,30 +176,64 @@ def create_streamlit_app():
             st.write("- **Minh họa**: Biểu đồ giá trị kernel theo tích vô hướng.")
             x = np.linspace(-2, 2, 100)
             k_linear = x  # K(x, x') = x * x', giả sử x' = 1 để minh họa
-            fig, ax = plt.subplots(figsize=(5, 3))
+            fig, ax = plt.subplots(figsize=(3, 2))  # Giảm kích thước
             ax.plot(x, k_linear, label="Linear Kernel")
             ax.set_xlabel("x")
             ax.set_ylabel("K(x, x')")
             ax.legend()
             ax.grid(True)
             st.pyplot(fig)
-    
+        
             # Kernel RBF
             st.write("**2. RBF Kernel (Radial Basis Function)**")
             st.write("- **Định nghĩa**: Dựa trên khoảng cách Euclidean, biến đổi dữ liệu dựa trên độ tương tự theo phân bố Gaussian.")
             st.latex(r"K(x, x') = \exp\left(-\frac{||x - x'||^2}{2\sigma^2}\right)")
             st.write("Với $$( ||x - x'|| $$) là khoảng cách Euclidean, $$( \sigma $$) là tham số điều chỉnh độ rộng của Gaussian.")
+            st.write("- **Minh họa**: Biểu đồ giá trị kernel theo khoảng cách.")
+            dist = np.linspace(0, 3, 100)
+            sigma = 1.0
+            k_rbf = np.exp(-dist**2 / (2 * sigma**2))
+            fig, ax = plt.subplots(figsize=(3, 2))  
+            ax.plot(dist, k_rbf, label="RBF Kernel (σ=1)")
+            ax.set_xlabel("||x - x'||")
+            ax.set_ylabel("K(x, x')")
+            ax.legend()
+            ax.grid(True)
+            st.pyplot(fig)
     
             # Kernel Polynomial
             st.write("**3. Polynomial Kernel (Kernel Đa thức)**")
             st.write("- **Định nghĩa**: Biến đổi dữ liệu bằng cách sử dụng hàm đa thức của tích vô hướng.")
             st.latex(r"K(x, x') = (x \cdot x' + c)^d")
             st.write("Với $$( c $$) là hằng số (thường $$( c \geq 0 $$)), $$( d $$) là bậc của đa thức.")
+            st.write("- **Minh họa**: Biểu đồ giá trị kernel với bậc khác nhau.")
+            x = np.linspace(-2, 2, 100)
+            k_poly_d2 = (x + 1)**2  # c=1, d=2
+            k_poly_d3 = (x + 1)**3  # c=1, d=3
+            fig, ax = plt.subplots(figsize=(3, 2))  # Giảm kích thước
+            ax.plot(x, k_poly_d2, label="Poly Kernel (d=2, c=1)")
+            ax.plot(x, k_poly_d3, label="Poly Kernel (d=3, c=1)")
+            ax.set_xlabel("x")
+            ax.set_ylabel("K(x, x')")
+            ax.legend()
+            ax.grid(True)
+            st.pyplot(fig)
             
             st.write("**4. Sigmoid Kernel**")
             st.write("- **Định nghĩa**: Dựa trên hàm sigmoid, tương tự như hàm kích hoạt trong mạng nơ-ron, biến đổi dữ liệu theo dạng phi tuyến.")
             st.latex(r"K(x, x') = \tanh(\alpha \cdot (x \cdot x') + c)")
             st.write("Với $$ \alpha $$) là tham số độ dốc, $$( c $$) là hằng số dịch chuyển (bias).")
+            st.write("- **Minh họa**: Biểu đồ giá trị kernel theo tích vô hướng.")
+            x = np.linspace(-2, 2, 100)
+            alpha, c = 1.0, 0.0
+            k_sigmoid = np.tanh(alpha * x + c)
+            fig, ax = plt.subplots(figsize=(3, 2))  # Giảm kích thước
+            ax.plot(x, k_sigmoid, label="Sigmoid Kernel (α=1, c=0)")
+            ax.set_xlabel("x")
+            ax.set_ylabel("K(x, x')")
+            ax.legend()
+            ax.grid(True)
+            st.pyplot(fig)
 
     with tab2:
         sample_size = st.number_input("**Chọn cỡ mẫu để huấn luyện**", 1000, 70000, 10000, step=1000)
