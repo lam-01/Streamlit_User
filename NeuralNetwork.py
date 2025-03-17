@@ -23,7 +23,7 @@ if 'params' not in st.session_state:
 if 'cv_folds' not in st.session_state:
     st.session_state.cv_folds = 5
 if 'custom_model_name' not in st.session_state:
-    st.session_state.custom_model_name = "MyModel"
+    st.session_state.custom_model_name = ""
 
 # 📌 Tải và xử lý dữ liệu MNIST từ OpenML
 @st.cache_data
@@ -47,6 +47,7 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
         X_train, y_train, test_size=val_size / (train_size + val_size), random_state=random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
+
 # 📌 Visualize mạng nơ-ron với kết quả dự đoán
 def visualize_neural_network_prediction(model, input_image, predicted_label):
     hidden_layer_sizes = model.hidden_layer_sizes
@@ -55,92 +56,74 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
     elif isinstance(hidden_layer_sizes, tuple):
         hidden_layer_sizes = list(hidden_layer_sizes)
 
-    # Define layers: input, hidden layers, output
     input_layer_size = 784  # 28x28 pixel
     output_layer_size = 10  # 10 chữ số (0-9)
     layer_sizes = [input_layer_size] + hidden_layer_sizes + [output_layer_size]
     num_layers = len(layer_sizes)
 
-    # Create figure with two subplots: input image and neural network
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={'width_ratios': [1, 3]})
 
-    # --- Phần 1: Vẽ hình ảnh đầu vào (chữ số) ---
     ax1.imshow(input_image.reshape(28, 28), cmap='gray')
     ax1.set_title("Input Image")
     ax1.axis('off')
 
-    # --- Phần 2: Vẽ sơ đồ mạng nơ-ron ---
-    # Tạo vị trí cho các nơ-ron
     pos = {}
     layer_names = ['Input', 'Hidden 1', 'Hidden 2', 'Output'] if len(hidden_layer_sizes) == 2 else ['Input'] + [f'Hidden {i+1}' for i in range(len(hidden_layer_sizes))] + ['Output']
 
-    # Đặt vị trí cho các nơ-ron trong từng tầng
     for layer_idx, layer_size in enumerate(layer_sizes):
         for neuron_idx in range(layer_size):
-            if layer_size > 20 and layer_idx == 0:  # Đơn giản hóa tầng đầu vào
+            if layer_size > 20 and layer_idx == 0:
                 if neuron_idx < 10 or neuron_idx >= layer_size - 10:
                     pos[(layer_idx, neuron_idx)] = (layer_idx, neuron_idx / layer_size)
                 elif neuron_idx == 10:
-                    pos[('dots', layer_idx)] = (layer_idx, 0.5)  # Thêm dấu "..."
+                    pos[('dots', layer_idx)] = (layer_idx, 0.5)
             else:
                 pos[(layer_idx, neuron_idx)] = (layer_idx, neuron_idx / (layer_size - 1) if layer_size > 1 else 0.5)
 
-    # Vẽ các nơ-ron
     for layer_idx, layer_size in enumerate(layer_sizes):
         for neuron_idx in range(layer_size):
             if layer_size > 20 and layer_idx == 0 and neuron_idx >= 10 and neuron_idx < layer_size - 10:
-                continue  # Bỏ qua các nơ-ron ở giữa để đơn giản hóa
+                continue
             
             x, y = pos[(layer_idx, neuron_idx)]
             circle = Circle((x, y), 0.05, color='white', ec='black')
             ax2.add_patch(circle)
             
-            # Gắn nhãn cho tầng đầu ra
             if layer_idx == num_layers - 1:
                 ax2.text(x + 0.2, y, f"{neuron_idx}", fontsize=12, color='white')
             
-            # Tô đậm nơ-ron dự đoán bằng hình vuông màu vàng
             if layer_idx == num_layers - 1 and neuron_idx == predicted_label:
                 square = Rectangle((x - 0.07, y - 0.07), 0.14, 0.14, fill=False, edgecolor='yellow', linewidth=2)
                 ax2.add_patch(square)
 
-    # Vẽ dấu "..." cho tầng đầu vào
     if ('dots', 0) in pos:
         x, y = pos[('dots', 0)]
         ax2.text(x, y, "...", fontsize=12, color='white', ha='center', va='center')
 
-    # Vẽ các kết nối giữa các tầng (cải tiến để dễ nhìn hơn)
     for layer_idx in range(len(layer_sizes) - 1):
-        # Chỉ chọn một số nơ-ron đại diện để vẽ kết nối
         current_layer_size = layer_sizes[layer_idx]
         next_layer_size = layer_sizes[layer_idx + 1]
 
-        # Nếu là tầng đầu vào, chỉ chọn 10 nơ-ron đại diện (5 ở đầu, 5 ở cuối)
         if layer_idx == 0 and current_layer_size > 20:
             neuron_indices_1 = list(range(5)) + list(range(current_layer_size - 5, current_layer_size))
         else:
             neuron_indices_1 = range(current_layer_size)
 
-        # Chỉ vẽ kết nối đến nơ-ron dự đoán ở tầng đầu ra (nếu là tầng cuối)
-        if layer_idx == len(layer_sizes) - 2:  # Tầng trước tầng đầu ra
-            neuron_indices_2 = [predicted_label]  # Chỉ vẽ đến nơ-ron dự đoán
+        if layer_idx == len(layer_sizes) - 2:
+            neuron_indices_2 = [predicted_label]
         else:
-            # Nếu là tầng ẩn, chọn 5 nơ-ron đại diện (hoặc tất cả nếu tầng nhỏ)
             if next_layer_size > 10:
                 neuron_indices_2 = list(range(5)) + list(range(next_layer_size - 5, next_layer_size))
             else:
                 neuron_indices_2 = range(next_layer_size)
 
-        # Sử dụng màu gradient từ xanh đến đỏ
         for idx1, neuron1 in enumerate(neuron_indices_1):
             for idx2, neuron2 in enumerate(neuron_indices_2):
                 x1, y1 = pos[(layer_idx, neuron1)]
                 x2, y2 = pos[(layer_idx + 1, neuron2)]
-                # Tạo màu gradient dựa trên vị trí nơ-ron
-                color = plt.cm.coolwarm(idx2 / max(len(neuron_indices_2), 1))  # Gradient từ xanh đến đỏ
+                color = plt.cm.coolwarm(idx2 / max(len(neuron_indices_2), 1))
                 ax2.plot([x1, x2], [y1, y2], color=color, alpha=0.5, linewidth=1)
 
-    # Thiết lập trục
     ax2.set_xlim(-0.5, num_layers - 0.5)
     ax2.set_ylim(-0.1, 1.1)
     ax2.set_xticks(range(num_layers))
@@ -156,18 +139,18 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
     progress_bar = st.progress(0)
     status_text = st.empty()
 
-    # Tạo tuple cho hidden_layer_sizes dựa trên số lớp ẩn và số neuron mỗi lớp
     hidden_layer_sizes = tuple([params["neurons_per_layer"]] * params["num_hidden_layers"])
 
     model = MLPClassifier(
         hidden_layer_sizes=hidden_layer_sizes,
         max_iter=params["epochs"],
         activation=params["activation"],
+        learning_rate_init=params["learning_rate"],  # Thêm tốc độ học
+        solver='sgd',  # Sử dụng SGD để learning_rate_init có hiệu lực
         random_state=42,
         warm_start=True
     )
 
-    # Huấn luyện mô hình
     try:
         with mlflow.start_run(run_name=custom_model_name):
             for i in range(params["epochs"]):
@@ -178,7 +161,6 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
                 status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
                 time.sleep(0.1)
 
-            # Dự đoán và tính toán độ chính xác
             y_train_pred = model.predict(X_train)
             y_test_pred = model.predict(X_test)
             y_val_pred = model.predict(X_val)
@@ -186,13 +168,11 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
 
-            # Thực hiện cross-validation
             cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds)
             cv_mean_accuracy = np.mean(cv_scores)
 
-            # Ghi log tham số và metric vào MLflow
             mlflow.log_param("model_name", "Neural Network")
-            mlflow.log_params(params)
+            mlflow.log_params(params)  # Ghi lại tất cả tham số, bao gồm learning_rate
             mlflow.log_param("cv_folds", cv_folds)
             mlflow.log_metric("train_accuracy", train_accuracy)
             mlflow.log_metric("val_accuracy", val_accuracy)
@@ -281,8 +261,7 @@ def create_streamlit_app():
         st.latex(r"f(x) = \frac{1}{1 + e^{-x}}")
 
     with tab2:
-        # Cho phép chọn số mẫu để huấn luyện
-        max_samples = 70000  # Tổng số mẫu trong MNIST
+        max_samples = 70000
         n_samples = st.number_input(
             "Số lượng mẫu để huấn luyện", min_value=1000, max_value=max_samples, value=9000, step=1000,
         )
@@ -301,17 +280,14 @@ def create_streamlit_app():
         if val_ratio >= 1.0:
             st.error("Tỷ lệ Validation quá lớn so với Train! Vui lòng điều chỉnh lại.")
         else:
-            # Chia dữ liệu với tỷ lệ chính xác
             X_temp, X_test, y_temp, y_test = train_test_split(
                 X, y, test_size=test_size/100, random_state=42
             )
-            # Tính toán tỷ lệ validation dựa trên tập còn lại (train + val)
-            val_ratio_adjusted = val_size / (train_size)  # Tỷ lệ val trên tập (train + val)
+            val_ratio_adjusted = val_size / (train_size)
             X_train, X_val, y_train, y_val = train_test_split(
                 X_temp, y_temp, test_size=val_ratio_adjusted, random_state=42
             )
             
-            # Kiểm tra số lượng mẫu
             st.session_state.data_split = (X_train, X_val, X_test, y_train, y_val, y_test)
             
             data_ratios = pd.DataFrame({
@@ -325,11 +301,12 @@ def create_streamlit_app():
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
         
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100)
-        params["epochs"] = st.slider("Epochs", 5, 50, 10)
-        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"])
-        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5)
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2, help="Số lượng tầng ẩn trong mạng nơ-ron.")
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100, help="Số nơ-ron trong mỗi tầng ẩn.")
+        params["epochs"] = st.slider("Epochs", 5, 50, 10, help="Số lần lặp qua toàn bộ dữ liệu huấn luyện.")
+        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"], help="Hàm kích hoạt cho các nơ-ron.")
+        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.01, 0.001, 0.0001, help="Tốc độ học ban đầu cho bộ tối ưu hóa SGD.")
+        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5, help="Số lượng fold để đánh giá mô hình bằng cross-validation.")
     
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
@@ -340,13 +317,12 @@ def create_streamlit_app():
                 )
                 if result[0] is not None:
                     model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
-                    st.session_state.model = model  # Lưu mô hình vào session state
+                    st.session_state.model = model
                     st.success(f"✅ Huấn luyện xong!")
                     st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
                     st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
                     st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
                     st.write(f"🎯 **Độ chính xác trung bình Cross-Validation: {cv_mean_accuracy:.4f}**")
-                    
                 else:
                     st.error("Huấn luyện thất bại. Vui lòng kiểm tra lỗi ở trên.")
 
@@ -369,7 +345,6 @@ def create_streamlit_app():
                         probabilities = model.predict_proba(processed_image)[0]
                         st.write(f"🎯 **Dự đoán: {prediction}**")
                         st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
-                        # Visualize neural network prediction (nếu được chọn)
                         if show_visualization:
                             st.write("##### 📉 Biểu diễn mạng Neural Network với kết quả dự đoán")
                             fig = visualize_neural_network_prediction(model, processed_image, prediction)
@@ -388,7 +363,6 @@ def create_streamlit_app():
                         probabilities = model.predict_proba(processed_canvas)[0]
                         st.write(f"🎯 **Dự đoán: {prediction}**")
                         st.write(f"🔢 **Độ tin cậy: {probabilities[prediction] * 100:.2f}%**")
-                        # Visualize neural network prediction (nếu được chọn)
                         if show_visualization:
                             st.write("##### 📉 Biểu diễn mạng Neural Network với kết quả dự đoán")
                             fig = visualize_neural_network_prediction(model, processed_canvas, prediction)
