@@ -151,7 +151,7 @@ def create_streamlit_app():
             st.write("**1. Gini Index (Chỉ số Gini)**")
             st.write("- **Định nghĩa**: Đo lường mức độ 'không thuần khiết' của tập dữ liệu. Giá trị nhỏ hơn nghĩa là dữ liệu thuần khiết hơn (chỉ chứa một lớp).")
             st.latex(r"Gini = 1 - \sum_{i=1}^{n} p_i^2")
-            st.markdown("Với $$( p_i \)$$ là tỷ lệ của lớp \( i \) trong tập dữ liệu.")
+            st.markdown("Với $$( p_i $$) là tỷ lệ của lớp \( i \) trong tập dữ liệu.")
     
             # Tiêu chí Entropy
             st.write("**2. Entropy**")
