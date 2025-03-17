@@ -157,7 +157,7 @@ def create_streamlit_app():
             st.write("**2. Entropy**")
             st.write("- **Định nghĩa**: Đo lường mức độ hỗn loạn (uncertainty) trong tập dữ liệu, dựa trên lý thuyết thông tin.")
             st.latex(r"Entropy = - \sum_{i=1}^{n} p_i \log_2(p_i)")
-            st.write("Với $$( p_i $$) là tỷ lệ của lớp $$( i $$), và nếu $$( p_i = 0 $$) thì $$( p_i $$log_2(p_i) = 0 $$) .")
+            st.write("Với $$( p_i $$) là tỷ lệ của lớp $$( i $$), và nếu $$( p_i = 0 $$) thì $$( p_i \log_2(p_i) = 0 $$) .")
     
             # Tiêu chí Log Loss
             st.write("**3. Log Loss (Hàm mất mát Logarit)**")
