@@ -227,11 +227,11 @@ def create_streamlit_app():
             x = np.linspace(-2, 2, 100)
             alpha, c = 1.0, 0.0
             k_sigmoid = np.tanh(alpha * x + c)
-            fig, ax = plt.subplots(figsize=(3, 2))  # Giảm kích thước
+            fig, ax = plt.subplots(figsize=(3, 2))
             ax.plot(x, k_sigmoid, label="Sigmoid Kernel (α=1, c=0)")
-            ax.set_xlabel("x")
-            ax.set_ylabel("K(x, x')")
-            ax.legend()
+            ax.set_xlabel("x", fontsize=8)
+            ax.set_ylabel("K(x, x')", fontsize=8)
+            ax.legend(loc='upper left', fontsize=6)
             ax.grid(True)
             st.pyplot(fig)
 
