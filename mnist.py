@@ -185,6 +185,11 @@ def create_streamlit_app():
             st.write("- **Định nghĩa**: Biến đổi dữ liệu bằng cách sử dụng hàm đa thức của tích vô hướng.")
             st.latex(r"K(x, x') = (x \cdot x' + c)^d")
             st.write("Với $$( c $$) là hằng số (thường $$( c \geq 0 $$)), $$( d $$) là bậc của đa thức.")
+            
+            st.write("**4. Sigmoid Kernel**")
+            st.write("- **Định nghĩa**: Dựa trên hàm sigmoid, tương tự như hàm kích hoạt trong mạng nơ-ron, biến đổi dữ liệu theo dạng phi tuyến.")
+            st.latex(r"K(x, x') = \tanh(\alpha \cdot (x \cdot x') + c)")
+            st.write("Với $$ \alpha $$) là tham số độ dốc, $$( c $$) là hằng số dịch chuyển (bias).")
 
     with tab2:
         sample_size = st.number_input("**Chọn cỡ mẫu để huấn luyện**", 1000, 70000, 10000, step=1000)
