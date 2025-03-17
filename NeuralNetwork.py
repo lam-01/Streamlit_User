@@ -29,8 +29,8 @@ if 'custom_model_name' not in st.session_state:
 @st.cache_data
 def load_data(n_samples=None):
     mnist = fetch_openml("mnist_784", version=1, as_frame=False)
-    X, y = mnist.data, mnist.target.astype(int)  # Chuyển nhãn về kiểu số nguyên
-    X = X / 255.0  # Chuẩn hóa về [0,1]
+    X, y = mnist.data, mnist.target.astype(int)
+    X = X / 255.0
     if n_samples is not None and n_samples < len(X):
         indices = np.random.choice(len(X), n_samples, replace=False)
         X = X[indices]
@@ -56,8 +56,8 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
     elif isinstance(hidden_layer_sizes, tuple):
         hidden_layer_sizes = list(hidden_layer_sizes)
 
-    input_layer_size = 784  # 28x28 pixel
-    output_layer_size = 10  # 10 chữ số (0-9)
+    input_layer_size = 784
+    output_layer_size = 10
     layer_sizes = [input_layer_size] + hidden_layer_sizes + [output_layer_size]
     num_layers = len(layer_sizes)
 
@@ -145,8 +145,8 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
         hidden_layer_sizes=hidden_layer_sizes,
         max_iter=params["epochs"],
         activation=params["activation"],
-        learning_rate_init=params["learning_rate"],  # Thêm tốc độ học
-        solver='sgd',  # Sử dụng SGD để learning_rate_init có hiệu lực
+        learning_rate_init=params["learning_rate"],
+        solver='sgd',
         random_state=42,
         warm_start=True
     )
@@ -172,7 +172,7 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             cv_mean_accuracy = np.mean(cv_scores)
 
             mlflow.log_param("model_name", "Neural Network")
-            mlflow.log_params(params)  # Ghi lại tất cả tham số, bao gồm learning_rate
+            mlflow.log_params(params)
             mlflow.log_param("cv_folds", cv_folds)
             mlflow.log_metric("train_accuracy", train_accuracy)
             mlflow.log_metric("val_accuracy", val_accuracy)
@@ -301,12 +301,15 @@ def create_streamlit_app():
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
         
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100)
-        params["epochs"] = st.slider("Epochs", 5, 50, 10)
-        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"])
-        params["learning_rate"] = st.slider("Tốc độ học (learning rate)",min_value=0.001, max_value=1.0, value=0.01)
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2, help="Số lượng tầng ẩn trong mạng nơ-ron.")
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100, help="Số nơ-ron trong mỗi tầng ẩn.")
+        params["epochs"] = st.slider("Epochs", 5, 50, 10, help="Số lần lặp qua toàn bộ dữ liệu huấn luyện.")
+        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"], help="Hàm kích hoạt cho các nơ-ron.")
+        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.01, 0.001, 0.0001, help="Tốc độ học ban đầu cho bộ tối ưu hóa SGD.")
         st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5, help="Số lượng fold để đánh giá mô hình bằng cross-validation.")
+        
+        # Hiển thị giá trị thực tế để kiểm tra
+        st.write(f"Tốc độ học đã chọn: {params['learning_rate']:.4f}")
     
         if st.button("🚀 Huấn luyện mô hình"):
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
