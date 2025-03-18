@@ -311,14 +311,32 @@ def main():
        
     with tab2:
         X, y = load_mnist_data()
-        st.write("**🖼️ Một vài mẫu dữ liệu từ MNIST**")
+        # st.write("**🖼️ Một vài mẫu dữ liệu từ MNIST**")
+        # num_samples = 10  
+        # cols = st.columns(10)
+        # for i in range(num_samples):
+        #     with cols[i % 10]:
+        #         st.write(f"**{y[i]}**")  # Hiển thị caption phía trên ảnh
+        #         fig, ax = plt.subplots()
+        #         ax.imshow(X[i].reshape(28, 28), cmap="gray")
+        #         ax.axis("off")
+        #         st.pyplot(fig)
+        digit_indices = {}
+        for i in range(len(y)):
+            digit = int(y[i])
+            if digit not in digit_indices:
+                digit_indices[digit] = i
+            if len(digit_indices) == 10:  # Đủ 10 chữ số thì thoát
+                break
+        
+        # Hiển thị ảnh mẫu với caption phía trên
         num_samples = 10  
         cols = st.columns(10)
-        for i in range(num_samples):
-            with cols[i % 10]:
-                st.write(f"**{y[i]}**")  # Hiển thị caption phía trên ảnh
-                fig, ax = plt.subplots()
-                ax.imshow(X[i].reshape(28, 28), cmap="gray")
+        for digit in range(num_samples):
+            with cols[digit]:
+                st.write(f"**{digit}**")  # Hiển thị caption phía trên ảnh
+                fig, ax = plt.subplots(figsize=(1.5, 1.5))  # Điều chỉnh kích thước nếu cần
+                ax.imshow(X[digit_indices[digit]].reshape(28, 28), cmap="gray")
                 ax.axis("off")
                 st.pyplot(fig)
 
