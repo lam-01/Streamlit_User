@@ -317,7 +317,7 @@ def main():
             idx = np.where(y == str(digit))[0][0]  
             ax = axes[digit]
             ax.imshow(X[idx].reshape(28, 28), cmap='gray')
-            ax.set_title(f"{digit}", fontsize=10)
+            ax.set_title(f"{digit}", fontsize=12)
             ax.axis('off')
         plt.tight_layout()  
         st.pyplot(fig)
