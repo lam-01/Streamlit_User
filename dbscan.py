@@ -268,16 +268,17 @@ def main():
                 if len(X) == 0 or len(y) == 0:
                     st.error("Dữ liệu MNIST trống. Vui lòng kiểm tra lại hàm tải dữ liệu.")
                 else:
-                    cols = st.columns(5)
-                    for i, col in enumerate(cols):
-                        idx = np.random.randint(0, len(X))
-                        with col:
-                            fig, ax = plt.subplots(figsize=(3, 3))
-                            ax.imshow(X[idx].reshape(28, 28), cmap='gray')
-                            ax.set_title(f"Digit: {y[idx]}")
-                            ax.axis('off')
-                            st.pyplot(fig)
-                            plt.close(fig)
+                    # Hiển thị 10 ảnh mẫu từ 0 đến 9 trong một hàng
+                    fig, axes = plt.subplots(1, 10, figsize=(15, 3))
+                    for digit in range(10):
+                        idx = np.where(y == digit)[0][0]  # Tìm chỉ số đầu tiên của chữ số
+                        ax = axes[digit]
+                        ax.imshow(X[idx].reshape(28, 28), cmap='gray')
+                        ax.set_title(f"{digit}", fontsize=10)
+                        ax.axis('off')
+                    plt.tight_layout()  # Đảm bảo bố cục gọn gàng
+                    st.pyplot(fig)
+                    plt.close(fig)
                 st.write("##### Tùy chọn mẫu dữ liệu")
                 sample_size = st.number_input("Chọn cỡ mẫu để phân cụm", min_value=1000, max_value=70000, value=5000, step=1000)
                 
