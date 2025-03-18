@@ -27,11 +27,16 @@ def load_mnist_data():
     return X, y
 
 # Lấy mẫu dữ liệu ngẫu nhiên
-def sample_data(X, y, sample_size):
-    if sample_size > len(X):
-        sample_size = len(X)
-    indices = np.random.choice(len(X), sample_size, replace=False)
-    return X[indices], y[indices]
+def show_sample_images(X, y):
+    st.write("**🖼️ Một vài mẫu dữ liệu từ MNIST**")
+    fig, axes = plt.subplots(1, 10, figsize=(15, 3))
+    for digit in range(10):
+        idx = np.where(y == digit)[0][0]
+        ax = axes[digit]
+        ax.imshow(X[idx].reshape(28, 28), cmap='gray')
+        ax.set_title(f"{digit}")
+        ax.axis('off')
+    st.pyplot(fig)
 
 # Hàm giảm chiều bằng PCA với tiến trình
 def apply_pca(X, n_components, progress_bar):
@@ -311,16 +316,7 @@ def main():
        
     with tab2:
         X, y = load_mnist_data()
-        st.write("##### Một số ảnh mẫu từ tập dữ liệu MNIST")
-        num_samples = 5  
-        cols = st.columns(5)
-        for i in range(num_samples):
-            with cols[i % 5]:
-                fig, ax = plt.subplots()
-                ax.imshow(X[i].reshape(28, 28), cmap="gray")
-                ax.axis("off")
-                st.pyplot(fig)
-                st.caption(f"Chữ số {y[i]}")
+        show_sample_images(X, y)
 
         st.write("##### Tùy chọn mẫu dữ liệu")
         sample_size = st.number_input("Chọn cỡ mẫu để phân cụm", min_value=1000, max_value=70000, value=5000, step=1000)
