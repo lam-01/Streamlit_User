@@ -316,11 +316,11 @@ def main():
         cols = st.columns(10)
         for i in range(num_samples):
             with cols[i % 10]:
+                st.write(f"**{y[i]}**")  # Hiển thị caption phía trên ảnh
                 fig, ax = plt.subplots()
                 ax.imshow(X[i].reshape(28, 28), cmap="gray")
                 ax.axis("off")
                 st.pyplot(fig)
-                st.caption(f"{y[i]}")
 
         st.write("##### Tùy chọn mẫu dữ liệu")
         sample_size = st.number_input("Chọn cỡ mẫu để phân cụm", min_value=1000, max_value=70000, value=5000, step=1000)
