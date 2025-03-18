@@ -264,17 +264,16 @@ def main():
         with tab2:
             try:
                 X, y = load_mnist_data()
-                st.write("##### Một vài mẫu dữ liệu từ MNIST")
+                st.write("##### 🖼️ Một vài mẫu dữ liệu từ MNIST")
                 if len(X) == 0 or len(y) == 0:
                     st.error("Dữ liệu MNIST trống. Vui lòng kiểm tra lại hàm tải dữ liệu.")
                 else:
-                    # Hiển thị 10 ảnh mẫu từ 0 đến 9 trong một hàng
                     fig, axes = plt.subplots(1, 10, figsize=(15, 3))
                     for digit in range(10):
-                        idx = np.where(y == digit)[0][0]  # Tìm chỉ số đầu tiên của chữ số
+                        idx = np.where(y == digit)[0][0]  
                         ax = axes[digit]
                         ax.imshow(X[idx].reshape(28, 28), cmap='gray')
-                        ax.set_title(f"{digit}", fontsize=10)
+                        ax.set_title(f"{digit}", fontsize=12)
                         ax.axis('off')
                     plt.tight_layout()  # Đảm bảo bố cục gọn gàng
                     st.pyplot(fig)
