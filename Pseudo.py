@@ -16,7 +16,6 @@ def create_model(num_hidden_layers, neurons_per_layer, activation, learning_rate
     model = keras.Sequential()
     model.add(layers.Flatten(input_shape=(28, 28)))
     
-    # Thêm các tầng ẩn
     for _ in range(num_hidden_layers):
         model.add(layers.Dense(neurons_per_layer, activation=activation))
         model.add(layers.Dropout(0.2))
@@ -31,9 +30,15 @@ def create_model(num_hidden_layers, neurons_per_layer, activation, learning_rate
 
 # Tải và chia dữ liệu với train/val/test
 @st.cache_data
-def load_data(train_split=0.7, val_split=0.15):
+def load_data(train_split=0.7, val_split=0.15, sample_size=70000):
     (x_full, y_full), _ = keras.datasets.mnist.load_data()
     x_full = x_full.astype('float32') / 255
+    
+    # Giới hạn số lượng mẫu theo sample_size
+    if sample_size < len(x_full):
+        indices = np.random.permutation(len(x_full))[:sample_size]
+        x_full = x_full[indices]
+        y_full = y_full[indices]
     
     total_samples = len(x_full)
     train_size = int(total_samples * train_split)
@@ -70,34 +75,22 @@ def select_initial_data(x_train, y_train, percentage):
     
     return x_labeled, y_labeled, x_unlabeled, unlabeled_idx
 
-# Thuật toán Pseudo Labelling với Cross-Validation
+# Thuật toán Pseudo Labelling với hiển thị kết quả mỗi iteration
 def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val, x_test, y_test, 
-                              params, custom_model_name, show_details=False, cv_folds=5):
-    if show_details:
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        log_container = st.empty()
-        log_text = ""
-    else:
-        log_text = ""
+                              params, custom_model_name, cv_folds=5):
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    result_container = st.empty()
     
     with mlflow.start_run(run_name=custom_model_name):
-        # Log parameters
         mlflow.log_params(params)
         
         x_train_current = x_labeled.copy()
         y_train_current = y_labeled.copy()
         remaining_unlabeled = x_unlabeled.copy()
         
-        log_text += "✅ **Bước 0**: Chia tập train/val/test hoàn tất.\n"
-        if show_details:
-            log_container.text(log_text)
-            progress_bar.progress(0.1)
-            status_text.text("Đang khởi tạo mô hình... (10%)")
-        
-        log_text += f"✅ **Bước 1**: Đã chọn {len(x_labeled)} mẫu làm tập labeled ban đầu ({params['initial_labeled_percentage']:.1f}%).\n"
-        if show_details:
-            log_container.text(log_text)
+        progress_bar.progress(0.1)
+        status_text.text("Đang khởi tạo mô hình... (10%)")
         
         for iteration in range(params["max_iterations"]):
             # Cross-validation
@@ -139,30 +132,40 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             val_acc = history.history['val_accuracy'][-1]
             cv_mean_acc = np.mean(cv_scores)
             
-            log_text += f"🔄 **Iteration {iteration+1}**: Huấn luyện với {len(x_train_current)} mẫu.\n"
-            log_text += f"📊 Train acc: {train_acc:.4f}, Val acc: {val_acc:.4f}, CV mean acc: {cv_mean_acc:.4f}\n"
-            if show_details:
-                log_container.text(log_text)
-            
             # Dự đoán trên unlabeled
             predictions = model.predict(remaining_unlabeled, verbose=0)
             max_probs = np.max(predictions, axis=1)
             pseudo_labels = np.argmax(predictions, axis=1)
             
             confident_idx = np.where(max_probs >= params["threshold"])[0]
-            log_text += f"📌 Gán nhãn giả cho {len(confident_idx)} mẫu với ngưỡng {params['threshold']}.\n"
-            if show_details:
-                log_container.text(log_text)
-                progress_bar.progress(0.5 + 0.4 * (iteration + 1) / params["max_iterations"])
-                status_text.text(f"Iteration {iteration + 1}: Đã gán nhãn cho {len(confident_idx)} mẫu ({int(50 + 40 * (iteration + 1) / params['max_iterations'])}%)")
             
             mlflow.log_metric("train_accuracy", train_acc, step=iteration)
             mlflow.log_metric("val_accuracy", val_acc, step=iteration)
             mlflow.log_metric("cv_mean_accuracy", cv_mean_acc, step=iteration)
             mlflow.log_metric("labeled_samples", len(confident_idx), step=iteration)
             
+            # Hiển thị kết quả sau mỗi iteration
+            with result_container.container():
+                st.write(f"**Iteration {iteration + 1}:**")
+                st.write(f"- Số mẫu được gán nhãn: {len(confident_idx)}")
+                st.write(f"- Train accuracy: {train_acc:.4f}")
+                st.write(f"- Validation accuracy: {val_acc:.4f}")
+                st.write(f"- CV mean accuracy: {cv_mean_acc:.4f}")
+                
+                if len(confident_idx) > 0:
+                    st.write("**Hình ảnh mẫu được gán nhãn:**")
+                    fig, axes = plt.subplots(1, min(5, len(confident_idx)), figsize=(15, 3))
+                    for i, ax in enumerate(axes if len(confident_idx) > 1 else [axes]):
+                        idx = confident_idx[i]
+                        ax.imshow(remaining_unlabeled[idx], cmap='gray')
+                        ax.set_title(f"Nhãn: {pseudo_labels[idx]}")
+                        ax.axis('off')
+                    st.pyplot(fig)
+            
+            progress_bar.progress(0.5 + 0.4 * (iteration + 1) / params["max_iterations"])
+            status_text.text(f"Iteration {iteration + 1}: Đã gán nhãn cho {len(confident_idx)} mẫu ({int(50 + 40 * (iteration + 1) / params['max_iterations'])}%)")
+            
             if len(confident_idx) == 0:
-                log_text += "⛔ Không còn mẫu nào vượt ngưỡng. Dừng thuật toán.\n"
                 break
                 
             x_train_current = np.concatenate([x_train_current, remaining_unlabeled[confident_idx]])
@@ -170,20 +173,16 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             remaining_unlabeled = np.delete(remaining_unlabeled, confident_idx, axis=0)
             
             if len(remaining_unlabeled) == 0:
-                log_text += "✅ Đã gán nhãn hết dữ liệu unlabeled. Dừng thuật toán.\n"
                 break
         
         test_loss, test_accuracy = model.evaluate(x_test, y_test, verbose=0)
         mlflow.log_metric("test_accuracy", test_accuracy)
         mlflow.keras.log_model(model, "final_model")
         
-        log_text += f"✅ **Đánh giá cuối**: Độ chính xác trên test set: {test_accuracy:.4f}\n"
-        if show_details:
-            log_container.text(log_text)
-            progress_bar.progress(1.0)
-            status_text.text("Hoàn tất! (100%)")
+        progress_bar.progress(1.0)
+        status_text.text("Hoàn tất! (100%)")
         
-    return model, test_accuracy, log_text
+    return model, test_accuracy
 
 # Xử lý ảnh tải lên
 def preprocess_uploaded_image(image):
@@ -232,7 +231,9 @@ def create_streamlit_app():
         """)
     
     with tab2:
-        x_train, y_train, x_val, y_val, _, _ = load_data()
+        sample_size = st.number_input("**Chọn cỡ mẫu để huấn luyện**", 1000, 70000, 10000, step=1000)
+        x_train, y_train, x_val, y_val, _, _ = load_data(sample_size=sample_size)
+        st.write(f"**Số lượng mẫu của bộ dữ liệu: {len(x_train) + len(x_val)}**")
         show_sample_images(x_train, y_train)
         
         st.write("##### Chia tập dữ liệu")
@@ -243,7 +244,7 @@ def create_streamlit_app():
             st.error("Tổng tỉ lệ vượt quá 100%! Vui lòng điều chỉnh lại.")
             return
         
-        x_train, y_train, x_val, y_val, x_test, y_test = load_data(train_split, val_split)
+        x_train, y_train, x_val, y_val, x_test, y_test = load_data(train_split, val_split, sample_size)
         labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1)
         percentage = labeled_percentage / 100
         x_labeled, y_labeled, x_unlabeled, _ = select_initial_data(x_train, y_train, percentage)
@@ -277,19 +278,15 @@ def create_streamlit_app():
         }
         st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5)
         
-        show_details = st.checkbox("Hiển thị chi tiết quá trình huấn luyện", value=False)
-        
         if st.button("🚀 Chạy Pseudo Labelling"):
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
-                model, test_accuracy, log_text = pseudo_labeling_with_mlflow(
+                model, test_accuracy = pseudo_labeling_with_mlflow(
                     x_labeled, y_labeled, x_unlabeled, x_val, y_val, x_test, y_test,
-                    params, custom_model_name, show_details, st.session_state.cv_folds
+                    params, custom_model_name, st.session_state.cv_folds
                 )
                 st.session_state['model'] = model
             
             st.success(f"✅ Huấn luyện xong! Độ chính xác trên test: {test_accuracy:.4f}")
-            if show_details:
-                st.text(log_text)
     
     with tab3:
         st.write("**🔮 Dự đoán chữ số**")
@@ -373,5 +370,5 @@ def create_streamlit_app():
             st.write("⚠️ Không có phiên làm việc nào được ghi lại.")
 
 if __name__ == "__main__":
-    mlflow.set_tracking_uri("http://localhost:5000")  # Cập nhật nếu cần
+    mlflow.set_tracking_uri("http://localhost:5000")
     create_streamlit_app()
