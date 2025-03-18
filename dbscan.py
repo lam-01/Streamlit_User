@@ -264,20 +264,16 @@ def main():
         with tab2:
             try:
                 X, y = load_mnist_data()
-                st.write("##### Một vài mẫu dữ liệu từ MNIST")
-                if len(X) == 0 or len(y) == 0:
-                    st.error("Dữ liệu MNIST trống. Vui lòng kiểm tra lại hàm tải dữ liệu.")
-                else:
-                    cols = st.columns(5)
-                    for i, col in enumerate(cols):
-                        idx = np.random.randint(0, len(X))
-                        with col:
-                            fig, ax = plt.subplots(figsize=(3, 3))
-                            ax.imshow(X[idx].reshape(28, 28), cmap='gray')
-                            ax.set_title(f"Digit: {y[idx]}")
-                            ax.axis('off')
-                            st.pyplot(fig)
-                            plt.close(fig)
+                st.write("##### 🖼️ Một vài mẫu dữ liệu từ MNIST")
+                fig, axes = plt.subplots(1, 10, figsize=(15, 3)) 
+                for digit in range(10):
+                    idx = np.where(y == str(digit))[0][0] 
+                    ax = axes[digit]
+                    ax.imshow(X[idx].reshape(28, 28), cmap='gray')
+                    ax.set_title(f"{digit}", fontsize=12)
+                    ax.axis('off')
+                plt.tight_layout()  
+                st.pyplot(fig)
                 st.write("##### Tùy chọn mẫu dữ liệu")
                 sample_size = st.number_input("Chọn cỡ mẫu để phân cụm", min_value=1000, max_value=70000, value=5000, step=1000)
                 
