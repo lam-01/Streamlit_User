@@ -9,11 +9,10 @@ from sklearn.metrics import accuracy_score
 from streamlit_drawable_canvas import st_canvas
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.patches import Circle, Polygon, Rectangle
+from matplotlib.patches import Circle, Rectangle
 from sklearn.neural_network import MLPClassifier
-import time
 
-# Khởi tạo session state để lưu mô hình và dữ liệu đã huấn luyện
+# Khởi tạo session state
 if 'model' not in st.session_state:
     st.session_state.model = None
 if 'data_split' not in st.session_state:
@@ -25,18 +24,14 @@ if 'cv_folds' not in st.session_state:
 if 'custom_model_name' not in st.session_state:
     st.session_state.custom_model_name = ""
 if 'trained_models' not in st.session_state:
-    st.session_state.trained_models = {}  # Từ điển lưu các mô hình đã huấn luyện
+    st.session_state.trained_models = {}
 
-# 📌 Tải và xử lý dữ liệu MNIST từ OpenML
+# 📌 Tải và xử lý dữ liệu MNIST từ OpenML (Tối ưu: chỉ tải số mẫu cần thiết)
 @st.cache_data
 def load_data(n_samples=None):
-    mnist = fetch_openml("mnist_784", version=1, as_frame=False)
-    X, y = mnist.data, mnist.target.astype(int)
+    mnist = fetch_openml("mnist_784", version=1, as_frame=False, parser='liac-arff')
+    X, y = mnist.data[:n_samples], mnist.target[:n_samples].astype(int)
     X = X / 255.0
-    if n_samples is not None and n_samples < len(X):
-        indices = np.random.choice(len(X), n_samples, replace=False)
-        X = X[indices]
-        y = y[indices]
     return X, y
 
 # 📌 Chia dữ liệu thành train, validation, và test
@@ -136,32 +131,30 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
 
     return fig
 
-# 📌 Huấn luyện mô hình với thanh tiến trình và cross-validation
+# 📌 Huấn luyện mô hình (Tối ưu: dùng 'adam', early stopping, song song cross-validation)
+@st.cache_resource
 def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds):
     progress_bar = st.progress(0)
     status_text = st.empty()
 
     hidden_layer_sizes = tuple([params["neurons_per_layer"]] * params["num_hidden_layers"])
-
     model = MLPClassifier(
         hidden_layer_sizes=hidden_layer_sizes,
         max_iter=params["epochs"],
         activation=params["activation"],
         learning_rate_init=params["learning_rate"],
-        solver='sgd',
+        solver='adam',  # Tối ưu với Adam
         random_state=42,
-        warm_start=True
+        early_stopping=True,  # Dừng sớm
+        validation_fraction=0.1,
+        n_iter_no_change=5
     )
 
     try:
         with mlflow.start_run(run_name=custom_model_name):
-            for i in range(params["epochs"]):
-                model.max_iter = i + 1
-                model.fit(X_train, y_train)
-                progress = (i + 1) / params["epochs"]
-                progress_bar.progress(progress)
-                status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
-                time.sleep(0.1)
+            model.fit(X_train, y_train)
+            progress_bar.progress(1.0)
+            status_text.text("Huấn luyện hoàn tất!")
 
             y_train_pred = model.predict(X_train)
             y_test_pred = model.predict(X_test)
@@ -170,7 +163,7 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
 
-            cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds)
+            cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds, n_jobs=-1)  # Song song hóa
             cv_mean_accuracy = np.mean(cv_scores)
 
             mlflow.log_param("model_name", "Neural Network")
@@ -303,8 +296,8 @@ def create_streamlit_app():
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
         
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100)
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 3, 2)  # Giảm max từ 5 xuống 3
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 100, 50)  # Giảm max từ 200 xuống 100
         params["epochs"] = st.slider("Epochs", 5, 50, 10)
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"])
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001)
@@ -325,7 +318,7 @@ def create_streamlit_app():
                     if result[0] is not None:
                         model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
                         st.session_state.model = model
-                        st.session_state.trained_models[st.session_state.custom_model_name] = model  # Lưu vào danh sách
+                        st.session_state.trained_models[st.session_state.custom_model_name] = model
                         st.success(f"✅ Huấn luyện xong!")
                         st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
                         st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
