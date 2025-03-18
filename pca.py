@@ -311,25 +311,15 @@ def main():
        
     with tab2:
         X, y = load_mnist_data()
-        # st.write("**🖼️ Một vài mẫu dữ liệu từ MNIST**")
-        # num_samples = 10  
-        # cols = st.columns(10)
-        # for i in range(num_samples):
-        #     with cols[i % 10]:
-        #         st.write(f"**{y[i]}**")  # Hiển thị caption phía trên ảnh
-        #         fig, ax = plt.subplots()
-        #         ax.imshow(X[i].reshape(28, 28), cmap="gray")
-        #         ax.axis("off")
-        #         st.pyplot(fig)
-        st.write("Dưới đây là các ảnh mẫu đại diện cho các chữ số từ 0 đến 9:")
-        fig, axes = plt.subplots(1, 10, figsize=(15, 3))  # Tạo 1 hàng, 10 cột
+        st.write("**🖼️ Một vài mẫu dữ liệu từ MNIST**")
+        fig, axes = plt.subplots(1, 10, figsize=(15, 3)
         for digit in range(10):
-            idx = np.where(y == str(digit))[0][0]  # Lưu ý: y là chuỗi trong MNIST từ OpenML
+            idx = np.where(y == str(digit))[0][0]  
             ax = axes[digit]
             ax.imshow(X[idx].reshape(28, 28), cmap='gray')
             ax.set_title(f"{digit}", fontsize=10)
             ax.axis('off')
-        plt.tight_layout()  # Đảm bảo bố cục gọn gàng
+        plt.tight_layout()  
         st.pyplot(fig)
 
         st.write("##### Tùy chọn mẫu dữ liệu")
