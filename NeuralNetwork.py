@@ -4,7 +4,7 @@ import mlflow.sklearn
 import numpy as np
 import cv2
 from sklearn.datasets import fetch_openml
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, KFold
 from sklearn.metrics import accuracy_score
 from streamlit_drawable_canvas import st_canvas
 import pandas as pd
@@ -20,13 +20,13 @@ if 'data_split' not in st.session_state:
 if 'params' not in st.session_state:
     st.session_state.params = None
 if 'cv_folds' not in st.session_state:
-    st.session_state.cv_folds = 5
+    st.session_state.cv_folds = 3  # Mặc định 3 fold
 if 'custom_model_name' not in st.session_state:
     st.session_state.custom_model_name = ""
 if 'trained_models' not in st.session_state:
     st.session_state.trained_models = {}
 
-# 📌 Tải và xử lý dữ liệu MNIST từ OpenML (Tối ưu: chỉ tải số mẫu cần thiết)
+# 📌 Tải và xử lý dữ liệu MNIST từ OpenML
 @st.cache_data
 def load_data(n_samples=None):
     mnist = fetch_openml("mnist_784", version=1, as_frame=False, parser='liac-arff')
@@ -131,7 +131,7 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
 
     return fig
 
-# 📌 Huấn luyện mô hình (Tối ưu với thanh tiến trình 0-100%)
+# 📌 Huấn luyện mô hình
 @st.cache_resource
 def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds):
     progress_bar = st.progress(0)
@@ -140,17 +140,17 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
     hidden_layer_sizes = tuple([params["neurons_per_layer"]] * params["num_hidden_layers"])
     model = MLPClassifier(
         hidden_layer_sizes=hidden_layer_sizes,
-        max_iter=1,  # Huấn luyện từng epoch thủ công
+        max_iter=1,
         activation=params["activation"],
         learning_rate_init=params["learning_rate"],
         solver='adam',
+        alpha=0.0001,  # Thêm regularization
         random_state=42,
-        warm_start=True  # Giữ trọng số từ lần huấn luyện trước
+        warm_start=True
     )
 
     try:
         with mlflow.start_run(run_name=custom_model_name):
-            # Huấn luyện từng epoch và cập nhật tiến trình
             for epoch in range(params["epochs"]):
                 model.fit(X_train, y_train)
                 progress = (epoch + 1) / params["epochs"]
@@ -164,7 +164,18 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
 
-            cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds, n_jobs=-1)
+            # Cross-Validation với mô hình mới
+            cv_model = MLPClassifier(
+                hidden_layer_sizes=hidden_layer_sizes,
+                max_iter=params["epochs"],
+                activation=params["activation"],
+                learning_rate_init=params["learning_rate"],
+                solver='adam',
+                alpha=0.0001,
+                random_state=42
+            )
+            cv = KFold(n_splits=cv_folds, shuffle=True, random_state=42)
+            cv_scores = cross_val_score(cv_model, X_train, y_train, cv=cv, n_jobs=-1)
             cv_mean_accuracy = np.mean(cv_scores)
 
             mlflow.log_param("model_name", "Neural Network")
@@ -297,12 +308,12 @@ def create_streamlit_app():
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
         
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 3, 2)
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 100, 50)
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 2, 1)  # Giảm max từ 3 xuống 2
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 20, 100, 50)  # Giảm min từ 50 xuống 20
         params["epochs"] = st.slider("Epochs", 5, 50, 10)
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"])
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001)
-        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5)
+        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 5, 3)  # Giảm max từ 10 xuống 5
         
         st.write(f"Tốc độ học đã chọn: {params['learning_rate']:.4f}")
     
