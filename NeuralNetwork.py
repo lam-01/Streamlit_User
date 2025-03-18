@@ -131,7 +131,7 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
 
     return fig
 
-# 📌 Huấn luyện mô hình (Tối ưu: dùng 'adam', early stopping, song song cross-validation)
+# 📌 Huấn luyện mô hình (Tối ưu với thanh tiến trình 0-100%)
 @st.cache_resource
 def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds):
     progress_bar = st.progress(0)
@@ -140,21 +140,22 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
     hidden_layer_sizes = tuple([params["neurons_per_layer"]] * params["num_hidden_layers"])
     model = MLPClassifier(
         hidden_layer_sizes=hidden_layer_sizes,
-        max_iter=params["epochs"],
+        max_iter=1,  # Huấn luyện từng epoch thủ công
         activation=params["activation"],
         learning_rate_init=params["learning_rate"],
-        solver='adam',  # Tối ưu với Adam
+        solver='adam',
         random_state=42,
-        early_stopping=True,  # Dừng sớm
-        validation_fraction=0.1,
-        n_iter_no_change=5
+        warm_start=True  # Giữ trọng số từ lần huấn luyện trước
     )
 
     try:
         with mlflow.start_run(run_name=custom_model_name):
-            model.fit(X_train, y_train)
-            progress_bar.progress(1.0)
-            status_text.text("Huấn luyện hoàn tất!")
+            # Huấn luyện từng epoch và cập nhật tiến trình
+            for epoch in range(params["epochs"]):
+                model.fit(X_train, y_train)
+                progress = (epoch + 1) / params["epochs"]
+                progress_bar.progress(progress)
+                status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
 
             y_train_pred = model.predict(X_train)
             y_test_pred = model.predict(X_test)
@@ -163,7 +164,7 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
 
-            cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds, n_jobs=-1)  # Song song hóa
+            cv_scores = cross_val_score(model, X_train, y_train, cv=cv_folds, n_jobs=-1)
             cv_mean_accuracy = np.mean(cv_scores)
 
             mlflow.log_param("model_name", "Neural Network")
@@ -296,8 +297,8 @@ def create_streamlit_app():
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
         
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 3, 2)  # Giảm max từ 5 xuống 3
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 100, 50)  # Giảm max từ 200 xuống 100
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 3, 2)
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 100, 50)
         params["epochs"] = st.slider("Epochs", 5, 50, 10)
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"])
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001)
