@@ -26,17 +26,6 @@ def load_mnist_data():
     X, y = fetch_openml('mnist_784', version=1, return_X_y=True, as_frame=False)
     return X, y
 
-# Lấy mẫu dữ liệu ngẫu nhiên
-def show_sample_images(X, y):
-    st.write("**🖼️ Một vài mẫu dữ liệu từ MNIST**")
-    fig, axes = plt.subplots(1, 10, figsize=(15, 3))
-    for digit in range(10):
-        idx = np.where(y == digit)[0][0]
-        ax = axes[digit]
-        ax.imshow(X[idx].reshape(28, 28), cmap='gray')
-        ax.set_title(f"{digit}")
-        ax.axis('off')
-    st.pyplot(fig)
 
 # Hàm giảm chiều bằng PCA với tiến trình
 def apply_pca(X, n_components, progress_bar):
@@ -316,7 +305,15 @@ def main():
        
     with tab2:
         X, y = load_mnist_data()
-        show_sample_images(X, y)
+        st.write("**🖼️ Một vài mẫu dữ liệu từ MNIST**")
+        fig, axes = plt.subplots(1, 10, figsize=(15, 3))
+        for digit in range(10):
+            idx = np.where(y == digit)[0][0]
+            ax = axes[digit]
+            ax.imshow(X[idx].reshape(28, 28), cmap='gray')
+            ax.set_title(f"{digit}")
+            ax.axis('off')
+        st.pyplot(fig)
 
         st.write("##### Tùy chọn mẫu dữ liệu")
         sample_size = st.number_input("Chọn cỡ mẫu để phân cụm", min_value=1000, max_value=70000, value=5000, step=1000)
