@@ -311,17 +311,32 @@ def main():
        
     with tab2:
         X, y = load_mnist_data()
-        st.write("**🖼️ Một vài mẫu dữ liệu từ MNIST**")
-        num_samples = 10  
-        cols = st.columns(10)
-        for i in range(num_samples):
-            with cols[i % 10]:
-                # st.write(f"**{y[i]}**")  # Hiển thị caption phía trên ảnh
-                st.markdown(f'<div style="text-align: center;"><b>{digit}</b></div>', unsafe_allow_html=True)
-                fig, ax = plt.subplots()
-                ax.imshow(X[i].reshape(28, 28), cmap="gray")
+        # st.write("**🖼️ Một vài mẫu dữ liệu từ MNIST**")
+        # num_samples = 10  
+        # cols = st.columns(10)
+        # for i in range(num_samples):
+        #     with cols[i % 10]:
+        #         st.write(f"**{y[i]}**")  # Hiển thị caption phía trên ảnh
+        #         fig, ax = plt.subplots()
+        #         ax.imshow(X[i].reshape(28, 28), cmap="gray")
+        #         ax.axis("off")
+        #         st.pyplot(fig)
+        digit_indices = []
+        for digit in range(10):
+            # Tìm chỉ số của ảnh đầu tiên có nhãn là digit
+            index = np.where(y == str(digit))[0][0]
+            digit_indices.append(index)
+    
+        # Hiển thị 10 ảnh trong 1 hàng
+        st.write("Dưới đây là các ảnh mẫu đại diện cho các chữ số từ 0 đến 9:")
+        cols = st.columns(10)  # Tạo 10 cột cho 10 ảnh
+        for i, idx in enumerate(digit_indices):
+            with cols[i]:
+                fig, ax = plt.subplots(figsize=(2, 2))  # Giảm kích thước ảnh để vừa hàng
+                ax.imshow(X[idx].reshape(28, 28), cmap="gray")
                 ax.axis("off")
                 st.pyplot(fig)
+                st.caption(f"Chữ số {y[idx]}")
 
         st.write("##### Tùy chọn mẫu dữ liệu")
         sample_size = st.number_input("Chọn cỡ mẫu để phân cụm", min_value=1000, max_value=70000, value=5000, step=1000)
