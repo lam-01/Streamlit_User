@@ -345,9 +345,41 @@ def create_streamlit_app():
     
     with tab1:
         st.write("##### Pseudo Labelling với Neural Network")
-        st.write(""" 
-        **Pseudo Labelling** là một kỹ thuật học bán giám sát nhằm tận dụng cả dữ liệu có nhãn và không nhãn để cải thiện hiệu suất mô hình.
-        """)
+         st.write(""" 
+            **Pseudo Labelling** là một kỹ thuật học bán giám sát (semi-supervised learning) nhằm tận dụng cả dữ liệu có nhãn (labeled data) và dữ liệu không nhãn (unlabeled data) để cải thiện hiệu suất của mô hình học máy, đặc biệt khi lượng dữ liệu có nhãn ban đầu rất hạn chế. Phương pháp này dựa trên ý tưởng sử dụng mô hình để dự đoán nhãn cho dữ liệu không nhãn, sau đó chọn các dự đoán có độ tin cậy cao để bổ sung vào tập dữ liệu có nhãn, từ đó huấn luyện lại mô hình.
+            \n **Cơ chế hoạt động**
+            \n Phương pháp Pseudo Labelling với Neural Network bao gồm các bước chính sau:
+            
+            \n **(1) Chuẩn bị dữ liệu ban đầu**
+            \nTập dữ liệu có nhãn (Labeled Data): Một tập nhỏ dữ liệu đã được gán nhãn chính xác, thường chiếm tỉ lệ rất thấp (ví dụ: 1%) so với tổng dữ liệu.
+            \nTập dữ liệu không nhãn (Unlabeled Data): Phần lớn dữ liệu còn lại, không có nhãn ban đầu, chiếm tỉ lệ lớn (ví dụ: 99%).
+            \nTập kiểm tra (Test Data): Một tập dữ liệu riêng biệt để đánh giá hiệu suất cuối cùng của mô hình.
+            \nVí dụ: Với tập MNIST (60,000 ảnh chữ số viết tay):
+            
+            \n Chia 80% làm tập train (48,000 ảnh) và 20% làm tập test (12,000 ảnh).
+            \n Từ tập train, lấy 1% (~480 ảnh) làm tập labeled, 99% (~47,520 ảnh) làm tập unlabeled.
+            \n **(2) Huấn luyện mô hình ban đầu**
+            \n Sử dụng một mạng nơ-ron (NN) để huấn luyện trên tập labeled ban đầu.
+            \n **(3) Dự đoán nhãn cho dữ liệu không nhãn**
+            \n Sử dụng mô hình đã huấn luyện để dự đoán nhãn cho toàn bộ tập unlabeled.
+            \n Kết quả dự đoán là một phân phối xác suất cho mỗi mẫu dữ liệu (ví dụ: [0.05, 0.02, 0.90, ..., 0.01] cho 10 lớp).
+            \n **(4) Gán nhãn giả (Pseudo Label)**
+            \n Đặt một ngưỡng tin cậy (threshold), ví dụ 0.95, để lọc các dự đoán đáng tin cậy.
+            \n Quy tắc:
+            \n Nếu xác suất tối đa ≥ threshold, mẫu đó được gán nhãn giả dựa trên lớp có xác suất cao nhất.
+            \n Nếu xác suất tối đa < threshold, mẫu đó vẫn giữ trạng thái không nhãn.
+            \n Ví dụ: Một ảnh trong tập unlabeled được dự đoán với xác suất [0.02, 0.01, 0.96, ..., 0.01]. Nếu threshold = 0.95, ảnh này được gán nhãn giả là lớp 2 (vì 0.96 > 0.95).
+            \n **(5) Mở rộng tập labeled và huấn luyện lại**
+            \n Tập labeled mới = tập labeled ban đầu + các mẫu vừa được gán nhãn giả.
+            \n Huấn luyện lại mô hình NN trên tập labeled mở rộng này.
+            \n Quá trình dự đoán (bước 3) và gán nhãn giả (bước 4) được lặp lại trên phần unlabeled còn lại.
+            \n **(6) Lặp lại cho đến khi đạt điều kiện dừng**
+            \n Điều kiện dừng:
+            \n Toàn bộ tập unlabeled được gán nhãn giả và chuyển sang tập labeled.
+            \n Không còn mẫu nào trong tập unlabeled có dự đoán vượt ngưỡng tin cậy.
+            \n Đạt số vòng lặp tối đa do người dùng đặt (ví dụ: 5, 10, hoặc 20 vòng).
+            \n Sau mỗi vòng lặp, mô hình thường trở nên chính xác hơn do được huấn luyện trên tập labeled lớn hơn.
+            """)
     
     with tab2:
         st.write("##### Chuẩn bị dữ liệu")
@@ -395,16 +427,15 @@ def create_streamlit_app():
         st.write("##### Thiết lập tham số Neural Network")
         params = {}
         params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100)
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 128)
         params["epochs"] = st.slider("Epochs", 5, 50, 10)
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "sigmoid"])
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, format="%.4f")
         
         st.write("##### Huấn luyện mô hình Pseudo Labelling")
-        custom_model_name = st.text_input("Đặt tên mô hình (bắt buộc):", "")
-        if not custom_model_name.strip():
-            st.error("Vui lòng nhập tên mô hình!")
-            return
+        custom_model_name = st.text_input("Nhập tên mô hình :", "")
+        if not custom_model_name:
+            custom_model_name = "Default_model"
         
         threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.95, 0.01)
         max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 5)
