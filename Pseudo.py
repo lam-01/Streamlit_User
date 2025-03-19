@@ -264,15 +264,21 @@ def create_streamlit_app():
         
         st.write("##### Chia tập dữ liệu")
         
-        test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
+        train_size = st.slider("Tỷ lệ Train (%)", min_value=50, max_value=90, value=70, step=5)
         val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
+        test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
+        
+        total_ratio = train_size + val_size + test_size
+        if total_ratio != 100:
+            st.error(f"Tổng tỉ lệ phải bằng 100%, hiện tại là {total_ratio}%!")
+            return
         
         # Chia tập test trước
-        X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
+        X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
         
-        # Chia tập validation từ tập train_full
-        X_train, X_val, y_train, y_val = train_test_split(X_train_full, y_train_full, 
-                                                         test_size=val_size/100, 
+        # Chia tập validation và train từ phần còn lại
+        X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, 
+                                                         test_size=val_size/(train_size + val_size), 
                                                          random_state=42)
         
         labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1)
