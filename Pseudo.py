@@ -71,7 +71,6 @@ def select_initial_data(x_train, y_train, percentage):
 
 # Hiển thị mẫu dữ liệu được gán nhãn giả
 def show_pseudo_labeled_samples(model, samples, predictions, n_samples=5):
-    st.write("**Một số mẫu gán nhãn giả ( pseudo labeled )**")
     fig, axes = plt.subplots(2, n_samples, figsize=(n_samples * 3, 4))
     
     if len(samples) <= n_samples:
@@ -260,7 +259,7 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
         st.write("**Biểu đồ độ chính xác qua các lần lặp**")
         fig, ax = plt.subplots(figsize=(10, 4))
         iterations_range = metrics_history['iteration']
-        ax.plot(iterations_range, metrics_history['train_accuracy'], 'b-', label='Train Accuracy')
+        ax.plot(iterations_range, metrics_history['test_accuracy'], 'b-', label='Test Accuracy')
         ax.plot(iterations_range, metrics_history['val_accuracy'], 'r-', label='Validation Accuracy')
         ax.set_xlabel('Iteration')
         ax.set_ylabel('Accuracy')
