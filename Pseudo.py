@@ -162,7 +162,7 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             current_step += 1
             progress = min(100, int((current_step / total_steps) * 100))
             progress_bar.progress(progress)
-            status_text.text(f"##### Vòng lặp {iteration + 1}: Đang huấn luyện... ({progress}%)")
+            status_text.text(f"Vòng lặp {iteration + 1}: Đang huấn luyện... ({progress}%)")
 
             try:
                 history = model.fit(
@@ -222,7 +222,7 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             metrics_history['test_accuracy'].append(test_acc)
             
             with results_container.container():
-                st.markdown(f"### Iteration {iteration + 1} kết thúc:")
+                st.markdown(f"##### Vòng lặp {iteration + 1} kết thúc:")
                 st.write(f"- Số mẫu labeled hiện tại: {len(x_train_current)}")
                 st.write(f"- Số mẫu unlabeled còn lại: {len(remaining_unlabeled)}")
                 st.write(f"- Độ chính xác train: {train_acc:.4f}")
