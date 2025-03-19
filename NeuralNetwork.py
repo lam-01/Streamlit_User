@@ -365,23 +365,6 @@ def display_training_results(model_name, train_accuracy, val_accuracy, test_accu
 def create_streamlit_app():
     st.title("🔢 Phân loại chữ số viết tay")
     
-    # Thêm thông tin về tình trạng GPU
-    try:
-        import tensorflow as tf
-        if tf.config.list_physical_devices('GPU'):
-            st.sidebar.success("🚀 GPU được kích hoạt! Huấn luyện sẽ nhanh hơn.")
-        else:
-            st.sidebar.warning("⚠️ GPU không được kích hoạt. Huấn luyện có thể chậm hơn.")
-    except:
-        st.sidebar.info("⚠️ Không thể kiểm tra tình trạng GPU.")
-    
-    # Thêm cấu hình hiển thị vào sidebar
-    st.sidebar.title("⚙️ Cấu hình hiển thị")
-    reduced_animation = st.sidebar.checkbox("Giảm hiệu ứng động cho máy yếu", value=False)
-    
-    if reduced_animation:
-        st.sidebar.info("Đã giảm hiệu ứng động để tăng hiệu suất")
-    
     tab1, tab2, tab3, tab4 = st.tabs(["📓 Lí thuyết", "📋 Huấn luyện", "🔮 Dự đoán", "⚡ MLflow"])
     
     with tab1:
