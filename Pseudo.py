@@ -310,10 +310,9 @@ def create_streamlit_app():
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, format="%.4f")
         
         st.write("##### Huấn luyện mô hình Pseudo Labelling")
-        custom_model_name = st.text_input("Đặt tên mô hình (bắt buộc):", "")
-        if not custom_model_name.strip():
-            st.error("Vui lòng nhập tên mô hình!")
-            return
+        custom_model_name = st.text_input("Nhập tên mô hình :", "")
+        if not custom_model_name:
+            custom_model_name = "Default_model"
         
         threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.95, 0.01)
         max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 5)
