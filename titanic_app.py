@@ -384,20 +384,18 @@ def create_streamlit_app():
 
     with tab3:
         st.write("##### MLflow Tracking")
-    
-        # Lấy danh sách các phiên làm việc từ MLflow
         runs = mlflow.search_runs(order_by=["start_time desc"])
     
         if not runs.empty:
-            # Lấy danh sách tên mô hình
+            # Extract model name from tags
             runs["model_name"] = runs["tags.mlflow.runName"]
     
-            # Trích xuất regression_type từ params (xử lý trường hợp thiếu dữ liệu)
+            # Extract regression_type from params (safely handle missing keys)
             runs["regression_type"] = runs["params"].apply(
                 lambda x: x.get("regression_type") if isinstance(x, dict) else "N/A"
             )
     
-            # Trích xuất các metrics (xử lý trường hợp thiếu dữ liệu)
+            # Extract metrics (safely handle missing keys)
             runs["train_mse"] = runs["metrics"].apply(
                 lambda x: x.get("train_mse") if isinstance(x, dict) else None
             )
@@ -411,43 +409,35 @@ def create_streamlit_app():
                 lambda x: x.get("cv_mse") if isinstance(x, dict) else None
             )
     
-            # **Tìm kiếm mô hình**
+            # Search functionality
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
-    
             if search_model_name:
                 filtered_runs = runs[runs["model_name"].str.contains(search_model_name, case=False, na=False)]
             else:
                 filtered_runs = runs
     
-            # **Hiển thị danh sách mô hình với thông tin bổ sung**
             if not filtered_runs.empty:
-                # Hiển thị các cột: model_name, regression_type, và các độ đo MSE
+                # Display table with extracted columns
                 display_df = filtered_runs[["model_name", "regression_type", "train_mse", "valid_mse", "test_mse", "cv_mse"]]
                 display_df = display_df.fillna("N/A")
-                # Làm tròn các giá trị số nếu có
                 for col in ["train_mse", "valid_mse", "test_mse", "cv_mse"]:
                     display_df[col] = display_df[col].apply(lambda x: round(x, 4) if isinstance(x, (int, float)) else x)
                 st.dataframe(display_df)
     
-                # **Chọn một mô hình để xem chi tiết**
+                # Detailed view of a selected model
                 selected_model_name = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["model_name"].tolist())
-    
                 if selected_model_name:
-                    # Lấy run_id tương ứng với model_name được chọn
                     selected_run_id = filtered_runs[filtered_runs["model_name"] == selected_model_name]["run_id"].iloc[0]
                     run_details = mlflow.get_run(selected_run_id)
                     st.write(f"##### 🔍 Chi tiết mô hình: `{run_details.data.tags.get('mlflow.runName', 'Không có tên')}`")
                     st.write("**Tham số:**")
                     for key, value in run_details.data.params.items():
                         st.write(f"- **{key}**: {value}")
-    
                     st.write("**Metric:**")
                     for key, value in run_details.data.metrics.items():
                         st.write(f"- **{key}**: {value}")
-    
             else:
                 st.write("❌ Không tìm thấy mô hình nào.")
-    
         else:
             st.write("⚠️ Không có phiên làm việc nào được ghi lại.")
 
