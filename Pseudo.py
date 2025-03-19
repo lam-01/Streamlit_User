@@ -93,7 +93,7 @@ def show_pseudo_labeled_samples(model, samples, predictions, n_samples=5):
     return fig
 
 # Thuật toán Pseudo Labelling với MLflow
-def pseudo_labeling_with_mmflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val, x_test, y_test, 
+def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val, x_test, y_test, 
                                threshold, max_iterations, custom_model_name, model_params):
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -267,21 +267,15 @@ def create_streamlit_app():
         
         st.write("##### Chia tập dữ liệu")
         
-        train_size = st.slider("Tỷ lệ Train (%)", min_value=50, max_value=90, value=70, step=5)
-        val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
-        test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
-        
-        total_ratio = train_size + val_size + test_size
-        if total_ratio != 100:
-            st.error(f"Tổng tỉ lệ phải bằng 100%, hiện tại là {total_ratio}%!")
-            return
+        test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=50, value=15, step=5)
+        val_size = st.slider("Tỷ lệ Validation (%) từ tập train", min_value=5, max_value=50, value=15, step=5)
         
         # Chia tập test trước
-        X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
+        X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
         
-        # Chia tập validation và train từ phần còn lại
-        X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, 
-                                                         test_size=val_size/(train_size + val_size), 
+        # Chia tập validation từ tập train
+        X_train, X_val, y_train, y_val = train_test_split(X_train_full, y_train_full, 
+                                                         test_size=val_size/100, 
                                                          random_state=42)
         
         labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1)
