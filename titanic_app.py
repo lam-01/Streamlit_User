@@ -387,22 +387,27 @@ def create_streamlit_app():
         runs = mlflow.search_runs(order_by=["start_time desc"])
     
         if not runs.empty:
-            # Debug: Display available columns to understand the DataFrame structure
-            # Uncomment the following line temporarily to inspect the DataFrame
-            # st.write("Available columns in runs:", runs.columns.tolist())
+            # Debug: Inspect the raw params and metrics for the first run
+            if "params" in runs.columns and "metrics" in runs.columns:
+                st.write("Debug - First run params:", runs["params"].iloc[0])
+                st.write("Debug - First run metrics:", runs["metrics"].iloc[0])
     
             # Extract model name from tags (safe access)
             runs["model_name"] = runs.get("tags.mlflow.runName", pd.Series([None] * len(runs))).fillna("Unnamed Run")
     
-            # Check if 'params' column exists and extract regression_type
+            # Extract params (with debug check)
             if "params" in runs.columns:
                 runs["regression_type"] = runs["params"].apply(
                     lambda x: x.get("regression_type") if isinstance(x, dict) else "N/A"
                 )
+                runs["model_name_param"] = runs["params"].apply(
+                    lambda x: x.get("model_name") if isinstance(x, dict) else "N/A"
+                )  # Extract model_name from params for consistency
             else:
-                runs["regression_type"] = "N/A"  # Default if 'params' is missing
+                runs["regression_type"] = "N/A"
+                runs["model_name_param"] = "N/A"
     
-            # Check if 'metrics' column exists and extract metrics
+            # Extract metrics (with debug check)
             if "metrics" in runs.columns:
                 runs["train_mse"] = runs["metrics"].apply(
                     lambda x: x.get("train_mse") if isinstance(x, dict) else None
@@ -417,7 +422,6 @@ def create_streamlit_app():
                     lambda x: x.get("cv_mse") if isinstance(x, dict) else None
                 )
             else:
-                # Default values if 'metrics' is missing
                 runs["train_mse"] = None
                 runs["valid_mse"] = None
                 runs["test_mse"] = None
