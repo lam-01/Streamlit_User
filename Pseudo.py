@@ -345,7 +345,7 @@ def create_streamlit_app():
     
     with tab1:
         st.write("##### Pseudo Labelling với Neural Network")
-         st.write(""" 
+        st.write(""" 
             **Pseudo Labelling** là một kỹ thuật học bán giám sát (semi-supervised learning) nhằm tận dụng cả dữ liệu có nhãn (labeled data) và dữ liệu không nhãn (unlabeled data) để cải thiện hiệu suất của mô hình học máy, đặc biệt khi lượng dữ liệu có nhãn ban đầu rất hạn chế. Phương pháp này dựa trên ý tưởng sử dụng mô hình để dự đoán nhãn cho dữ liệu không nhãn, sau đó chọn các dự đoán có độ tin cậy cao để bổ sung vào tập dữ liệu có nhãn, từ đó huấn luyện lại mô hình.
             \n **Cơ chế hoạt động**
             \n Phương pháp Pseudo Labelling với Neural Network bao gồm các bước chính sau:
@@ -354,10 +354,10 @@ def create_streamlit_app():
             \nTập dữ liệu có nhãn (Labeled Data): Một tập nhỏ dữ liệu đã được gán nhãn chính xác, thường chiếm tỉ lệ rất thấp (ví dụ: 1%) so với tổng dữ liệu.
             \nTập dữ liệu không nhãn (Unlabeled Data): Phần lớn dữ liệu còn lại, không có nhãn ban đầu, chiếm tỉ lệ lớn (ví dụ: 99%).
             \nTập kiểm tra (Test Data): Một tập dữ liệu riêng biệt để đánh giá hiệu suất cuối cùng của mô hình.
-            \nVí dụ: Với tập MNIST (60,000 ảnh chữ số viết tay):
+            \nVí dụ: Với tập MNIST (70,000 ảnh chữ số viết tay):
             
-            \n Chia 80% làm tập train (48,000 ảnh) và 20% làm tập test (12,000 ảnh).
-            \n Từ tập train, lấy 1% (~480 ảnh) làm tập labeled, 99% (~47,520 ảnh) làm tập unlabeled.
+            \n Chia 80% làm tập train (54,000 ảnh) và 20% làm tập test (14,000 ảnh).
+            \n Từ tập train, lấy 1% (~540 ảnh) làm tập labeled, 99% (~55.440 ảnh) làm tập unlabeled.
             \n **(2) Huấn luyện mô hình ban đầu**
             \n Sử dụng một mạng nơ-ron (NN) để huấn luyện trên tập labeled ban đầu.
             \n **(3) Dự đoán nhãn cho dữ liệu không nhãn**
@@ -380,6 +380,7 @@ def create_streamlit_app():
             \n Đạt số vòng lặp tối đa do người dùng đặt (ví dụ: 5, 10, hoặc 20 vòng).
             \n Sau mỗi vòng lặp, mô hình thường trở nên chính xác hơn do được huấn luyện trên tập labeled lớn hơn.
             """)
+        st.image("lb.png",caption="Sơ đồ chi tiết quy trình Pseudo Labelling với MNIST")
     
     with tab2:
         st.write("##### Chuẩn bị dữ liệu")
