@@ -45,7 +45,7 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-# Visualize mạng nơ-ron với kết quả dự đoán
+# Visualize mạng nơ-ron với kết quả dự đoán (giữ nguyên)
 def visualize_neural_network_prediction(model, input_image, predicted_label):
     hidden_layer_sizes = model.hidden_layer_sizes
     if isinstance(hidden_layer_sizes, int):
@@ -125,14 +125,15 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
 
     return fig
 
-# Thuật toán Pseudo Labeling với hiển thị kết quả mỗi vòng lặp
-def train_pseudo_labeling(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds, threshold=0.95, max_iterations=5):
+# Thuật toán Pseudo Labeling với thanh tiến trình
+def train_pseudo_labeling(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds, labeled_percent=1.0, threshold=0.95, max_iterations=5):
     st.write("🚀 Starting Pseudo Labeling...")
     
+    # Chia dữ liệu thành labeled và unlabeled dựa trên % người dùng chọn
     X_labeled, X_unlabeled, y_labeled, y_unlabeled = [], [], [], []
     for digit in range(10):
         indices = np.where(y_train == digit)[0]
-        n_samples_per_class = max(1, int(0.01 * len(indices)))  # 1% mỗi class
+        n_samples_per_class = max(1, int((labeled_percent / 100) * len(indices)))  # % mỗi class
         labeled_indices = np.random.choice(indices, n_samples_per_class, replace=False)
         unlabeled_indices = np.setdiff1d(indices, labeled_indices)
         
@@ -146,8 +147,12 @@ def train_pseudo_labeling(custom_model_name, params, X_train, X_val, X_test, y_t
     X_unlabeled = np.vstack(X_unlabeled)
     y_unlabeled = np.hstack(y_unlabeled)
 
-    st.write(f"Initial labeled data: {len(X_labeled)} samples")
+    st.write(f"Initial labeled data: {len(X_labeled)} samples ({labeled_percent}%)")
     st.write(f"Unlabeled data: {len(X_unlabeled)} samples")
+
+    # Lưu thông tin để hiển thị trong bảng
+    st.session_state.labeled_data = (X_labeled, y_labeled)
+    st.session_state.unlabeled_data = (X_unlabeled, y_unlabeled)
 
     hidden_layer_sizes = tuple([params["neurons_per_layer"]] * params["num_hidden_layers"])
     model = MLPClassifier(
@@ -160,10 +165,20 @@ def train_pseudo_labeling(custom_model_name, params, X_train, X_val, X_test, y_t
         random_state=42
     )
 
+    # Thanh tiến trình
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+
     iteration = 0
+    total_steps = max_iterations
     while len(X_unlabeled) > 0 and iteration < max_iterations:
         iteration += 1
         st.write(f"🔄 **Iteration {iteration}/{max_iterations}**")
+
+        # Cập nhật thanh tiến trình
+        progress = iteration / total_steps
+        progress_bar.progress(progress)
+        status_text.text(f"Pseudo Labeling Progress: {int(progress * 100)}%")
 
         with st.spinner(f"Training on {len(X_labeled)} labeled samples..."):
             model.fit(X_labeled, y_labeled)
@@ -204,6 +219,10 @@ def train_pseudo_labeling(custom_model_name, params, X_train, X_val, X_test, y_t
         X_unlabeled = np.delete(X_unlabeled, confident_indices, axis=0)
         y_unlabeled = np.delete(y_unlabeled, confident_indices)
 
+    # Xóa thanh tiến trình khi hoàn tất
+    progress_bar.empty()
+    status_text.empty()
+
     with mlflow.start_run(run_name=custom_model_name + "_Pseudo"):
         y_train_pred = model.predict(X_train)
         y_val_pred = model.predict(X_val)
@@ -227,6 +246,7 @@ def train_pseudo_labeling(custom_model_name, params, X_train, X_val, X_test, y_t
 
         mlflow.log_param("model_name", "Neural Network (Pseudo Labeling)")
         mlflow.log_params(params)
+        mlflow.log_param("labeled_percent", labeled_percent)
         mlflow.log_param("cv_folds", cv_folds)
         mlflow.log_param("threshold", threshold)
         mlflow.log_param("iterations", iteration)
@@ -238,14 +258,14 @@ def train_pseudo_labeling(custom_model_name, params, X_train, X_val, X_test, y_t
 
     return model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy
 
-# Xử lý ảnh tải lên
+# Xử lý ảnh tải lên (giữ nguyên)
 def preprocess_uploaded_image(image):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     image = cv2.resize(image, (28, 28))
     image = image / 255.0
     return image.reshape(1, -1)
 
-# Xử lý ảnh từ canvas
+# Xử lý ảnh từ canvas (giữ nguyên)
 def preprocess_canvas_image(canvas):
     image = np.array(canvas)
     image = cv2.cvtColor(image, cv2.COLOR_RGBA2GRAY)
@@ -254,7 +274,7 @@ def preprocess_canvas_image(canvas):
     image = image / 255.0
     return image.reshape(1, -1)
 
-# Hiển thị mẫu dữ liệu
+# Hiển thị mẫu dữ liệu (giữ nguyên)
 def show_sample_images(X, y):
     st.write("**🖼️ Một vài mẫu dữ liệu từ MNIST**")
     fig, axes = plt.subplots(1, 10, figsize=(15, 3))
@@ -291,6 +311,7 @@ def create_streamlit_app():
         st.write("**📊 Tỷ lệ dữ liệu**")
         test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
         val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
+        labeled_percent = st.slider("Tỷ lệ dữ liệu labeled ban đầu (%)", min_value=0.1, max_value=10.0, value=1.0, step=0.1)
 
         train_size = 100 - test_size
         val_ratio = val_size / train_size
@@ -307,10 +328,25 @@ def create_streamlit_app():
             )
             st.session_state.data_split = (X_train, X_val, X_test, y_train, y_val, y_test)
 
+            # Tính toán dữ liệu labeled/unlabeled tạm thời để hiển thị bảng
+            X_labeled_temp, X_unlabeled_temp, y_labeled_temp, y_unlabeled_temp = [], [], [], []
+            for digit in range(10):
+                indices = np.where(y_train == digit)[0]
+                n_samples_per_class = max(1, int((labeled_percent / 100) * len(indices)))
+                labeled_indices = np.random.choice(indices, n_samples_per_class, replace=False)
+                unlabeled_indices = np.setdiff1d(indices, labeled_indices)
+                X_labeled_temp.append(X_train[labeled_indices])
+                y_labeled_temp.append(y_train[labeled_indices])
+                X_unlabeled_temp.append(X_train[unlabeled_indices])
+                y_unlabeled_temp.append(y_train[unlabeled_indices])
+
+            X_labeled_temp = np.vstack(X_labeled_temp)
+            X_unlabeled_temp = np.vstack(X_unlabeled_temp)
+
             data_ratios = pd.DataFrame({
-                "Tập dữ liệu": ["Train", "Validation", "Test"],
-                "Tỷ lệ (%)": [train_size - val_size, val_size, test_size],
-                "Số lượng mẫu": [len(X_train), len(X_val), len(X_test)]
+                "Tập dữ liệu": ["Train (Labeled)", "Train (Unlabeled)", "Validation", "Test"],
+                "Tỷ lệ (%)": [labeled_percent, train_size - val_size - labeled_percent, val_size, test_size],
+                "Số lượng mẫu": [len(X_labeled_temp), len(X_unlabeled_temp), len(X_val), len(X_test)]
             })
             st.table(data_ratios)
 
@@ -336,7 +372,7 @@ def create_streamlit_app():
                     X_train, X_val, X_test, y_train, y_val, y_test = st.session_state.data_split
                     result = train_pseudo_labeling(
                         st.session_state.custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test,
-                        st.session_state.cv_folds, threshold, max_iterations
+                        st.session_state.cv_folds, labeled_percent, threshold, max_iterations
                     )
 
                     if result[0] is not None:
@@ -354,12 +390,10 @@ def create_streamlit_app():
     with tab3:
         st.write("##### 🔮 Dự đoán với mô hình đã huấn luyện")
         
-        # Kiểm tra nếu không có mô hình nào
         runs = mlflow.search_runs(order_by=["start_time desc"])
         if not st.session_state.trained_models and runs.empty:
             st.warning("⚠️ Vui lòng huấn luyện hoặc lưu ít nhất một mô hình trước khi dự đoán!")
         else:
-            # Tùy chọn nguồn mô hình
             model_source = st.radio("Chọn nguồn mô hình:", ["Mô hình trong session hiện tại", "Mô hình từ MLflow"])
 
             if model_source == "Mô hình trong session hiện tại":
@@ -370,7 +404,7 @@ def create_streamlit_app():
                     selected_model_name = st.selectbox("📝 Chọn mô hình từ session:", model_names)
                     selected_model = st.session_state.trained_models[selected_model_name]
 
-            else:  # Mô hình từ MLflow
+            else:
                 if runs.empty:
                     st.warning("⚠️ Không có mô hình nào được lưu trong MLflow!")
                 else:
@@ -381,7 +415,6 @@ def create_streamlit_app():
                     model_names = runs["model_custom_name"].dropna().unique().tolist()
                     selected_model_name = st.selectbox("📝 Chọn mô hình từ MLflow:", model_names)
                     
-                    # Tải mô hình từ MLflow
                     selected_run = runs[runs["model_custom_name"] == selected_model_name].iloc[0]
                     run_id = selected_run["run_id"]
                     model_uri = f"runs:/{run_id}/Neural Network (Pseudo)"
@@ -392,7 +425,6 @@ def create_streamlit_app():
                         st.error(f"Lỗi khi tải mô hình từ MLflow: {str(e)}")
                         selected_model = None
 
-            # Nếu đã chọn được mô hình
             if 'selected_model' in locals() and selected_model is not None:
                 option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
                 show_visualization = st.checkbox("Hiển thị biểu đồ mạng nơ-ron", value=True)
