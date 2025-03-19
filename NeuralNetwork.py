@@ -308,14 +308,14 @@ def create_streamlit_app():
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
         
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 2, 1)  # Giảm max từ 3 xuống 2
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 20, 100, 50)  # Giảm min từ 50 xuống 20
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)  
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 128)  
         params["epochs"] = st.slider("Epochs", 5, 50, 10)
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"])
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001)
-        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 5, 3)  # Giảm max từ 10 xuống 5
-        
         st.write(f"Tốc độ học đã chọn: {params['learning_rate']:.4f}")
+        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 5, 3)  
+    
     
         if st.button("🚀 Huấn luyện mô hình"):
             if not st.session_state.custom_model_name:
