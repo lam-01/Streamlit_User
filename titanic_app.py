@@ -387,27 +387,41 @@ def create_streamlit_app():
         runs = mlflow.search_runs(order_by=["start_time desc"])
     
         if not runs.empty:
-            # Extract model name from tags
-            runs["model_name"] = runs["tags.mlflow.runName"]
+            # Debug: Display available columns to understand the DataFrame structure
+            # Uncomment the following line temporarily to inspect the DataFrame
+            # st.write("Available columns in runs:", runs.columns.tolist())
     
-            # Extract regression_type from params (safely handle missing keys)
-            runs["regression_type"] = runs["params"].apply(
-                lambda x: x.get("regression_type") if isinstance(x, dict) else "N/A"
-            )
+            # Extract model name from tags (safe access)
+            runs["model_name"] = runs.get("tags.mlflow.runName", pd.Series([None] * len(runs))).fillna("Unnamed Run")
     
-            # Extract metrics (safely handle missing keys)
-            runs["train_mse"] = runs["metrics"].apply(
-                lambda x: x.get("train_mse") if isinstance(x, dict) else None
-            )
-            runs["valid_mse"] = runs["metrics"].apply(
-                lambda x: x.get("valid_mse") if isinstance(x, dict) else None
-            )
-            runs["test_mse"] = runs["metrics"].apply(
-                lambda x: x.get("test_mse") if isinstance(x, dict) else None
-            )
-            runs["cv_mse"] = runs["metrics"].apply(
-                lambda x: x.get("cv_mse") if isinstance(x, dict) else None
-            )
+            # Check if 'params' column exists and extract regression_type
+            if "params" in runs.columns:
+                runs["regression_type"] = runs["params"].apply(
+                    lambda x: x.get("regression_type") if isinstance(x, dict) else "N/A"
+                )
+            else:
+                runs["regression_type"] = "N/A"  # Default if 'params' is missing
+    
+            # Check if 'metrics' column exists and extract metrics
+            if "metrics" in runs.columns:
+                runs["train_mse"] = runs["metrics"].apply(
+                    lambda x: x.get("train_mse") if isinstance(x, dict) else None
+                )
+                runs["valid_mse"] = runs["metrics"].apply(
+                    lambda x: x.get("valid_mse") if isinstance(x, dict) else None
+                )
+                runs["test_mse"] = runs["metrics"].apply(
+                    lambda x: x.get("test_mse") if isinstance(x, dict) else None
+                )
+                runs["cv_mse"] = runs["metrics"].apply(
+                    lambda x: x.get("cv_mse") if isinstance(x, dict) else None
+                )
+            else:
+                # Default values if 'metrics' is missing
+                runs["train_mse"] = None
+                runs["valid_mse"] = None
+                runs["test_mse"] = None
+                runs["cv_mse"] = None
     
             # Search functionality
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
