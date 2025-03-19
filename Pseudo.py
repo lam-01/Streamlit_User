@@ -248,6 +248,10 @@ def show_sample_images(X, y):
 def create_streamlit_app():
     st.title("🔢 Pseudo Labelling trên MNIST với Neural Network")
     
+    # Khởi tạo trained_models trong session_state nếu chưa có
+    if 'trained_models' not in st.session_state:
+        st.session_state.trained_models = {}
+    
     tab1, tab2, tab3, tab4 = st.tabs(["📓 Giới thiệu", "📋 Huấn luyện", "🔮 Dự đoán", "⚡ MLflow"])
     
     with tab1:
@@ -310,9 +314,10 @@ def create_streamlit_app():
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, format="%.4f")
         
         st.write("##### Huấn luyện mô hình Pseudo Labelling")
-        custom_model_name = st.text_input("Nhập tên mô hình :", "")
-        if not custom_model_name:
-            custom_model_name = "Default_model"
+        custom_model_name = st.text_input("Đặt tên mô hình (bắt buộc):", "")
+        if not custom_model_name.strip():
+            st.error("Vui lòng nhập tên mô hình!")
+            return
         
         threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.95, 0.01)
         max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 5)
@@ -323,29 +328,20 @@ def create_streamlit_app():
                     x_labeled, y_labeled, x_unlabeled, X_val, y_val, X_test, y_test,
                     threshold, max_iterations, custom_model_name, params
                 )
-                st.session_state['model'] = model
+                # Lưu mô hình vào session_state với tên người dùng đặt
+                st.session_state.trained_models[custom_model_name] = model
             
             st.success(f"✅ Huấn luyện xong! Độ chính xác cuối cùng trên test: {test_accuracy:.4f}")
     
     with tab3:
         st.write("**🔮 Dự đoán chữ số**")
         
-        runs = mlflow.search_runs(order_by=["start_time desc"])
-        model_options = ["Mô hình vừa huấn luyện (nếu có)"]
-        if not runs.empty:
-            runs["model_custom_name"] = runs["tags.mlflow.runName"]
-            model_options.extend(runs["model_custom_name"].tolist())
-        
-        selected_model_name = st.selectbox("Chọn mô hình để dự đoán:", model_options)
-        
-        if selected_model_name == "Mô hình vừa huấn luyện (nếu có)" and 'model' not in st.session_state:
-            st.warning("Vui lòng huấn luyện mô hình trước ở tab Huấn luyện!")
+        if 'trained_models' not in st.session_state or not st.session_state.trained_models:
+            st.warning("⚠️ Vui lòng huấn luyện ít nhất một mô hình trước khi dự đoán!")
         else:
-            if selected_model_name != "Mô hình vừa huấn luyện (nếu có)":
-                selected_run = runs[runs["model_custom_name"] == selected_model_name].iloc[0]
-                model_path = f"runs:/{selected_run['run_id']}/final_model"
-                model = mlflow.keras.load_model(model_path)
-                st.session_state['model'] = model
+            model_names = list(st.session_state.trained_models.keys())
+            selected_model_name = st.selectbox("📝 Chọn mô hình để dự đoán:", model_names)
+            selected_model = st.session_state.trained_models[selected_model_name]
             
             option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
             
@@ -357,8 +353,7 @@ def create_streamlit_app():
                     st.image(image, caption="📷 Ảnh tải lên", width=200)
                     
                     if st.button("🔮 Dự đoán"):
-                        model = st.session_state['model']
-                        prediction = model.predict(processed_image)
+                        prediction = selected_model.predict(processed_image)
                         predicted_digit = np.argmax(prediction)
                         confidence = np.max(prediction)
                         st.write(f"🎯 **Dự đoán: {predicted_digit}**")
@@ -372,8 +367,7 @@ def create_streamlit_app():
                 if st.button("🔮 Dự đoán"):
                     if canvas_result.image_data is not None:
                         processed_canvas = preprocess_canvas_image(canvas_result.image_data)
-                        model = st.session_state['model']
-                        prediction = model.predict(processed_canvas)
+                        prediction = selected_model.predict(processed_canvas)
                         predicted_digit = np.argmax(prediction)
                         confidence = np.max(prediction)
                         st.write(f"🎯 **Dự đoán: {predicted_digit}**")
