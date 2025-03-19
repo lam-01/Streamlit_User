@@ -247,84 +247,92 @@ def show_sample_images(X, y):
 
 # Visualize mạng nơ-ron với kết quả dự đoán (điều chỉnh cho Keras)
 def visualize_neural_network_prediction(model, input_image, predicted_label):
-    hidden_layer_sizes = [layer.output_shape[-1] for layer in model.layers if isinstance(layer, layers.Dense) and layer != model.layers[-1]]
-    output_layer_size = model.layers[-1].output_shape[-1]
-    input_layer_size = 784
-    layer_sizes = [input_layer_size] + hidden_layer_sizes + [output_layer_size]
-    num_layers = len(layer_sizes)
+    try:
+        # Lấy kích thước các tầng ẩn, bỏ qua layer Dropout
+        hidden_layer_sizes = []
+        for layer in model.layers:
+            if isinstance(layer, layers.Dense) and layer != model.layers[-1]:
+                hidden_layer_sizes.append(layer.units)  # Dùng .units thay vì .output_shape[-1]
+        output_layer_size = model.layers[-1].units
+        input_layer_size = 784
+        layer_sizes = [input_layer_size] + hidden_layer_sizes + [output_layer_size]
+        num_layers = len(layer_sizes)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={'width_ratios': [1, 3]})
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={'width_ratios': [1, 3]})
 
-    ax1.imshow(input_image.reshape(28, 28), cmap='gray')
-    ax1.set_title("Input Image")
-    ax1.axis('off')
+        ax1.imshow(input_image.reshape(28, 28), cmap='gray')
+        ax1.set_title("Input Image")
+        ax1.axis('off')
 
-    pos = {}
-    layer_names = ['Input'] + [f'Hidden {i+1}' for i in range(len(hidden_layer_sizes))] + ['Output']
+        pos = {}
+        layer_names = ['Input'] + [f'Hidden {i+1}' for i in range(len(hidden_layer_sizes))] + ['Output']
 
-    for layer_idx, layer_size in enumerate(layer_sizes):
-        for neuron_idx in range(layer_size):
-            if layer_size > 20 and layer_idx == 0:
-                if neuron_idx < 10 or neuron_idx >= layer_size - 10:
-                    pos[(layer_idx, neuron_idx)] = (layer_idx, neuron_idx / layer_size)
-                elif neuron_idx == 10:
-                    pos[('dots', layer_idx)] = (layer_idx, 0.5)
+        for layer_idx, layer_size in enumerate(layer_sizes):
+            for neuron_idx in range(layer_size):
+                if layer_size > 20 and layer_idx == 0:
+                    if neuron_idx < 10 or neuron_idx >= layer_size - 10:
+                        pos[(layer_idx, neuron_idx)] = (layer_idx, neuron_idx / layer_size)
+                    elif neuron_idx == 10:
+                        pos[('dots', layer_idx)] = (layer_idx, 0.5)
+                else:
+                    pos[(layer_idx, neuron_idx)] = (layer_idx, neuron_idx / (layer_size - 1) if layer_size > 1 else 0.5)
+
+        for layer_idx, layer_size in enumerate(layer_sizes):
+            for neuron_idx in range(layer_size):
+                if layer_size > 20 and layer_idx == 0 and neuron_idx >= 10 and neuron_idx < layer_size - 10:
+                    continue
+                
+                x, y = pos[(layer_idx, neuron_idx)]
+                circle = Circle((x, y), 0.05, color='white', ec='black')
+                ax2.add_patch(circle)
+                
+                if layer_idx == num_layers - 1:
+                    ax2.text(x + 0.2, y, f"{neuron_idx}", fontsize=12, color='white')
+                
+                if layer_idx == num_layers - 1 and neuron_idx == predicted_label:
+                    square = Rectangle((x - 0.07, y - 0.07), 0.14, 0.14, fill=False, edgecolor='yellow', linewidth=2)
+                    ax2.add_patch(square)
+
+        if ('dots', 0) in pos:
+            x, y = pos[('dots', 0)]
+            ax2.text(x, y, "...", fontsize=12, color='white', ha='center', va='center')
+
+        for layer_idx in range(len(layer_sizes) - 1):
+            current_layer_size = layer_sizes[layer_idx]
+            next_layer_size = layer_sizes[layer_idx + 1]
+
+            if layer_idx == 0 and current_layer_size > 20:
+                neuron_indices_1 = list(range(5)) + list(range(current_layer_size - 5, current_layer_size))
             else:
-                pos[(layer_idx, neuron_idx)] = (layer_idx, neuron_idx / (layer_size - 1) if layer_size > 1 else 0.5)
+                neuron_indices_1 = range(current_layer_size)
 
-    for layer_idx, layer_size in enumerate(layer_sizes):
-        for neuron_idx in range(layer_size):
-            if layer_size > 20 and layer_idx == 0 and neuron_idx >= 10 and neuron_idx < layer_size - 10:
-                continue
-            
-            x, y = pos[(layer_idx, neuron_idx)]
-            circle = Circle((x, y), 0.05, color='white', ec='black')
-            ax2.add_patch(circle)
-            
-            if layer_idx == num_layers - 1:
-                ax2.text(x + 0.2, y, f"{neuron_idx}", fontsize=12, color='white')
-            
-            if layer_idx == num_layers - 1 and neuron_idx == predicted_label:
-                square = Rectangle((x - 0.07, y - 0.07), 0.14, 0.14, fill=False, edgecolor='yellow', linewidth=2)
-                ax2.add_patch(square)
-
-    if ('dots', 0) in pos:
-        x, y = pos[('dots', 0)]
-        ax2.text(x, y, "...", fontsize=12, color='white', ha='center', va='center')
-
-    for layer_idx in range(len(layer_sizes) - 1):
-        current_layer_size = layer_sizes[layer_idx]
-        next_layer_size = layer_sizes[layer_idx + 1]
-
-        if layer_idx == 0 and current_layer_size > 20:
-            neuron_indices_1 = list(range(5)) + list(range(current_layer_size - 5, current_layer_size))
-        else:
-            neuron_indices_1 = range(current_layer_size)
-
-        if layer_idx == len(layer_sizes) - 2:
-            neuron_indices_2 = [predicted_label]
-        else:
-            if next_layer_size > 10:
-                neuron_indices_2 = list(range(5)) + list(range(next_layer_size - 5, next_layer_size))
+            if layer_idx == len(layer_sizes) - 2:
+                neuron_indices_2 = [predicted_label]
             else:
-                neuron_indices_2 = range(next_layer_size)
+                if next_layer_size > 10:
+                    neuron_indices_2 = list(range(5)) + list(range(next_layer_size - 5, next_layer_size))
+                else:
+                    neuron_indices_2 = range(next_layer_size)
 
-        for idx1, neuron1 in enumerate(neuron_indices_1):
-            for idx2, neuron2 in enumerate(neuron_indices_2):
-                x1, y1 = pos[(layer_idx, neuron1)]
-                x2, y2 = pos[(layer_idx + 1, neuron2)]
-                color = plt.cm.coolwarm(idx2 / max(len(neuron_indices_2), 1))
-                ax2.plot([x1, x2], [y1, y2], color=color, alpha=0.5, linewidth=1)
+            for idx1, neuron1 in enumerate(neuron_indices_1):
+                for idx2, neuron2 in enumerate(neuron_indices_2):
+                    x1, y1 = pos[(layer_idx, neuron1)]
+                    x2, y2 = pos[(layer_idx + 1, neuron2)]
+                    color = plt.cm.coolwarm(idx2 / max(len(neuron_indices_2), 1))
+                    ax2.plot([x1, x2], [y1, y2], color=color, alpha=0.5, linewidth=1)
 
-    ax2.set_xlim(-0.5, num_layers - 0.5)
-    ax2.set_ylim(-0.1, 1.1)
-    ax2.set_xticks(range(num_layers))
-    ax2.set_xticklabels(layer_names)
-    ax2.set_yticks([])
-    ax2.set_title(f"Neural Network Prediction: {predicted_label}")
-    ax2.set_facecolor('black')
+        ax2.set_xlim(-0.5, num_layers - 0.5)
+        ax2.set_ylim(-0.1, 1.1)
+        ax2.set_xticks(range(num_layers))
+        ax2.set_xticklabels(layer_names)
+        ax2.set_yticks([])
+        ax2.set_title(f"Neural Network Prediction: {predicted_label}")
+        ax2.set_facecolor('black')
 
-    return fig
+        return fig
+    except AttributeError as e:
+        st.error(f"Lỗi khi trực quan hóa mạng nơ-ron: {str(e)}")
+        return None
 
 # Giao diện Streamlit
 def create_streamlit_app():
@@ -433,14 +441,18 @@ def create_streamlit_app():
                     st.image(image, caption="📷 Ảnh tải lên", width=200)
                     
                     if st.button("🔮 Dự đoán"):
-                        prediction = selected_model.predict(processed_image)
-                        predicted_digit = np.argmax(prediction)
-                        confidence = np.max(prediction)
-                        st.write(f"🎯 **Dự đoán: {predicted_digit}**")
-                        st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
-                        if show_visualization:
-                            fig = visualize_neural_network_prediction(selected_model, processed_image[0], predicted_digit)
-                            st.pyplot(fig)
+                        if selected_model is None:
+                            st.error("Mô hình không hợp lệ! Vui lòng chọn lại mô hình.")
+                        else:
+                            prediction = selected_model.predict(processed_image)
+                            predicted_digit = np.argmax(prediction)
+                            confidence = np.max(prediction)
+                            st.write(f"🎯 **Dự đoán: {predicted_digit}**")
+                            st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
+                            if show_visualization:
+                                fig = visualize_neural_network_prediction(selected_model, processed_image[0], predicted_digit)
+                                if fig is not None:
+                                    st.pyplot(fig)
             
             elif option == "✏️ Vẽ số":
                 st.write("Vẽ chữ số của bạn dưới đây:")
@@ -452,19 +464,23 @@ def create_streamlit_app():
                     width=280,
                     height=280,
                     drawing_mode="freedraw",
-                    key="prediction_canvas"  # Sử dụng key cố định
+                    key="prediction_canvas"
                 )
                 if st.button("🔮 Dự đoán"):
                     if canvas_result.image_data is not None:
-                        processed_canvas = preprocess_canvas_image(canvas_result.image_data)
-                        prediction = selected_model.predict(processed_canvas)
-                        predicted_digit = np.argmax(prediction)
-                        confidence = np.max(prediction)
-                        st.write(f"🎯 **Dự đoán: {predicted_digit}**")
-                        st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
-                        if show_visualization:
-                            fig = visualize_neural_network_prediction(selected_model, processed_canvas[0], predicted_digit)
-                            st.pyplot(fig)
+                        if selected_model is None:
+                            st.error("Mô hình không hợp lệ! Vui lòng chọn lại mô hình.")
+                        else:
+                            processed_canvas = preprocess_canvas_image(canvas_result.image_data)
+                            prediction = selected_model.predict(processed_canvas)
+                            predicted_digit = np.argmax(prediction)
+                            confidence = np.max(prediction)
+                            st.write(f"🎯 **Dự đoán: {predicted_digit}**")
+                            st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
+                            if show_visualization:
+                                fig = visualize_neural_network_prediction(selected_model, processed_canvas[0], predicted_digit)
+                                if fig is not None:
+                                    st.pyplot(fig)
                     else:
                         st.warning("Vui lòng vẽ một chữ số trước khi dự đoán!")
     
