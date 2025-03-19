@@ -41,19 +41,17 @@ def load_data(sample_size=None):
 
 # Chọn dữ liệu labeled ban đầu với tỉ lệ chính xác
 def select_initial_data(x_train, y_train, percentage):
-    total_labeled_samples = int(len(x_train) * percentage)  # Tổng số mẫu labeled mong muốn
+    total_labeled_samples = int(len(x_train) * percentage)
     n_classes = 10
-    min_samples_per_class = 1  # Đảm bảo ít nhất 1 mẫu mỗi lớp
-    remaining_samples = total_labeled_samples - min_samples_per_class * n_classes  # Số mẫu còn lại để phân bổ
+    min_samples_per_class = 1
+    remaining_samples = total_labeled_samples - min_samples_per_class * n_classes
     
     labeled_idx = []
     for i in range(n_classes):
         class_idx = np.where(y_train == i)[0]
-        # Lấy ít nhất 1 mẫu mỗi lớp
         initial_samples = np.random.choice(class_idx, min_samples_per_class, replace=False)
         labeled_idx.extend(initial_samples)
     
-    # Phân bổ số mẫu còn lại theo tỉ lệ trong dữ liệu
     if remaining_samples > 0:
         remaining_idx = [i for i in range(len(x_train)) if i not in labeled_idx]
         x_remaining = x_train[remaining_idx]
@@ -91,7 +89,7 @@ def show_pseudo_labeled_samples(model, samples, predictions, n_samples=5):
     plt.tight_layout()
     return fig
 
-# Thuật toán Pseudo Labelling với MLflow, thanh tiến trình và kết quả mỗi vòng lặp
+# Thuật toán Pseudo Labelling với MLflow
 def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val, x_test, y_test, 
                                threshold, max_iterations, custom_model_name, model_params):
     progress_bar = st.progress(0)
@@ -252,7 +250,7 @@ def create_streamlit_app():
     with tab1:
         st.write("##### Pseudo Labelling với Neural Network")
         st.write(""" 
-        **Pseudo Labelling** là một kỹ thuật học bán giám sát (semi-supervised learning) nhằm tận dụng cả dữ liệu có nhãn và dữ liệu không nhãn để cải thiện hiệu suất của mô hình học máy.
+        **Pseudo Labelling** là một kỹ thuật học bán giám sát nhằm tận dụng cả dữ liệu có nhãn và không nhãn để cải thiện hiệu suất mô hình.
         """)
     
     with tab2:
@@ -266,13 +264,18 @@ def create_streamlit_app():
         
         st.write("##### Chia tập dữ liệu")
         
-        train_ratio = st.slider("Tỉ lệ dữ liệu train", 0.5, 0.8, 0.6, 0.05)
-        val_ratio = st.slider("Tỉ lệ dữ liệu validation", 0.1, 0.3, 0.2, 0.05)
-        test_ratio = 1.0 - train_ratio - val_ratio
+        train_ratio = st.slider("Tỉ lệ dữ liệu train (%)", 0.0, 100.0, 60.0, 5.0)
+        val_ratio = st.slider("Tỉ lệ dữ liệu validation (%)", 0.0, 100.0, 20.0, 5.0)
+        test_ratio = st.slider("Tỉ lệ dữ liệu test (%)", 0.0, 100.0, 20.0, 5.0)
         
-        X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=test_ratio, random_state=42)
+        total_ratio = train_ratio + val_ratio + test_ratio
+        if total_ratio != 100.0:
+            st.error(f"Tổng tỉ lệ phải bằng 100%, hiện tại là {total_ratio}%!")
+            return
+        
+        X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=test_ratio/100, random_state=42)
         X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, 
-                                                        test_size=val_ratio/(train_ratio+val_ratio), 
+                                                        test_size=val_ratio/(train_ratio + val_ratio), 
                                                         random_state=42)
         
         labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1)
@@ -323,9 +326,24 @@ def create_streamlit_app():
     
     with tab3:
         st.write("**🔮 Dự đoán chữ số**")
-        if 'model' not in st.session_state:
+        
+        runs = mlflow.search_runs(order_by=["start_time desc"])
+        model_options = ["Mô hình vừa huấn luyện (nếu có)"]
+        if not runs.empty:
+            runs["model_custom_name"] = runs["tags.mlflow.runName"]
+            model_options.extend(runs["model_custom_name"].tolist())
+        
+        selected_model_name = st.selectbox("Chọn mô hình để dự đoán:", model_options)
+        
+        if selected_model_name == "Mô hình vừa huấn luyện (nếu có)" and 'model' not in st.session_state:
             st.warning("Vui lòng huấn luyện mô hình trước ở tab Huấn luyện!")
         else:
+            if selected_model_name != "Mô hình vừa huấn luyện (nếu có)":
+                selected_run = runs[runs["model_custom_name"] == selected_model_name].iloc[0]
+                model_path = f"runs:/{selected_run['run_id']}/final_model"
+                model = mlflow.keras.load_model(model_path)
+                st.session_state['model'] = model
+            
             option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
             
             if option == "📂 Tải ảnh lên":
@@ -403,4 +421,5 @@ def create_streamlit_app():
             st.write("⚠️ Không có phiên làm việc nào được ghi lại.")
 
 if __name__ == "__main__":
+    mlflow.set_tracking_uri("http://localhost:5000")
     create_streamlit_app()
