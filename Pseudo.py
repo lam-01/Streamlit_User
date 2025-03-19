@@ -14,19 +14,20 @@ from sklearn.model_selection import train_test_split
 
 # Hàm xây dựng model NN với tham số tùy chỉnh
 def create_model(num_hidden_layers=2, neurons_per_layer=128, activation='relu', learning_rate=0.001):
-    model = keras.Sequential()
-    model.add(layers.Input(shape=(784,)))
-    
-    for _ in range(num_hidden_layers):
-        model.add(layers.Dense(neurons_per_layer, activation=activation))
-        model.add(layers.Dropout(0.2))
-    
-    model.add(layers.Dense(10, activation='softmax'))
-    
-    optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
-    model.compile(optimizer=optimizer,
-                 loss='sparse_categorical_crossentropy',
-                 metrics=['accuracy'])
+    with keras.name_scope("PseudoLabelModel"):  # Thêm name scope rõ ràng
+        model = keras.Sequential()
+        model.add(layers.Input(shape=(784,)))
+        
+        for _ in range(num_hidden_layers):
+            model.add(layers.Dense(neurons_per_layer, activation=activation))
+            model.add(layers.Dropout(0.2))
+        
+        model.add(layers.Dense(10, activation='softmax'))
+        
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        model.compile(optimizer=optimizer,
+                     loss='sparse_categorical_crossentropy',
+                     metrics=['accuracy'])
     return model
 
 # Tải và xử lý dữ liệu MNIST từ OpenML
@@ -83,8 +84,8 @@ def show_pseudo_labeled_samples(model, samples, predictions, n_samples=5):
         confidence = np.max(predictions[idx])
         axes[1, i].axis('off')
         axes[1, i].text(0.5, 0.5, f"{pred_idx}\n{confidence:.2f}", 
-                      ha='center', va='center',
-                      color='green' if confidence > 0.9 else 'blue')
+                       ha='center', va='center',
+                       color='green' if confidence > 0.9 else 'blue')
     
     plt.tight_layout()
     return fig
@@ -98,120 +99,126 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
     metrics_container = st.empty()
     samples_container = st.empty()
     
-    with mlflow.start_run(run_name=custom_model_name):
-        model = create_model(
-            num_hidden_layers=model_params['num_hidden_layers'],
-            neurons_per_layer=model_params['neurons_per_layer'],
-            activation=model_params['activation'],
-            learning_rate=model_params['learning_rate']
-        )
-        
-        mlflow.log_param("threshold", threshold)
-        mlflow.log_param("max_iterations", max_iterations)
-        mlflow.log_param("initial_labeled_percentage", percentage * 100)
-        for key, value in model_params.items():
-            mlflow.log_param(key, value)
-        
-        x_train_current = x_labeled.copy()
-        y_train_current = y_labeled.copy()
-        remaining_unlabeled = x_unlabeled.copy()
-        
-        metrics_history = {
-            'iteration': [],
-            'labeled_samples_count': [],
-            'train_accuracy': [],
-            'val_accuracy': [],
-            'test_accuracy': []
-        }
-        
-        metrics_history['iteration'].append(0)
-        metrics_history['labeled_samples_count'].append(len(x_labeled))
-        metrics_history['train_accuracy'].append(0)
-        metrics_history['val_accuracy'].append(0)
-        metrics_history['test_accuracy'].append(0)
-        
-        progress_bar.progress(0)
-        status_text.text("Khởi tạo mô hình... (0%)")
-        
-        total_steps = max_iterations * 2
-        current_step = 0
-        
-        for iteration in range(max_iterations):
-            current_step += 1
-            progress = min(100, int((current_step / total_steps) * 100))
-            progress_bar.progress(progress)
-            status_text.text(f"Iteration {iteration + 1}: Đang huấn luyện... ({progress}%)")
-            
-            history = model.fit(
-                x_train_current, y_train_current,
-                epochs=model_params['epochs'],
-                batch_size=32,
-                verbose=0,
-                validation_data=(x_val, y_val)
+    try:
+        with mlflow.start_run(run_name=custom_model_name):
+            model = create_model(
+                num_hidden_layers=model_params['num_hidden_layers'],
+                neurons_per_layer=model_params['neurons_per_layer'],
+                activation=model_params['activation'],
+                learning_rate=model_params['learning_rate']
             )
             
-            train_acc = history.history['accuracy'][-1]
-            val_acc = history.history['val_accuracy'][-1]
-            test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
+            mlflow.log_param("threshold", threshold)
+            mlflow.log_param("max_iterations", max_iterations)
+            mlflow.log_param("initial_labeled_percentage", percentage * 100)
+            for key, value in model_params.items():
+                mlflow.log_param(key, value)
             
-            mlflow.log_metric("train_accuracy", train_acc, step=iteration)
-            mlflow.log_metric("val_accuracy", val_acc, step=iteration)
-            mlflow.log_metric("test_accuracy", test_acc, step=iteration)
+            x_train_current = x_labeled.copy()
+            y_train_current = y_labeled.copy()
+            remaining_unlabeled = x_unlabeled.copy()
             
-            current_step += 1
-            progress = min(100, int((current_step / total_steps) * 100))
-            progress_bar.progress(progress)
-            status_text.text(f"Iteration {iteration + 1}: Đang gán nhãn... ({progress}%)")
+            metrics_history = {
+                'iteration': [],
+                'labeled_samples_count': [],
+                'train_accuracy': [],
+                'val_accuracy': [],
+                'test_accuracy': []
+            }
             
-            if len(remaining_unlabeled) > 0:
-                predictions = model.predict(remaining_unlabeled, verbose=0)
-                max_probs = np.max(predictions, axis=1)
-                pseudo_labels = np.argmax(predictions, axis=1)
+            metrics_history['iteration'].append(0)
+            metrics_history['labeled_samples_count'].append(len(x_labeled))
+            metrics_history['train_accuracy'].append(0)
+            metrics_history['val_accuracy'].append(0)
+            metrics_history['test_accuracy'].append(0)
+            
+            progress_bar.progress(0)
+            status_text.text("Khởi tạo mô hình... (0%)")
+            
+            total_steps = max_iterations * 2
+            current_step = 0
+            
+            for iteration in range(max_iterations):
+                current_step += 1
+                progress = min(100, int((current_step / total_steps) * 100))
+                progress_bar.progress(progress)
+                status_text.text(f"Iteration {iteration + 1}: Đang huấn luyện... ({progress}%)")
                 
-                confident_idx = np.where(max_probs >= threshold)[0]
+                history = model.fit(
+                    x_train_current, y_train_current,
+                    epochs=model_params['epochs'],
+                    batch_size=32,
+                    verbose=0,
+                    validation_data=(x_val, y_val)
+                )
                 
-                if len(confident_idx) > 0:
-                    fig = show_pseudo_labeled_samples(
-                        model, 
-                        remaining_unlabeled[confident_idx], 
-                        predictions[confident_idx]
-                    )
-                    samples_container.pyplot(fig)
+                train_acc = history.history['accuracy'][-1]
+                val_acc = history.history['val_accuracy'][-1]
+                test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
+                
+                mlflow.log_metric("train_accuracy", train_acc, step=iteration)
+                mlflow.log_metric("val_accuracy", val_acc, step=iteration)
+                mlflow.log_metric("test_accuracy", test_acc, step=iteration)
+                
+                current_step += 1
+                progress = min(100, int((current_step / total_steps) * 100))
+                progress_bar.progress(progress)
+                status_text.text(f"Iteration {iteration + 1}: Đang gán nhãn... ({progress}%)")
+                
+                if len(remaining_unlabeled) > 0:
+                    predictions = model.predict(remaining_unlabeled, verbose=0)
+                    max_probs = np.max(predictions, axis=1)
+                    pseudo_labels = np.argmax(predictions, axis=1)
                     
-                    x_train_current = np.concatenate([x_train_current, remaining_unlabeled[confident_idx]])
-                    y_train_current = np.concatenate([y_train_current, pseudo_labels[confident_idx]])
-                    remaining_unlabeled = np.delete(remaining_unlabeled, confident_idx, axis=0)
-                    mlflow.log_metric("labeled_samples", len(confident_idx), step=iteration)
+                    confident_idx = np.where(max_probs >= threshold)[0]
+                    
+                    if len(confident_idx) > 0:
+                        fig = show_pseudo_labeled_samples(
+                            model, 
+                            remaining_unlabeled[confident_idx], 
+                            predictions[confident_idx]
+                        )
+                        samples_container.pyplot(fig)
+                        plt.close(fig)  # Đóng figure để tránh memory leak
+                        
+                        x_train_current = np.concatenate([x_train_current, remaining_unlabeled[confident_idx]])
+                        y_train_current = np.concatenate([y_train_current, pseudo_labels[confident_idx]])
+                        remaining_unlabeled = np.delete(remaining_unlabeled, confident_idx, axis=0)
+                        mlflow.log_metric("labeled_samples", len(confident_idx), step=iteration)
+                    else:
+                        break
                 else:
                     break
-            else:
-                break
+                
+                metrics_history['iteration'].append(iteration + 1)
+                metrics_history['labeled_samples_count'].append(len(x_train_current))
+                metrics_history['train_accuracy'].append(train_acc)
+                metrics_history['val_accuracy'].append(val_acc)
+                metrics_history['test_accuracy'].append(test_acc)
+                
+                with results_container.container():
+                    st.markdown(f"### Iteration {iteration + 1} kết thúc:")
+                    st.write(f"- Số mẫu labeled hiện tại: {len(x_train_current)}")
+                    st.write(f"- Số mẫu unlabeled còn lại: {len(remaining_unlabeled)}")
+                    st.write(f"- Độ chính xác train: {train_acc:.4f}")
+                    st.write(f"- Độ chính xác validation: {val_acc:.4f}")
+                    st.write(f"- Độ chính xác test: {test_acc:.4f}")
+                
+                metrics_df = pd.DataFrame(metrics_history)
+                metrics_container.dataframe(metrics_df)
             
-            metrics_history['iteration'].append(iteration + 1)
-            metrics_history['labeled_samples_count'].append(len(x_train_current))
-            metrics_history['train_accuracy'].append(train_acc)
-            metrics_history['val_accuracy'].append(val_acc)
-            metrics_history['test_accuracy'].append(test_acc)
+            progress_bar.progress(100)
+            status_text.text("Hoàn tất huấn luyện! (100%)")
             
-            with results_container.container():
-                st.markdown(f"### Iteration {iteration + 1} kết thúc:")
-                st.write(f"- Số mẫu labeled hiện tại: {len(x_train_current)}")
-                st.write(f"- Số mẫu unlabeled còn lại: {len(remaining_unlabeled)}")
-                st.write(f"- Độ chính xác train: {train_acc:.4f}")
-                st.write(f"- Độ chính xác validation: {val_acc:.4f}")
-                st.write(f"- Độ chính xác test: {test_acc:.4f}")
+            final_test_loss, final_test_accuracy = model.evaluate(x_test, y_test, verbose=0)
+            mlflow.log_metric("final_test_accuracy", final_test_accuracy)
+            mlflow.keras.log_model(model, "final_model")
             
-            metrics_df = pd.DataFrame(metrics_history)
-            metrics_container.dataframe(metrics_df)
-        
-        progress_bar.progress(100)
-        status_text.text("Hoàn tất huấn luyện! (100%)")
-        
-        final_test_loss, final_test_accuracy = model.evaluate(x_test, y_test, verbose=0)
-        mlflow.log_metric("final_test_accuracy", final_test_accuracy)
-        mlflow.keras.log_model(model, "final_model")
-        
-    return model, final_test_accuracy, metrics_history
+        return model, final_test_accuracy, metrics_history
+    
+    except Exception as e:
+        st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
+        raise e
 
 # Tải mô hình từ MLflow
 def load_model_from_mlflow(run_id):
