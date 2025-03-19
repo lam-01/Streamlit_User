@@ -11,6 +11,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Rectangle
 from sklearn.neural_network import MLPClassifier
+import time
 
 # Khởi tạo session state
 if 'model' not in st.session_state:
@@ -25,6 +26,8 @@ if 'custom_model_name' not in st.session_state:
     st.session_state.custom_model_name = ""
 if 'trained_models' not in st.session_state:
     st.session_state.trained_models = {}
+if 'training_metrics' not in st.session_state:
+    st.session_state.training_metrics = {}
 
 # 📌 Tải và xử lý dữ liệu MNIST từ OpenML
 @st.cache_data
@@ -131,12 +134,18 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
 
     return fig
 
-# 📌 Huấn luyện mô hình
-@st.cache_resource
+# 📌 Huấn luyện mô hình (cải tiến với tiến trình chi tiết và tối ưu hóa tốc độ)
 def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds):
     progress_bar = st.progress(0)
     status_text = st.empty()
-
+    metrics_container = st.empty()
+    metrics_plot = st.empty()
+    
+    # Khởi tạo các mảng để lưu trữ giá trị metrics qua các epoch
+    epochs = params["epochs"]
+    train_acc_history = []
+    val_acc_history = []
+    
     hidden_layer_sizes = tuple([params["neurons_per_layer"]] * params["num_hidden_layers"])
     model = MLPClassifier(
         hidden_layer_sizes=hidden_layer_sizes,
@@ -144,27 +153,119 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
         activation=params["activation"],
         learning_rate_init=params["learning_rate"],
         solver='adam',
-        alpha=0.0001,  # Thêm regularization
+        alpha=0.0001,
         random_state=42,
-        warm_start=True
+        warm_start=True,
+        batch_size=min(256, len(X_train))  # Tối ưu hóa với batch_size
     )
-
+    
+    # Hiển thị thông tin về kiến trúc mạng
+    layers_info = f"🧠 Kiến trúc mạng: Input(784) → "
+    for i in range(params["num_hidden_layers"]):
+        layers_info += f"Hidden{i+1}({params['neurons_per_layer']}) → "
+    layers_info += "Output(10)"
+    st.info(layers_info)
+    
+    train_start_time = time.time()
+    
     try:
         with mlflow.start_run(run_name=custom_model_name):
-            for epoch in range(params["epochs"]):
+            for epoch in range(epochs):
+                epoch_start_time = time.time()
+                
+                # Huấn luyện mô hình
                 model.fit(X_train, y_train)
-                progress = (epoch + 1) / params["epochs"]
+                
+                # Chỉ tính độ chính xác ở một số epoch nhất định để tăng tốc độ
+                if epoch % max(1, epochs // 10) == 0 or epoch == epochs - 1:
+                    y_train_pred = model.predict(X_train)
+                    y_val_pred = model.predict(X_val)
+                    
+                    train_accuracy = accuracy_score(y_train, y_train_pred)
+                    val_accuracy = accuracy_score(y_val, y_val_pred)
+                    
+                    train_acc_history.append(train_accuracy)
+                    val_acc_history.append(val_accuracy)
+                
+                # Hiển thị tiến trình
+                progress = (epoch + 1) / epochs
                 progress_bar.progress(progress)
-                status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
-
-            y_train_pred = model.predict(X_train)
+                
+                # Tính thời gian trung bình mỗi epoch
+                epoch_time = time.time() - epoch_start_time
+                elapsed_time = time.time() - train_start_time
+                eta = (epochs - (epoch + 1)) * (elapsed_time / (epoch + 1))  # Dự đoán ETA chính xác hơn
+                
+                # Thanh tiến trình chi tiết với HTML
+                status_html = f"""
+                <div style="display: flex; justify-content: space-between; padding: 10px; background-color: #f0f2f6; border-radius: 5px; margin-bottom: 10px;">
+                    <div>
+                        <span style="font-weight: bold;">⏳ Epoch {epoch + 1}/{epochs}</span> 
+                        <span style="margin-left: 15px;">⏱️ {epoch_time:.2f}s/epoch</span>
+                    </div>
+                    <div>
+                        <span style="margin-right: 15px;">🕒 Đã trôi qua: {elapsed_time:.2f}s</span>
+                        <span>⌛ ETA: {eta:.2f}s</span>
+                    </div>
+                </div>
+                """
+                status_text.markdown(status_html, unsafe_allow_html=True)
+                
+                # Hiển thị metrics nếu có
+                if train_acc_history and epoch % max(1, epochs // 10) == 0:
+                    metrics_html = f"""
+                    <div style="display: flex; justify-content: space-between; padding: 10px; background-color: #e6f3ff; border-radius: 5px;">
+                        <div style="text-align: center; flex: 1;">
+                            <div style="font-size: 24px; font-weight: bold;">{train_acc_history[-1]:.4f}</div>
+                            <div>Train Accuracy</div>
+                        </div>
+                        <div style="text-align: center; flex: 1;">
+                            <div style="font-size: 24px; font-weight: bold;">{val_acc_history[-1]:.4f}</div>
+                            <div>Validation Accuracy</div>
+                        </div>
+                    </div>
+                    """
+                    metrics_container.markdown(metrics_html, unsafe_allow_html=True)
+                
+                # Vẽ biểu đồ tiến trình
+                if train_acc_history and epoch > 0 and epoch % max(1, epochs // 10) == 0:
+                    fig, ax = plt.subplots(figsize=(10, 4))
+                    epochs_range = list(range(1, len(train_acc_history) + 1))
+                    ax.plot(epochs_range, train_acc_history, 'b-', label='Train Accuracy')
+                    ax.plot(epochs_range, val_acc_history, 'r-', label='Validation Accuracy')
+                    ax.set_xlabel('Epoch')
+                    ax.set_ylabel('Accuracy')
+                    ax.set_title('Training Progress')
+                    ax.legend()
+                    ax.grid(True)
+                    metrics_plot.pyplot(fig)
+                    plt.close(fig)
+                
+                # Lưu metrics cuối cùng
+                if epoch == epochs - 1:
+                    y_train_pred = model.predict(X_train)
+                    y_val_pred = model.predict(X_val)
+                    train_accuracy = accuracy_score(y_train, y_train_pred)
+                    val_accuracy = accuracy_score(y_val, y_val_pred)
+                    st.session_state.training_metrics[custom_model_name] = {
+                        'train_accuracy_history': train_acc_history,
+                        'val_accuracy_history': val_acc_history,
+                        'final_train_accuracy': train_accuracy,
+                        'final_val_accuracy': val_accuracy
+                    }
+                
+                # Lưu metrics vào MLflow
+                if epoch % max(1, epochs // 10) == 0 or epoch == epochs - 1:
+                    mlflow.log_metric("train_accuracy_epoch_" + str(epoch + 1), train_accuracy)
+                    mlflow.log_metric("val_accuracy_epoch_" + str(epoch + 1), val_accuracy)
+                
+            # Đánh giá trên tập test
             y_test_pred = model.predict(X_test)
-            y_val_pred = model.predict(X_val)
-            train_accuracy = accuracy_score(y_train, y_train_pred)
-            val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
-
-            # Cross-Validation với mô hình mới
+            
+            # Cross-Validation
+            cv_status = st.empty()
+            cv_status.info("⏳ Đang thực hiện Cross-Validation...")
             cv_model = MLPClassifier(
                 hidden_layer_sizes=hidden_layer_sizes,
                 max_iter=params["epochs"],
@@ -172,12 +273,15 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
                 learning_rate_init=params["learning_rate"],
                 solver='adam',
                 alpha=0.0001,
-                random_state=42
+                random_state=42,
+                batch_size=min(256, len(X_train))
             )
             cv = KFold(n_splits=cv_folds, shuffle=True, random_state=42)
             cv_scores = cross_val_score(cv_model, X_train, y_train, cv=cv, n_jobs=-1)
             cv_mean_accuracy = np.mean(cv_scores)
-
+            cv_status.success(f"✅ Cross-Validation hoàn tất: {cv_mean_accuracy:.4f}")
+            
+            # Log vào MLflow
             mlflow.log_param("model_name", "Neural Network")
             mlflow.log_params(params)
             mlflow.log_param("cv_folds", cv_folds)
@@ -185,13 +289,17 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             mlflow.log_metric("val_accuracy", val_accuracy)
             mlflow.log_metric("test_accuracy", test_accuracy)
             mlflow.log_metric("cv_mean_accuracy", cv_mean_accuracy)
+            mlflow.log_metric("training_time", time.time() - train_start_time)
             mlflow.sklearn.log_model(model, "Neural Network")
+            
+            # Hiển thị thông tin tổng quan
+            training_time = time.time() - train_start_time
+            st.success(f"✅ Huấn luyện hoàn tất trong {training_time:.2f} giây!")
+            
     except Exception as e:
-        st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
+        st.error(f"❌ Lỗi trong quá trình huấn luyện: {str(e)}")
         return None, None, None, None, None
 
-    progress_bar.empty()
-    status_text.empty()
     return model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy
 
 # 📌 Xử lý ảnh tải lên
@@ -221,16 +329,65 @@ def show_sample_images(X, y):
         ax.axis('off')
     st.pyplot(fig)
 
+# 📌 Hiển thị kết quả huấn luyện
+def display_training_results(model_name, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy):
+    result_container = st.container()
+    with result_container:
+        st.write("### 📊 Kết quả huấn luyện")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric(label="Train Accuracy", value=f"{train_accuracy:.4f}")
+        with col2:
+            st.metric(label="Validation Accuracy", value=f"{val_accuracy:.4f}")
+        with col3:
+            st.metric(label="Test Accuracy", value=f"{test_accuracy:.4f}")
+        with col4:
+            st.metric(label="CV Accuracy", value=f"{cv_mean_accuracy:.4f}")
+        
+        # Hiển thị biểu đồ tiến trình nếu có
+        if model_name in st.session_state.training_metrics:
+            train_history = st.session_state.training_metrics[model_name]['train_accuracy_history']
+            val_history = st.session_state.training_metrics[model_name]['val_accuracy_history']
+            
+            fig, ax = plt.subplots(figsize=(10, 4))
+            epochs_range = list(range(1, len(train_history) + 1))
+            ax.plot(epochs_range, train_history, 'b-', label='Train Accuracy')
+            ax.plot(epochs_range, val_history, 'r-', label='Validation Accuracy')
+            ax.set_xlabel('Epoch')
+            ax.set_ylabel('Accuracy')
+            ax.set_title('Training Progress')
+            ax.legend()
+            ax.grid(True)
+            st.pyplot(fig)
+
 # 📌 Giao diện Streamlit
 def create_streamlit_app():
     st.title("🔢 Phân loại chữ số viết tay")
+    
+    # Thêm thông tin về tình trạng GPU
+    try:
+        import tensorflow as tf
+        if tf.config.list_physical_devices('GPU'):
+            st.sidebar.success("🚀 GPU được kích hoạt! Huấn luyện sẽ nhanh hơn.")
+        else:
+            st.sidebar.warning("⚠️ GPU không được kích hoạt. Huấn luyện có thể chậm hơn.")
+    except:
+        st.sidebar.info("⚠️ Không thể kiểm tra tình trạng GPU.")
+    
+    # Thêm cấu hình hiển thị vào sidebar
+    st.sidebar.title("⚙️ Cấu hình hiển thị")
+    reduced_animation = st.sidebar.checkbox("Giảm hiệu ứng động cho máy yếu", value=False)
+    
+    if reduced_animation:
+        st.sidebar.info("Đã giảm hiệu ứng động để tăng hiệu suất")
     
     tab1, tab2, tab3, tab4 = st.tabs(["📓 Lí thuyết", "📋 Huấn luyện", "🔮 Dự đoán", "⚡ MLflow"])
     
     with tab1:
         st.write("##### Neural Network")
         st.write("""Neural Network là một phương thức phổ biến trong lĩnh vực trí tuệ nhân tạo, được dùng để điều khiển máy tính dự đoán, nhận dạng và xử lý dữ liệu như một bộ não của con người. 
-        Bên cạnh đó, quy trình này còn được biết đến với thuật ngữ quen thuộc là “deep learning”, nghĩa là việc vận dụng các nơ-ron hoặc các nút tạo sự liên kết với nhau trong cùng một cấu trúc phân lớp.""")
+        Bên cạnh đó, quy trình này còn được biết đến với thuật ngữ quen thuộc là "deep learning", nghĩa là việc vận dụng các nơ-ron hoặc các nút tạo sự liên kết với nhau trong cùng một cấu trúc phân lớp.""")
         st.write("##### 1. Đặc điểm của Neural Network")
         st.write("""- Mạng lưới nơ-ron nhân tạo hoạt động như nơ-ron trong não bộ con người. Trong đó, mỗi nơ-ron là một hàm toán học, có chức năng thu thập và phân loại dữ liệu, thông tin theo cấu trúc chi tiết. 
         \n- Neural Network tương đồng với những phương pháp thống kê theo đồ thị đường cong hoặc phân tích hồi quy. Để giải thích đơn giản nhất, bạn hãy hình dung Neural Network bao hàm các nút mạng liên kết với nhau. 
@@ -278,8 +435,11 @@ def create_streamlit_app():
         show_sample_images(X, y)
         
         st.write("**📊 Tỷ lệ dữ liệu**")
-        test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
-        val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
+        col1, col2 = st.columns(2)
+        with col1:
+            test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
+        with col2:
+            val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
         
         train_size = 100 - test_size
         val_ratio = val_size / train_size
@@ -297,26 +457,47 @@ def create_streamlit_app():
             
             st.session_state.data_split = (X_train, X_val, X_test, y_train, y_val, y_test)
             
-            data_ratios = pd.DataFrame({
-                "Tập dữ liệu": ["Train", "Validation", "Test"],
-                "Tỷ lệ (%)": [train_size - val_size, val_size, test_size],
-                "Số lượng mẫu": [len(X_train), len(X_val), len(X_test)]
-            })
-            st.table(data_ratios)
+            # Hiển thị tỷ lệ dữ liệu dưới dạng biểu đồ
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4), gridspec_kw={'width_ratios': [1, 3]})
+            labels = ['Train', 'Validation', 'Test']
+            sizes = [train_size - val_size, val_size, test_size]
+            colors = ['#5cb85c', '#f0ad4e', '#d9534f']
+            explode = (0.1, 0, 0)
+            
+            ax1.pie(sizes, explode=explode, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+            ax1.axis('equal')
+            ax1.set_title('Tỷ lệ dữ liệu')
+            
+            x = np.arange(len(labels))
+            width = 0.35
+            ax2.bar(x, [len(X_train), len(X_val), len(X_test)], width, color=colors)
+            ax2.set_title('Số lượng mẫu')
+            ax2.set_xticks(x)
+            ax2.set_xticklabels(labels)
+            ax2.set_ylabel('Số lượng mẫu')
+            for i, v in enumerate([len(X_train), len(X_val), len(X_test)]):
+                ax2.text(i, v + 0.1, str(v), ha='center')
+            st.pyplot(fig)
     
         st.write("**🚀 Huấn luyện mô hình Neural Network**")
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
         
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 2, 1)  # Giảm max từ 3 xuống 2
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 20, 100, 50)  # Giảm min từ 50 xuống 20
-        params["epochs"] = st.slider("Epochs", 5, 50, 10)
-        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"])
-        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001)
-        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 5, 3)  # Giảm max từ 10 xuống 5
+        # Thêm tùy chọn tối ưu hóa tốc độ
+        st.sidebar.subheader("⚡ Tối ưu hóa hiệu suất")
+        fast_mode = st.sidebar.checkbox("Chế độ nhanh (giảm tính toán độ chính xác)", value=False)
+        if fast_mode:
+            st.sidebar.info("Chỉ tính độ chính xác ở 10% số epoch để tăng tốc độ.")
+        
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 20, 256, 128)
+        params["epochs"] = st.slider("Epochs", 5, 100, 20, step=5)
+        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic", "identity"])
+        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, step=0.0001, format="%.4f")
+        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5)
         
         st.write(f"Tốc độ học đã chọn: {params['learning_rate']:.4f}")
-    
+        
         if st.button("🚀 Huấn luyện mô hình"):
             if not st.session_state.custom_model_name:
                 st.error("Vui lòng nhập tên mô hình trước khi huấn luyện!")
@@ -325,17 +506,17 @@ def create_streamlit_app():
                     st.session_state.params = params
                     X_train, X_val, X_test, y_train, y_val, y_test = st.session_state.data_split
                     result = train_model(
-                        st.session_state.custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, st.session_state.cv_folds
+                        st.session_state.custom_model_name, params, X_train, X_val, X_test, 
+                        y_train, y_val, y_test, st.session_state.cv_folds
                     )
                     if result[0] is not None:
                         model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
                         st.session_state.model = model
                         st.session_state.trained_models[st.session_state.custom_model_name] = model
-                        st.success(f"✅ Huấn luyện xong!")
-                        st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
-                        st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
-                        st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
-                        st.write(f"🎯 **Độ chính xác trung bình Cross-Validation: {cv_mean_accuracy:.4f}**")
+                        display_training_results(
+                            st.session_state.custom_model_name, train_accuracy, val_accuracy, 
+                            test_accuracy, cv_mean_accuracy
+                        )
                     else:
                         st.error("Huấn luyện thất bại. Vui lòng kiểm tra lỗi ở trên.")
 
