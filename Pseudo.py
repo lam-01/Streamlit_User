@@ -272,9 +272,7 @@ def create_streamlit_app():
         test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5) / 100
         val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5) / 100
         
-        # Chia tập test trước
         X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
-        # Chia tập validation từ tập train_val
         X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, 
                                                         test_size=val_size/(1-test_size), 
                                                         random_state=42)
@@ -311,25 +309,27 @@ def create_streamlit_app():
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, format="%.4f")
         
         st.write("##### Huấn luyện mô hình Pseudo Labelling")
-        custom_model_name = st.text_input("Nhập tên mô hình:", f"PseudoLabel_Model_{int(time.time())}")
+        custom_model_name = st.text_input("Nhập tên mô hình (bắt buộc):", "")
         threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.95, 0.01)
         max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 5)
         
         if st.button("🚀 Chạy Pseudo Labelling"):
-            with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
-                model, test_accuracy, metrics_history = pseudo_labeling_with_mlflow(
-                    x_labeled, y_labeled, x_unlabeled, X_val, y_val, X_test, y_test,
-                    threshold, max_iterations, custom_model_name, params
-                )
-                st.session_state['model'] = model
-                st.session_state['model_name'] = custom_model_name
-            
-            st.success(f"✅ Huấn luyện xong! Độ chính xác cuối cùng trên test: {test_accuracy:.4f}")
+            if not custom_model_name.strip():
+                st.error("Vui lòng nhập tên mô hình trước khi huấn luyện!")
+            else:
+                with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
+                    model, test_accuracy, metrics_history = pseudo_labeling_with_mlflow(
+                        x_labeled, y_labeled, x_unlabeled, X_val, y_val, X_test, y_test,
+                        threshold, max_iterations, custom_model_name, params
+                    )
+                    st.session_state['model'] = model
+                    st.session_state['model_name'] = custom_model_name
+                
+                st.success(f"✅ Huấn luyện xong! Độ chính xác cuối cùng trên test: {test_accuracy:.4f}")
     
     with tab3:
         st.write("**🔮 Dự đoán chữ số**")
         
-        # Lấy danh sách mô hình từ MLflow
         runs = mlflow.search_runs(order_by=["start_time desc"])
         model_options = ["Mô hình vừa huấn luyện"] if 'model' in st.session_state else []
         if not runs.empty:
