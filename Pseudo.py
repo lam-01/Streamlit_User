@@ -421,7 +421,6 @@ def create_streamlit_app():
             selected_model_name = st.selectbox("📝 Chọn mô hình để dự đoán:", model_names)
             selected_model = st.session_state.trained_models[selected_model_name]
             
-            # Thêm checkbox để bật/tắt hiển thị biểu đồ
             show_visualization = st.checkbox("Hiển thị biểu đồ mạng nơ-ron", value=True)
             
             option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
@@ -439,7 +438,6 @@ def create_streamlit_app():
                         confidence = np.max(prediction)
                         st.write(f"🎯 **Dự đoán: {predicted_digit}**")
                         st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
-                        # Hiển thị biểu đồ nếu checkbox được chọn
                         if show_visualization:
                             fig = visualize_neural_network_prediction(selected_model, processed_image[0], predicted_digit)
                             st.pyplot(fig)
@@ -454,7 +452,7 @@ def create_streamlit_app():
                     width=280,
                     height=280,
                     drawing_mode="freedraw",
-                    key=f"canvas_{time.time()}"
+                    key="prediction_canvas"  # Sử dụng key cố định
                 )
                 if st.button("🔮 Dự đoán"):
                     if canvas_result.image_data is not None:
@@ -464,7 +462,6 @@ def create_streamlit_app():
                         confidence = np.max(prediction)
                         st.write(f"🎯 **Dự đoán: {predicted_digit}**")
                         st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
-                        # Hiển thị biểu đồ nếu checkbox được chọn
                         if show_visualization:
                             fig = visualize_neural_network_prediction(selected_model, processed_canvas[0], predicted_digit)
                             st.pyplot(fig)
