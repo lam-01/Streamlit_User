@@ -162,12 +162,7 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             current_step += 1
             progress = min(100, int((current_step / total_steps) * 100))
             progress_bar.progress(progress)
-            status_text.text(f"Iteration {iteration + 1}: Đang huấn luyện... ({progress}%)")
-            
-            # Debug info
-            st.write(f"Iteration {iteration + 1} - Epochs: {model_params['epochs']}")
-            st.write(f"Training data shape: {x_train_current.shape}, Labels shape: {y_train_current.shape}")
-            st.write(f"Validation data shape: {x_val.shape}, Labels shape: {y_val.shape}")
+            status_text.text(f"##### Vòng lặp {iteration + 1}: Đang huấn luyện... ({progress}%)")
 
             try:
                 history = model.fit(
