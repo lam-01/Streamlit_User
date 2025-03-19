@@ -14,10 +14,10 @@ from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
 
 # Khai báo biến percentage toàn cục
-percentage = 0.05  # 5% dữ liệu labeled ban đầu
+percentage = 0.01  # Giá trị mặc định 1%
 
 # Hàm xây dựng model NN với tham số tùy chỉnh
-def create_model(num_hidden_layers=3, neurons_per_layer=256, activation='relu', learning_rate=0.0005):
+def create_model(num_hidden_layers=2, neurons_per_layer=128, activation='relu', learning_rate=0.001):
     model = keras.Sequential()
     model.add(layers.Input(shape=(784,)))
     
@@ -47,7 +47,7 @@ def load_data(sample_size=None):
 def select_initial_data(x_train, y_train, percentage):
     total_labeled_samples = int(len(x_train) * percentage)
     n_classes = 10
-    min_samples_per_class = 2
+    min_samples_per_class = 1
     remaining_samples = total_labeled_samples - min_samples_per_class * n_classes
     
     labeled_idx = []
@@ -103,7 +103,6 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
     samples_container = st.empty()
     
     with mlflow.start_run(run_name=custom_model_name):
-        # Tạo mô hình một lần duy nhất
         model = create_model(
             num_hidden_layers=model_params['num_hidden_layers'],
             neurons_per_layer=model_params['neurons_per_layer'],
@@ -147,23 +146,13 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             progress_bar.progress(progress)
             status_text.text(f"Iteration {iteration + 1}: Đang huấn luyện... ({progress}%)")
             
-            # Kiểm tra dữ liệu đầu vào
-            if x_train_current.shape[0] != y_train_current.shape[0]:
-                st.error(f"Lỗi dữ liệu: Kích thước x_train_current ({x_train_current.shape[0]}) không khớp với y_train_current ({y_train_current.shape[0]})")
-                return None, None, None
-            
-            try:
-                history = model.fit(
-                    x_train_current, y_train_current,
-                    epochs=model_params['epochs'],
-                    batch_size=32,
-                    verbose=0,
-                    validation_data=(x_val, y_val),
-                    shuffle=True  # Thêm shuffle để cải thiện huấn luyện
-                )
-            except Exception as e:
-                st.error(f"Lỗi khi huấn luyện mô hình: {str(e)}")
-                return None, None, None
+            history = model.fit(
+                x_train_current, y_train_current,
+                epochs=model_params['epochs'],
+                batch_size=32,
+                verbose=0,
+                validation_data=(x_val, y_val)
+            )
             
             train_acc = history.history['accuracy'][-1]
             val_acc = history.history['val_accuracy'][-1]
@@ -256,13 +245,14 @@ def show_sample_images(X, y):
         ax.axis('off')
     st.pyplot(fig)
 
-# Visualize mạng nơ-ron với kết quả dự đoán
+# Visualize mạng nơ-ron với kết quả dự đoán (điều chỉnh cho Keras)
 def visualize_neural_network_prediction(model, input_image, predicted_label):
     try:
+        # Lấy kích thước các tầng ẩn, bỏ qua layer Dropout
         hidden_layer_sizes = []
         for layer in model.layers:
             if isinstance(layer, layers.Dense) and layer != model.layers[-1]:
-                hidden_layer_sizes.append(layer.units)
+                hidden_layer_sizes.append(layer.units)  # Dùng .units thay vì .output_shape[-1]
         output_layer_size = model.layers[-1].units
         input_layer_size = 784
         layer_sizes = [input_layer_size] + hidden_layer_sizes + [output_layer_size]
@@ -379,7 +369,7 @@ def create_streamlit_app():
                                                          test_size=val_ratio, 
                                                          random_state=42)
         
-        labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 1.0, 10.0, 5.0, 0.1)  # Mặc định 5%
+        labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1)
         
         global percentage
         percentage = labeled_percentage / 100
@@ -404,11 +394,11 @@ def create_streamlit_app():
         
         st.write("##### Thiết lập tham số Neural Network")
         params = {}
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 3)
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 512, 256)
-        params["epochs"] = st.slider("Epochs", 5, 50, 20)
-        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "sigmoid"], index=0)
-        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.01, 0.0005, format="%.4f")
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100)
+        params["epochs"] = st.slider("Epochs", 5, 50, 10)
+        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "sigmoid"])
+        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, format="%.4f")
         
         st.write("##### Huấn luyện mô hình Pseudo Labelling")
         custom_model_name = st.text_input("Đặt tên mô hình (bắt buộc):", "")
@@ -416,8 +406,8 @@ def create_streamlit_app():
             st.error("Vui lòng nhập tên mô hình!")
             return
         
-        threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.9, 0.01)
-        max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 10)
+        threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.95, 0.01)
+        max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 5)
         
         if st.button("🚀 Chạy Pseudo Labelling"):
             with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
@@ -425,11 +415,9 @@ def create_streamlit_app():
                     x_labeled, y_labeled, x_unlabeled, X_val, y_val, X_test, y_test,
                     threshold, max_iterations, custom_model_name, params
                 )
-                if model is not None:
-                    st.session_state.trained_models[custom_model_name] = model
-                    st.success(f"✅ Huấn luyện xong! Độ chính xác cuối cùng trên test: {test_accuracy:.4f}")
-                else:
-                    st.error("Huấn luyện thất bại. Vui lòng kiểm tra lại!")
+                st.session_state.trained_models[custom_model_name] = model
+            
+            st.success(f"✅ Huấn luyện xong! Độ chính xác cuối cùng trên test: {test_accuracy:.4f}")
     
     with tab3:
         st.write("**🔮 Dự đoán chữ số**")
