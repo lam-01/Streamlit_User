@@ -417,32 +417,32 @@ def create_streamlit_app():
         st.write(f"**Số lượng mẫu được chọn để huấn luyện: {X.shape[0]}**")
         show_sample_images(X, y)
         st.write("**📊 Tỷ lệ dữ liệu**")
-                test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
-                val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
-                
-                train_size = 100 - test_size
-                val_ratio = val_size / train_size
-                
-                if val_ratio >= 1.0:
-                    st.error("Tỷ lệ Validation quá lớn so với Train! Vui lòng điều chỉnh lại.")
-                else:
-                    X_temp, X_test, y_temp, y_test = train_test_split(
-                        X, y, test_size=test_size/100, random_state=42
-                    )
-                    val_ratio_adjusted = val_size / (train_size)
-                    X_train, X_val, y_train, y_val = train_test_split(
-                        X_temp, y_temp, test_size=val_ratio_adjusted, random_state=42
-                    )
-                    
-                    st.session_state.data_split = (X_train, X_val, X_test, y_train, y_val, y_test)
-                    
-                    data_ratios = pd.DataFrame({
-                        "Tập dữ liệu": ["Train", "Validation", "Test"],
-                        "Tỷ lệ (%)": [train_size - val_size, val_size, test_size],
-                        "Số lượng mẫu": [len(X_train), len(X_val), len(X_test)]
-                    })
-                    st.table(data_ratios)
-    
+        test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
+        val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
+        
+        train_size = 100 - test_size
+        val_ratio = val_size / train_size
+        
+        if val_ratio >= 1.0:
+            st.error("Tỷ lệ Validation quá lớn so với Train! Vui lòng điều chỉnh lại.")
+        else:
+            X_temp, X_test, y_temp, y_test = train_test_split(
+                X, y, test_size=test_size/100, random_state=42
+            )
+            val_ratio_adjusted = val_size / (train_size)
+            X_train, X_val, y_train, y_val = train_test_split(
+                X_temp, y_temp, test_size=val_ratio_adjusted, random_state=42
+            )
+            
+            st.session_state.data_split = (X_train, X_val, X_test, y_train, y_val, y_test)
+            
+            data_ratios = pd.DataFrame({
+                "Tập dữ liệu": ["Train", "Validation", "Test"],
+                "Tỷ lệ (%)": [train_size - val_size, val_size, test_size],
+                "Số lượng mẫu": [len(X_train), len(X_val), len(X_test)]
+            })
+            st.table(data_ratios)
+
         st.write("**🚀 Huấn luyện mô hình Neural Network**")
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
