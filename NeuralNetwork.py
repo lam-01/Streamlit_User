@@ -131,7 +131,7 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
 
     return fig
 
-# 📌 Huấn luyện mô hình
+# 📌 Huấn luyện mô hình (đã cải tiến tốc độ)
 @st.cache_resource
 def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds):
     progress_bar = st.progress(0)
@@ -140,23 +140,27 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
     hidden_layer_sizes = tuple([params["neurons_per_layer"]] * params["num_hidden_layers"])
     model = MLPClassifier(
         hidden_layer_sizes=hidden_layer_sizes,
-        max_iter=1,
+        max_iter=params["epochs"],
         activation=params["activation"],
         learning_rate_init=params["learning_rate"],
         solver='adam',
-        alpha=0.0001,  # Thêm regularization
+        alpha=0.0001,
         random_state=42,
-        warm_start=True
+        batch_size=256,  # Huấn luyện theo lô để tăng tốc
+        early_stopping=True,  # Dừng sớm để tiết kiệm thời gian
+        validation_fraction=0.1,  # Dùng 10% dữ liệu train làm validation
+        n_iter_no_change=5,  # Dừng nếu không cải thiện sau 5 epochs
+        verbose=False
     )
 
     try:
         with mlflow.start_run(run_name=custom_model_name):
-            for epoch in range(params["epochs"]):
-                model.fit(X_train, y_train)
-                progress = (epoch + 1) / params["epochs"]
-                progress_bar.progress(progress)
-                status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
+            # Huấn luyện mô hình một lần với toàn bộ epochs
+            model.fit(X_train, y_train)
+            progress_bar.progress(1.0)
+            status_text.text("Đang huấn luyện: 100%")
 
+            # Dự đoán và tính độ chính xác
             y_train_pred = model.predict(X_train)
             y_test_pred = model.predict(X_test)
             y_val_pred = model.predict(X_val)
@@ -164,18 +168,9 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
 
-            # Cross-Validation với mô hình mới
-            cv_model = MLPClassifier(
-                hidden_layer_sizes=hidden_layer_sizes,
-                max_iter=params["epochs"],
-                activation=params["activation"],
-                learning_rate_init=params["learning_rate"],
-                solver='adam',
-                alpha=0.0001,
-                random_state=42
-            )
+            # Cross-Validation
             cv = KFold(n_splits=cv_folds, shuffle=True, random_state=42)
-            cv_scores = cross_val_score(cv_model, X_train, y_train, cv=cv, n_jobs=-1)
+            cv_scores = cross_val_score(model, X_train, y_train, cv=cv, n_jobs=-1)
             cv_mean_accuracy = np.mean(cv_scores)
 
             mlflow.log_param("model_name", "Neural Network")
@@ -308,15 +303,14 @@ def create_streamlit_app():
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
         
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)  
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 128)  
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 128)
         params["epochs"] = st.slider("Epochs", 5, 50, 10)
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"])
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001)
         st.write(f"Tốc độ học đã chọn: {params['learning_rate']:.4f}")
-        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 5, 3)  
-    
-    
+        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 5, 3)
+        
         if st.button("🚀 Huấn luyện mô hình"):
             if not st.session_state.custom_model_name:
                 st.error("Vui lòng nhập tên mô hình trước khi huấn luyện!")
