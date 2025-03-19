@@ -28,8 +28,8 @@ def create_model(num_hidden_layers=2, neurons_per_layer=128, activation='relu', 
     
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(optimizer=optimizer,
-                 loss='sparse_categorical_crossentropy',
-                 metrics=['accuracy'])
+                  loss='sparse_categorical_crossentropy',
+                  metrics=['accuracy'])
     return model
 
 # Tải và xử lý dữ liệu MNIST từ OpenML
@@ -86,15 +86,15 @@ def show_pseudo_labeled_samples(model, samples, predictions, n_samples=5):
         confidence = np.max(predictions[idx])
         axes[1, i].axis('off')
         axes[1, i].text(0.5, 0.5, f"{pred_idx}\n{confidence:.2f}", 
-                      ha='center', va='center',
-                      color='green' if confidence > 0.9 else 'blue')
+                        ha='center', va='center',
+                        color='green' if confidence > 0.9 else 'blue')
     
     plt.tight_layout()
     return fig
 
 # Thuật toán Pseudo Labelling với MLflow
 def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val, x_test, y_test, 
-                               threshold, max_iterations, custom_model_name, model_params):
+                                threshold, max_iterations, custom_model_name, model_params):
     # Validate epochs
     if model_params['epochs'] <= 0:
         st.error("Số epochs phải lớn hơn 0!")
@@ -401,7 +401,36 @@ def create_streamlit_app():
             **Pseudo Labelling** là một kỹ thuật học bán giám sát (semi-supervised learning) nhằm tận dụng cả dữ liệu có nhãn (labeled data) và dữ liệu không nhãn (unlabeled data) để cải thiện hiệu suất của mô hình học máy, đặc biệt khi lượng dữ liệu có nhãn ban đầu rất hạn chế. Phương pháp này dựa trên ý tưởng sử dụng mô hình để dự đoán nhãn cho dữ liệu không nhãn, sau đó chọn các dự đoán có độ tin cậy cao để bổ sung vào tập dữ liệu có nhãn, từ đó huấn luyện lại mô hình.
             \n **Cơ chế hoạt động**
             \n Phương pháp Pseudo Labelling với Neural Network bao gồm các bước chính sau:
-            # ... (rest of the introduction text remains unchanged) ...
+            
+            \n **(1) Chuẩn bị dữ liệu ban đầu**
+            \nTập dữ liệu có nhãn (Labeled Data): Một tập nhỏ dữ liệu đã được gán nhãn chính xác, thường chiếm tỉ lệ rất thấp (ví dụ: 1%) so với tổng dữ liệu.
+            \nTập dữ liệu không nhãn (Unlabeled Data): Phần lớn dữ liệu còn lại, không có nhãn ban đầu, chiếm tỉ lệ lớn (ví dụ: 99%).
+            \nTập kiểm tra (Test Data): Một tập dữ liệu riêng biệt để đánh giá hiệu suất cuối cùng của mô hình.
+            \nVí dụ: Với tập MNIST (70,000 ảnh chữ số viết tay):
+            
+            \n Chia 80% làm tập train (54,000 ảnh) và 20% làm tập test (14,000 ảnh).
+            \n Từ tập train, lấy 1% (~540 ảnh) làm tập labeled, 99% (~55.440 ảnh) làm tập unlabeled.
+            \n **(2) Huấn luyện mô hình ban đầu**
+            \n Sử dụng một mạng nơ-ron (NN) để huấn luyện trên tập labeled ban đầu.
+            \n **(3) Dự đoán nhãn cho dữ liệu không nhãn**
+            \n Sử dụng mô hình đã huấn luyện để dự đoán nhãn cho toàn bộ tập unlabeled.
+            \n Kết quả dự đoán là một phân phối xác suất cho mỗi mẫu dữ liệu (ví dụ: [0.05, 0.02, 0.90, ..., 0.01] cho 10 lớp).
+            \n **(4) Gán nhãn giả (Pseudo Label)**
+            \n Đặt một ngưỡng tin cậy (threshold), ví dụ 0.95, để lọc các dự đoán đáng tin cậy.
+            \n Quy tắc:
+            \n Nếu xác suất tối đa ≥ threshold, mẫu đó được gán nhãn giả dựa trên lớp có xác suất cao nhất.
+            \n Nếu xác suất tối đa < threshold, mẫu đó vẫn giữ trạng thái không nhãn.
+            \n Ví dụ: Một ảnh trong tập unlabeled được dự đoán với xác suất [0.02, 0.01, 0.96, ..., 0.01]. Nếu threshold = 0.95, ảnh này được gán nhãn giả là lớp 2 (vì 0.96 > 0.95).
+            \n **(5) Mở rộng tập labeled và huấn luyện lại**
+            \n Tập labeled mới = tập labeled ban đầu + các mẫu vừa được gán nhãn giả.
+            \n Huấn luyện lại mô hình NN trên tập labeled mở rộng này.
+            \n Quá trình dự đoán (bước 3) và gán nhãn giả (bước 4) được lặp lại trên phần unlabeled còn lại.
+            \n **(6) Lặp lại cho đến khi đạt điều kiện dừng**
+            \n Điều kiện dừng:
+            \n Toàn bộ tập unlabeled được gán nhãn giả và chuyển sang tập labeled.
+            \n Không còn mẫu nào trong tập unlabeled có dự đoán vượt ngưỡng tin cậy.
+            \n Đạt số vòng lặp tối đa do người dùng đặt (ví dụ: 5, 10, hoặc 20 vòng).
+            \n Sau mỗi vòng lặp, mô hình thường trở nên chính xác hơn do được huấn luyện trên tập labeled lớn hơn.
              """)
         st.image("lb.png", caption="Sơ đồ chi tiết quy trình Pseudo Labelling với MNIST")
 
@@ -422,8 +451,8 @@ def create_streamlit_app():
         X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
         val_ratio = val_size / (100 - test_size)
         X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, 
-                                                         test_size=val_ratio, 
-                                                         random_state=42)
+                                                          test_size=val_ratio, 
+                                                          random_state=42)
         
         labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1)
         
@@ -543,7 +572,7 @@ def create_streamlit_app():
     with tab4:
         st.write("##### MLflow Tracking")
         
-       runs = mlflow.search_runs(order_by=["start_time desc"])
+        runs = mlflow.search_runs(order_by=["start_time desc"])
         if not runs.empty:
             runs["model_custom_name"] = runs["tags.mlflow.runName"]
             
