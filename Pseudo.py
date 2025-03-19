@@ -263,17 +263,19 @@ def create_streamlit_app():
         show_sample_images(X, y)
         
         st.write("##### Chia tập dữ liệu")
+        
         st.write("**📊 Tỷ lệ dữ liệu**")
         test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
         val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
         
-        # Chia tập test từ dữ liệu ban đầu
-        X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
+        # Chia tập test từ toàn bộ dữ liệu
+        X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
         
-        # Chia tập validation từ tập train
-        val_size_adjusted = val_size / (100 - test_size)  # Điều chỉnh tỉ lệ val dựa trên train
-        X_train, X_val, y_train, y_val = train_test_split(X_train_full, y_train_full, 
-                                                        test_size=val_size_adjusted, random_state=42)
+        # Chia tập validation từ tập train+val
+        val_size_relative = val_size / (100 - test_size)  # Tính tỉ lệ val so với tập train+val
+        X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, 
+                                                         test_size=val_size_relative, 
+                                                         random_state=42)
         
         labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1)
         
@@ -283,7 +285,7 @@ def create_streamlit_app():
         
         total_samples = len(X)
         data = {
-            "Tập dữ liệu": ["Tổng mẫu", "Tập train (sau khi chia val)", "Tập validation", "Tập test", "Tập labeled ban đầu", "Tập unlabeled"],
+            "Tập dữ liệu": ["Tổng mẫu", "Tập train", "Tập validation", "Tập test", "Tập labeled ban đầu", "Tập unlabeled"],
             "Số mẫu": [len(X), len(X_train), len(X_val), len(X_test), len(x_labeled), len(x_unlabeled)],
             "Tỷ lệ (%)": [
                 "100%",
