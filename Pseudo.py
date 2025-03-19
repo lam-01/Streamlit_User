@@ -272,14 +272,15 @@ def create_streamlit_app():
         st.write("##### Chia tập dữ liệu")
         
         test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=50, value=15, step=5)
-        val_size = st.slider("Tỷ lệ Validation (%) từ tập train", min_value=5, max_value=50, value=15, step=5)
+        val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=50, value=15, step=5)
         
         # Chia tập test trước
-        X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
+        X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
         
-        # Chia tập validation từ tập train
-        X_train, X_val, y_train, y_val = train_test_split(X_train_full, y_train_full, 
-                                                         test_size=val_size/100, 
+        # Chia tập validation từ tổng dữ liệu còn lại sao cho val_size là % của tổng dữ liệu
+        val_ratio = val_size / (100 - test_size)  # Tính tỉ lệ val trên phần còn lại
+        X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, 
+                                                         test_size=val_ratio, 
                                                          random_state=42)
         
         labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1)
@@ -308,15 +309,16 @@ def create_streamlit_app():
         st.write("##### Thiết lập tham số Neural Network")
         params = {}
         params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 128)
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100)
         params["epochs"] = st.slider("Epochs", 5, 50, 10)
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "sigmoid"])
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, format="%.4f")
         
         st.write("##### Huấn luyện mô hình Pseudo Labelling")
-        custom_model_name = st.text_input("Nhập tên mô hình :", "")
-        if not custom_model_name:
-            custom_model_name = "Default_model"
+        custom_model_name = st.text_input("Đặt tên mô hình (bắt buộc):", "")
+        if not custom_model_name.strip():
+            st.error("Vui lòng nhập tên mô hình!")
+            return
         
         threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.95, 0.01)
         max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 5)
@@ -399,7 +401,7 @@ def create_streamlit_app():
                 selected_model_name = st.selectbox("📝 Chọn một mô hình để xem chi tiết:",
                                                   filtered_runs["model_custom_name"].tolist())
                 if selected_model_name:
-                    selected_run = filtered_runs[filtered_runs["model_custom_name"] == selected_model_name].iloc[0]
+                    selected_run = runs[runs["model_custom_name"] == selected_model_name].iloc[0]
                     run_details = mlflow.get_run(selected_run["run_id"])
                     custom_name = run_details.data.tags.get('mlflow.runName', 'Không có tên')
                     st.write(f"##### 🔍 Chi tiết mô hình: `{custom_name}`")
