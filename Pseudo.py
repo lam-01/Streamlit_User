@@ -22,7 +22,7 @@ def create_model(num_hidden_layers=2, neurons_per_layer=128, activation='relu', 
     
     for _ in range(num_hidden_layers):
         model.add(layers.Dense(neurons_per_layer, activation=activation))
-        model.add(layers.Dropout(0.2))
+        model.add(layers.Dropout(0.3))
     
     model.add(layers.Dense(10, activation='softmax'))
     
