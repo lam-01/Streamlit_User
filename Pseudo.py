@@ -189,7 +189,7 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             current_step += 1
             progress = min(100, int((current_step / total_steps) * 100))
             progress_bar.progress(progress)
-            status_text.text(f"Iteration {iteration + 1}: Đang gán nhãn... ({progress}%)")
+            status_text.text(f"Vòng lặp {iteration + 1}: Đang gán nhãn... ({progress}%)")
             
             if len(remaining_unlabeled) > 0:
                 predictions = model.predict(remaining_unlabeled, verbose=0)
