@@ -20,13 +20,13 @@ if 'data_split' not in st.session_state:
 if 'params' not in st.session_state:
     st.session_state.params = None
 if 'cv_folds' not in st.session_state:
-    st.session_state.cv_folds = 3
+    st.session_state.cv_folds = 3  # Mặc định 3 fold
 if 'custom_model_name' not in st.session_state:
     st.session_state.custom_model_name = ""
 if 'trained_models' not in st.session_state:
     st.session_state.trained_models = {}
 
-# Tải và xử lý dữ liệu MNIST từ OpenML
+# 📌 Tải và xử lý dữ liệu MNIST từ OpenML
 @st.cache_data
 def load_data(n_samples=None):
     mnist = fetch_openml("mnist_784", version=1, as_frame=False, parser='liac-arff')
@@ -34,7 +34,7 @@ def load_data(n_samples=None):
     X = X / 255.0
     return X, y
 
-# Chia dữ liệu thành train, validation, và test
+# 📌 Chia dữ liệu thành train, validation, và test
 @st.cache_data
 def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state=42):
     X_train, X_test, y_train, y_test = train_test_split(
@@ -45,7 +45,7 @@ def split_data(X, y, train_size=0.7, val_size=0.15, test_size=0.15, random_state
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-# Visualize mạng nơ-ron với kết quả dự đoán (giữ nguyên)
+# 📌 Visualize mạng nơ-ron với kết quả dự đoán
 def visualize_neural_network_prediction(model, input_image, predicted_label):
     hidden_layer_sizes = model.hidden_layer_sizes
     if isinstance(hidden_layer_sizes, int):
@@ -65,7 +65,7 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
     ax1.axis('off')
 
     pos = {}
-    layer_names = ['Input'] + [f'Hidden {i+1}' for i in range(len(hidden_layer_sizes))] + ['Output']
+    layer_names = ['Input', 'Hidden 1', 'Hidden 2', 'Output'] if len(hidden_layer_sizes) == 2 else ['Input'] + [f'Hidden {i+1}' for i in range(len(hidden_layer_sizes))] + ['Output']
 
     for layer_idx, layer_size in enumerate(layer_sizes):
         for neuron_idx in range(layer_size):
@@ -109,7 +109,10 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
         if layer_idx == len(layer_sizes) - 2:
             neuron_indices_2 = [predicted_label]
         else:
-            neuron_indices_2 = range(next_layer_size) if next_layer_size <= 10 else list(range(5)) + list(range(next_layer_size - 5, next_layer_size))
+            if next_layer_size > 10:
+                neuron_indices_2 = list(range(5)) + list(range(next_layer_size - 5, next_layer_size))
+            else:
+                neuron_indices_2 = range(next_layer_size)
 
         for idx1, neuron1 in enumerate(neuron_indices_1):
             for idx2, neuron2 in enumerate(neuron_indices_2):
@@ -128,7 +131,7 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
 
     return fig
 
-# Huấn luyện mô hình thông thường
+# 📌 Huấn luyện mô hình
 @st.cache_resource
 def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds):
     progress_bar = st.progress(0)
@@ -141,7 +144,7 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
         activation=params["activation"],
         learning_rate_init=params["learning_rate"],
         solver='adam',
-        alpha=0.0001,
+        alpha=0.0001,  # Thêm regularization
         random_state=42,
         warm_start=True
     )
@@ -152,7 +155,7 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
                 model.fit(X_train, y_train)
                 progress = (epoch + 1) / params["epochs"]
                 progress_bar.progress(progress)
-                status_text.text(f"Training: {int(progress * 100)}%")
+                status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
 
             y_train_pred = model.predict(X_train)
             y_test_pred = model.predict(X_test)
@@ -161,6 +164,7 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
 
+            # Cross-Validation với mô hình mới
             cv_model = MLPClassifier(
                 hidden_layer_sizes=hidden_layer_sizes,
                 max_iter=params["epochs"],
@@ -183,124 +187,21 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             mlflow.log_metric("cv_mean_accuracy", cv_mean_accuracy)
             mlflow.sklearn.log_model(model, "Neural Network")
     except Exception as e:
-        st.error(f"Error during training: {str(e)}")
+        st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
         return None, None, None, None, None
 
     progress_bar.empty()
     status_text.empty()
     return model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy
 
-# Thuật toán Pseudo Labeling
-@st.cache_resource
-def train_pseudo_labeling(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds, threshold=0.95, max_iterations=5):
-    st.write("🚀 Starting Pseudo Labeling...")
-    
-    # (1) Lấy 1% dữ liệu mỗi class làm tập train ban đầu
-    X_labeled, X_unlabeled, y_labeled, y_unlabeled = [], [], [], []
-    for digit in range(10):
-        indices = np.where(y_train == digit)[0]
-        n_samples_per_class = max(1, int(0.01 * len(indices)))  # 1% mỗi class
-        labeled_indices = np.random.choice(indices, n_samples_per_class, replace=False)
-        unlabeled_indices = np.setdiff1d(indices, labeled_indices)
-        
-        X_labeled.append(X_train[labeled_indices])
-        y_labeled.append(y_train[labeled_indices])
-        X_unlabeled.append(X_train[unlabeled_indices])
-        y_unlabeled.append(y_train[unlabeled_indices])
-
-    X_labeled = np.vstack(X_labeled)
-    y_labeled = np.hstack(y_labeled)
-    X_unlabeled = np.vstack(X_unlabeled)
-    y_unlabeled = np.hstack(y_unlabeled)
-
-    st.write(f"Initial labeled data: {len(X_labeled)} samples")
-    st.write(f"Unlabeled data: {len(X_unlabeled)} samples")
-
-    hidden_layer_sizes = tuple([params["neurons_per_layer"]] * params["num_hidden_layers"])
-    model = MLPClassifier(
-        hidden_layer_sizes=hidden_layer_sizes,
-        max_iter=params["epochs"],
-        activation=params["activation"],
-        learning_rate_init=params["learning_rate"],
-        solver='adam',
-        alpha=0.0001,
-        random_state=42
-    )
-
-    iteration = 0
-    while len(X_unlabeled) > 0 and iteration < max_iterations:
-        iteration += 1
-        st.write(f"🔄 Iteration {iteration}/{max_iterations}")
-
-        # (2) Huấn luyện mô hình trên tập labeled
-        with st.spinner(f"Training on {len(X_labeled)} labeled samples..."):
-            model.fit(X_labeled, y_labeled)
-
-        # (3) Dự đoán nhãn cho tập unlabeled
-        pseudo_probs = model.predict_proba(X_unlabeled)
-        pseudo_labels = model.predict(X_unlabeled)
-        max_probs = np.max(pseudo_probs, axis=1)
-
-        # (4) Gán nhãn giả với ngưỡng
-        confident_indices = np.where(max_probs >= threshold)[0]
-        if len(confident_indices) == 0:
-            st.write("No confident predictions above threshold. Stopping.")
-            break
-
-        X_confident = X_unlabeled[confident_indices]
-        y_confident = pseudo_labels[confident_indices]
-
-        # (5) Cập nhật tập dữ liệu
-        X_labeled = np.vstack((X_labeled, X_confident))
-        y_labeled = np.hstack((y_labeled, y_confident))
-        X_unlabeled = np.delete(X_unlabeled, confident_indices, axis=0)
-        y_unlabeled = np.delete(y_unlabeled, confident_indices)
-
-        st.write(f"Added {len(confident_indices)} pseudo-labeled samples. Remaining unlabeled: {len(X_unlabeled)}")
-
-    # Đánh giá mô hình cuối cùng
-    with mlflow.start_run(run_name=custom_model_name + "_Pseudo"):
-        y_train_pred = model.predict(X_train)
-        y_val_pred = model.predict(X_val)
-        y_test_pred = model.predict(X_test)
-        train_accuracy = accuracy_score(y_train, y_train_pred)
-        val_accuracy = accuracy_score(y_val, y_val_pred)
-        test_accuracy = accuracy_score(y_test, y_test_pred)
-
-        cv_model = MLPClassifier(
-            hidden_layer_sizes=hidden_layer_sizes,
-            max_iter=params["epochs"],
-            activation=params["activation"],
-            learning_rate_init=params["learning_rate"],
-            solver='adam',
-            alpha=0.0001,
-            random_state=42
-        )
-        cv = KFold(n_splits=cv_folds, shuffle=True, random_state=42)
-        cv_scores = cross_val_score(cv_model, X_train, y_train, cv=cv, n_jobs=-1)
-        cv_mean_accuracy = np.mean(cv_scores)
-
-        mlflow.log_param("model_name", "Neural Network (Pseudo Labeling)")
-        mlflow.log_params(params)
-        mlflow.log_param("cv_folds", cv_folds)
-        mlflow.log_param("threshold", threshold)
-        mlflow.log_param("iterations", iteration)
-        mlflow.log_metric("train_accuracy", train_accuracy)
-        mlflow.log_metric("val_accuracy", val_accuracy)
-        mlflow.log_metric("test_accuracy", test_accuracy)
-        mlflow.log_metric("cv_mean_accuracy", cv_mean_accuracy)
-        mlflow.sklearn.log_model(model, "Neural Network (Pseudo)")
-
-    return model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy
-
-# Xử lý ảnh tải lên (giữ nguyên)
+# 📌 Xử lý ảnh tải lên
 def preprocess_uploaded_image(image):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     image = cv2.resize(image, (28, 28))
     image = image / 255.0
     return image.reshape(1, -1)
 
-# Xử lý ảnh từ canvas (giữ nguyên)
+# 📌 Xử lý ảnh từ vẽ tay trên canvas
 def preprocess_canvas_image(canvas):
     image = np.array(canvas)
     image = cv2.cvtColor(image, cv2.COLOR_RGBA2GRAY)
@@ -309,7 +210,6 @@ def preprocess_canvas_image(canvas):
     image = image / 255.0
     return image.reshape(1, -1)
 
-# Hiển thị mẫu dữ liệu (giữ nguyên)
 def show_sample_images(X, y):
     st.write("**🖼️ Một vài mẫu dữ liệu từ MNIST**")
     fig, axes = plt.subplots(1, 10, figsize=(15, 3))
@@ -321,41 +221,69 @@ def show_sample_images(X, y):
         ax.axis('off')
     st.pyplot(fig)
 
-# Giao diện Streamlit
+# 📌 Giao diện Streamlit
 def create_streamlit_app():
     st.title("🔢 Phân loại chữ số viết tay")
-
+    
     tab1, tab2, tab3, tab4 = st.tabs(["📓 Lí thuyết", "📋 Huấn luyện", "🔮 Dự đoán", "⚡ MLflow"])
-
+    
     with tab1:
         st.write("##### Neural Network")
-        st.write("""Neural Network là một phương thức phổ biến trong lĩnh vực trí tuệ nhân tạo...""")
-        # Giữ nguyên nội dung lý thuyết cũ
-        st.write("##### Pseudo Labeling")
-        st.write("""Pseudo Labeling là một kỹ thuật bán giám sát (semi-supervised learning) nhằm tận dụng dữ liệu chưa được gán nhãn. Quy trình bao gồm:
-        - (1) Huấn luyện mô hình trên một tập dữ liệu nhỏ có nhãn.
-        - (2) Sử dụng mô hình để dự đoán nhãn cho dữ liệu chưa có nhãn.
-        - (3) Gán nhãn giả (pseudo labels) cho các mẫu có độ tin cậy cao (dựa trên ngưỡng).
-        - (4) Kết hợp dữ liệu có nhãn ban đầu và dữ liệu vừa gán nhãn để huấn luyện lại mô hình.
-        Quá trình này lặp lại cho đến khi hết dữ liệu chưa nhãn hoặc đạt số vòng lặp tối đa.""")
+        st.write("""Neural Network là một phương thức phổ biến trong lĩnh vực trí tuệ nhân tạo, được dùng để điều khiển máy tính dự đoán, nhận dạng và xử lý dữ liệu như một bộ não của con người. 
+        Bên cạnh đó, quy trình này còn được biết đến với thuật ngữ quen thuộc là “deep learning”, nghĩa là việc vận dụng các nơ-ron hoặc các nút tạo sự liên kết với nhau trong cùng một cấu trúc phân lớp.""")
+        st.write("##### 1. Đặc điểm của Neural Network")
+        st.write("""- Mạng lưới nơ-ron nhân tạo hoạt động như nơ-ron trong não bộ con người. Trong đó, mỗi nơ-ron là một hàm toán học, có chức năng thu thập và phân loại dữ liệu, thông tin theo cấu trúc chi tiết. 
+        \n- Neural Network tương đồng với những phương pháp thống kê theo đồ thị đường cong hoặc phân tích hồi quy. Để giải thích đơn giản nhất, bạn hãy hình dung Neural Network bao hàm các nút mạng liên kết với nhau. 
+        \n- Mỗi nút là một tập hợp tri giác, cấu tạo tương tự hàm hồi quy đa tuyến tính, được sắp xếp liên kết với nhau. Các lớp này sẽ thu thập thông tin, sau đó phân loại và phát tín hiệu đầu ra tương ứng.
+        """)
+        st.write("##### 2. Cấu trúc mạng Neural Network")
+        st.write("""- Input Layer (tầng đầu vào): Nằm bên trái của hệ thống, bao gồm dữ liệu thông tin đầu vào. 
+        \n- Output Layer (tầng đầu ra): Nằm bên phải của hệ thống, bao gồm dữ liệu thông tin đầu ra. 
+        \n- Hidden Layer (tầng ẩn): Nằm ở giữa tầng đầu vào và đầu ra, thể hiện quá trình suy luận và xử lý thông tin của hệ thống.    
+        """)
+        st.image("neural_networks.png", caption="Cấu trúc mạng Neural Network", width=500)
+        st.write("Ví dụ minh họa với bộ dữ liệu mnist : ")
+        st.image("mau.png", caption="Nguồn : https://www.researchgate.net/", width=700)
+        st.write("##### 3. Các tham số quan trọng")
+        st.write("""**a. Số lớp ẩn (num_hidden_layers)**:
+        \n- Đây là số lượng tầng ẩn trong mạng nơ-ron. Nhiều tầng ẩn hơn có thể giúp mô hình học được các đặc trưng phức tạp hơn, nhưng cũng làm tăng độ phức tạp tính toán.
+        \n**b. Số neuron mỗi lớp (neurons_per_layer)**:
+        \n- Đây là số lượng nơ-ron trong mỗi tầng ẩn. Số lượng nơ-ron ảnh hưởng đến khả năng học các đặc trưng từ dữ liệu.
+        \n**c. Epochs**:
+        \n- Đây là số lần toàn bộ dữ liệu huấn luyện được sử dụng để cập nhật trọng số của mô hình.""")
+        st.latex(r"w = w - \eta \cdot \nabla L(w)")
+        st.markdown(r"""
+        Trong đó:
+            $$w$$ là trọng số.
+            $$\eta$$ là tốc độ học (learning rate).
+            $$\nabla L(w)$$ là gradient của hàm mất mát (loss function) theo trọng số.
+        """)
+        st.write("""**d. Hàm kích hoạt (activation)**: 
+        \n- Hàm kích hoạt là một hàm toán học được áp dụng cho đầu ra của mỗi nơ-ron trong tầng ẩn. Nó giúp mô hình học được các mối quan hệ phi tuyến giữa các đặc trưng. Các hàm kích hoạt phổ biến bao gồm:""")
+        st.write("**ReLU (Rectified Linear Unit)**: Hàm này trả về giá trị đầu vào nếu nó lớn hơn 0, ngược lại trả về 0. ReLU giúp giảm thiểu vấn đề vanishing gradient.")
+        st.latex("f(x) = \max(0, x)")
+        st.write("**Tanh**: Hàm này trả về giá trị trong khoảng từ -1 đến 1, giúp cải thiện tốc độ hội tụ so với hàm sigmoid.")
+        st.latex(r" f(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}} ")
+        st.write("**Logistic (Sigmoid)**: Hàm này trả về giá trị trong khoảng từ 0 đến 1, thường được sử dụng cho các bài toán phân loại nhị phân.")
+        st.latex(r"f(x) = \frac{1}{1 + e^{-x}}")
 
     with tab2:
         max_samples = 70000
         n_samples = st.number_input(
-            "Số lượng mẫu để huấn luyện", min_value=1000, max_value=max_samples, value=9000, step=1000
+            "Số lượng mẫu để huấn luyện", min_value=1000, max_value=max_samples, value=9000, step=1000,
         )
-
+        
         X, y = load_data(n_samples=n_samples)
         st.write(f"**Số lượng mẫu được chọn để huấn luyện: {X.shape[0]}**")
         show_sample_images(X, y)
-
+        
         st.write("**📊 Tỷ lệ dữ liệu**")
         test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
         val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
-
+        
         train_size = 100 - test_size
         val_ratio = val_size / train_size
-
+        
         if val_ratio >= 1.0:
             st.error("Tỷ lệ Validation quá lớn so với Train! Vui lòng điều chỉnh lại.")
         else:
@@ -366,31 +294,29 @@ def create_streamlit_app():
             X_train, X_val, y_train, y_val = train_test_split(
                 X_temp, y_temp, test_size=val_ratio_adjusted, random_state=42
             )
+            
             st.session_state.data_split = (X_train, X_val, X_test, y_train, y_val, y_test)
-
+            
             data_ratios = pd.DataFrame({
                 "Tập dữ liệu": ["Train", "Validation", "Test"],
                 "Tỷ lệ (%)": [train_size - val_size, val_size, test_size],
                 "Số lượng mẫu": [len(X_train), len(X_val), len(X_test)]
             })
             st.table(data_ratios)
-
+    
         st.write("**🚀 Huấn luyện mô hình Neural Network**")
-        training_mode = st.radio("Chọn chế độ huấn luyện:", ["Thông thường", "Pseudo Labeling"])
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
-
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 2, 1)
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 20, 100, 50)
+        
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 2, 1)  # Giảm max từ 3 xuống 2
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 20, 100, 50)  # Giảm min từ 50 xuống 20
         params["epochs"] = st.slider("Epochs", 5, 50, 10)
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"])
-        params["learning_rate"] = st.slider("Tốc độ học", 0.0001, 0.1, 0.001)
-        st.session_state.cv_folds = st.slider("Số fold Cross-Validation", 2, 5, 3)
-
-        if training_mode == "Pseudo Labeling":
-            threshold = st.slider("Ngưỡng gán nhãn giả (Pseudo Label Threshold)", 0.5, 0.99, 0.95, step=0.01)
-            max_iterations = st.slider("Số vòng lặp tối đa", 1, 10, 5)
-
+        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001)
+        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 5, 3)  # Giảm max từ 10 xuống 5
+        
+        st.write(f"Tốc độ học đã chọn: {params['learning_rate']:.4f}")
+    
         if st.button("🚀 Huấn luyện mô hình"):
             if not st.session_state.custom_model_name:
                 st.error("Vui lòng nhập tên mô hình trước khi huấn luyện!")
@@ -398,15 +324,9 @@ def create_streamlit_app():
                 with st.spinner("🔄 Đang khởi tạo huấn luyện..."):
                     st.session_state.params = params
                     X_train, X_val, X_test, y_train, y_val, y_test = st.session_state.data_split
-                    if training_mode == "Thông thường":
-                        result = train_model(
-                            st.session_state.custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, st.session_state.cv_folds
-                        )
-                    else:
-                        result = train_pseudo_labeling(
-                            st.session_state.custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, st.session_state.cv_folds, threshold, max_iterations
-                        )
-
+                    result = train_model(
+                        st.session_state.custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, st.session_state.cv_folds
+                    )
                     if result[0] is not None:
                         model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
                         st.session_state.model = model
