@@ -383,7 +383,7 @@ def create_streamlit_app():
         st.image("lb.png",caption="Sơ đồ chi tiết quy trình Pseudo Labelling với MNIST")
 
     with tab2:
-        st.write("##### Chuẩn bị dữ liệu")
+        st.write("##### Tùy chọn mẫu dữ liệu")
         
         sample_size = st.number_input("**Chọn cỡ mẫu để huấn luyện**", 1000, 70000, 10000, step=1000)
         X, y = load_data(sample_size=sample_size)
@@ -410,10 +410,9 @@ def create_streamlit_app():
         
         total_samples = len(X)
         data = {
-            "Tập dữ liệu": ["Tổng mẫu", "Tập train", "Tập validation", "Tập test", "Tập labeled ban đầu", "Tập unlabeled"],
-            "Số mẫu": [len(X), len(X_train), len(X_val), len(X_test), len(x_labeled), len(x_unlabeled)],
+            "Tập dữ liệu": ["Tập train", "Tập validation", "Tập test", "Tập labeled ban đầu", "Tập unlabeled"],
+            "Số mẫu": [len(X_train), len(X_val), len(X_test), len(x_labeled), len(x_unlabeled)],
             "Tỷ lệ (%)": [
-                "100%",
                 f"{len(X_train)/total_samples*100:.1f}%",
                 f"{len(X_val)/total_samples*100:.1f}%",
                 f"{len(X_test)/total_samples*100:.1f}%",
@@ -422,7 +421,7 @@ def create_streamlit_app():
             ]
         }
         df = pd.DataFrame(data)
-        st.write("**Kích thước tập dữ liệu sau khi chia:**")
+        st.write("**Kích thước tập dữ liệu :**")
         st.table(df)
         
         st.write("##### Thiết lập tham số Neural Network")
