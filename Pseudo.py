@@ -96,6 +96,24 @@ def show_pseudo_labeled_samples(model, samples, predictions, n_samples=5):
 # Thuật toán Pseudo Labelling với MLflow
 def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val, x_test, y_test, 
                                threshold, max_iterations, custom_model_name, model_params):
+    # Validate epochs
+    if model_params['epochs'] <= 0:
+        st.error("Số epochs phải lớn hơn 0!")
+        return None, 0, {}
+
+    # Validate input data
+    if len(x_labeled) == 0 or len(y_labeled) == 0:
+        st.error("Tập dữ liệu labeled ban đầu rỗng!")
+        return None, 0, {}
+    if len(x_unlabeled) == 0:
+        st.warning("Tập dữ liệu unlabeled rỗng, sẽ chỉ huấn luyện trên dữ liệu labeled.")
+    if len(x_val) == 0 or len(y_val) == 0:
+        st.error("Tập dữ liệu validation rỗng!")
+        return None, 0, {}
+    if len(x_test) == 0 or len(y_test) == 0:
+        st.error("Tập dữ liệu test rỗng!")
+        return None, 0, {}
+
     progress_bar = st.progress(0)
     status_text = st.empty()
     results_container = st.empty()
@@ -146,13 +164,24 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             progress_bar.progress(progress)
             status_text.text(f"Iteration {iteration + 1}: Đang huấn luyện... ({progress}%)")
             
-            history = model.fit(
-                x_train_current, y_train_current,
-                epochs=model_params['epochs'],
-                batch_size=32,
-                verbose=0,
-                validation_data=(x_val, y_val)
-            )
+            # Debug info
+            st.write(f"Iteration {iteration + 1} - Epochs: {model_params['epochs']}")
+            st.write(f"Training data shape: {x_train_current.shape}, Labels shape: {y_train_current.shape}")
+            st.write(f"Validation data shape: {x_val.shape}, Labels shape: {y_val.shape}")
+
+            try:
+                history = model.fit(
+                    x_train_current, y_train_current,
+                    epochs=model_params['epochs'],
+                    batch_size=32,
+                    verbose=0,
+                    validation_data=(x_val, y_val)
+                )
+                train_acc = history.history['accuracy'][-1]
+                val_acc = history.history['val_accuracy'][-1]
+            except Exception as e:
+                st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
+                return None, 0, metrics_history
             
             train_acc = history.history['accuracy'][-1]
             val_acc = history.history['val_accuracy'][-1]
@@ -245,14 +274,13 @@ def show_sample_images(X, y):
         ax.axis('off')
     st.pyplot(fig)
 
-# Visualize mạng nơ-ron với kết quả dự đoán (điều chỉnh cho Keras)
+# Visualize mạng nơ-ron với kết quả dự đoán
 def visualize_neural_network_prediction(model, input_image, predicted_label):
     try:
-        # Lấy kích thước các tầng ẩn, bỏ qua layer Dropout
         hidden_layer_sizes = []
         for layer in model.layers:
             if isinstance(layer, layers.Dense) and layer != model.layers[-1]:
-                hidden_layer_sizes.append(layer.units)  # Dùng .units thay vì .output_shape[-1]
+                hidden_layer_sizes.append(layer.units)
         output_layer_size = model.layers[-1].units
         input_layer_size = 784
         layer_sizes = [input_layer_size] + hidden_layer_sizes + [output_layer_size]
@@ -380,7 +408,7 @@ def create_streamlit_app():
             \n Đạt số vòng lặp tối đa do người dùng đặt (ví dụ: 5, 10, hoặc 20 vòng).
             \n Sau mỗi vòng lặp, mô hình thường trở nên chính xác hơn do được huấn luyện trên tập labeled lớn hơn.
              """)
-        st.image("lb.png",caption="Sơ đồ chi tiết quy trình Pseudo Labelling với MNIST")
+        st.image("lb.png", caption="Sơ đồ chi tiết quy trình Pseudo Labelling với MNIST")
 
     with tab2:
         st.write("##### Tùy chọn mẫu dữ liệu")
@@ -428,7 +456,7 @@ def create_streamlit_app():
         params = {}
         params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
         params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 128)
-        params["epochs"] = st.slider("Epochs", 5, 50, 10)
+        params["epochs"] = st.slider("Epochs", 1, 50, 10)  # Adjusted min value to 1
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "sigmoid"])
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, format="%.4f")
         
@@ -446,9 +474,11 @@ def create_streamlit_app():
                     x_labeled, y_labeled, x_unlabeled, X_val, y_val, X_test, y_test,
                     threshold, max_iterations, custom_model_name, params
                 )
-                st.session_state.trained_models[custom_model_name] = model
-            
-            st.success(f"✅ Huấn luyện xong! Độ chính xác cuối cùng trên test: {test_accuracy:.4f}")
+                if model is not None:
+                    st.session_state.trained_models[custom_model_name] = model
+                    st.success(f"✅ Huấn luyện xong! Độ chính xác cuối cùng trên test: {test_accuracy:.4f}")
+                else:
+                    st.error("Huấn luyện thất bại! Vui lòng kiểm tra thông báo lỗi ở trên.")
     
     with tab3:
         st.write("**🔮 Dự đoán chữ số**")
