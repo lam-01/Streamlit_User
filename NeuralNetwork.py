@@ -134,7 +134,7 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
 
     return fig
 
-# 📌 Huấn luyện mô hình (cải tiến với tiến trình chi tiết và tối ưu hóa tốc độ)
+# 📌 Huấn luyện mô hình 
 def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds):
     progress_bar = st.progress(0)
     status_text = st.empty()
@@ -466,16 +466,11 @@ def create_streamlit_app():
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
         
-        # Thêm tùy chọn tối ưu hóa tốc độ
-        st.sidebar.subheader("⚡ Tối ưu hóa hiệu suất")
-        fast_mode = st.sidebar.checkbox("Chế độ nhanh (giảm tính toán độ chính xác)", value=False)
-        if fast_mode:
-            st.sidebar.info("Chỉ tính độ chính xác ở 10% số epoch để tăng tốc độ.")
         
         params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
         params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 20, 256, 128)
-        params["epochs"] = st.slider("Epochs", 5, 100, 20, step=5)
-        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic", "identity"])
+        params["epochs"] = st.slider("Epochs", 5, 50, 5, step=5)
+        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic"])
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, step=0.0001, format="%.4f")
         st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5)
         
