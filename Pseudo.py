@@ -71,6 +71,7 @@ def select_initial_data(x_train, y_train, percentage):
 
 # Hiển thị mẫu dữ liệu được gán nhãn giả
 def show_pseudo_labeled_samples(model, samples, predictions, n_samples=5):
+    st.write("**Một số mẫu gán nhãn giả ( pseudo labeled )**")
     fig, axes = plt.subplots(2, n_samples, figsize=(n_samples * 3, 4))
     
     if len(samples) <= n_samples:
@@ -241,9 +242,9 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
         mlflow.log_metric("final_test_accuracy", final_test_accuracy)
         mlflow.keras.log_model(model, "final_model")
         
-        # Display final results in columns
+        #Hiển thị kết quả cuối cùng trong các cột
         with results_container.container():
-            st.markdown("### Kết quả cuối cùng:")
+            st.markdown("##### Kết quả cuối cùng:")
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.write("**Train Accuracy:**")
@@ -256,13 +257,14 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
                 st.write(f"{final_test_accuracy:.4f}")
         
         # Plot train and validation accuracy
+        st.write("**Biểu đồ độ chính xác qua các lần lặp**")
         fig, ax = plt.subplots(figsize=(10, 4))
         iterations_range = metrics_history['iteration']
         ax.plot(iterations_range, metrics_history['train_accuracy'], 'b-', label='Train Accuracy')
         ax.plot(iterations_range, metrics_history['val_accuracy'], 'r-', label='Validation Accuracy')
         ax.set_xlabel('Iteration')
         ax.set_ylabel('Accuracy')
-        ax.set_title('Train vs Validation Accuracy Over Iterations')
+        ax.set_title('Training Progress')
         ax.legend()
         ax.grid(True)
         st.pyplot(fig)
