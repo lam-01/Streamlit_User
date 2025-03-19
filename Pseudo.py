@@ -16,7 +16,6 @@ def create_model(num_hidden_layers=2, neurons_per_layer=128, activation='relu', 
     model = keras.Sequential()
     model.add(layers.Flatten(input_shape=(28, 28)))
     
-    # Thêm các lớp ẩn theo tham số
     for _ in range(num_hidden_layers):
         model.add(layers.Dense(neurons_per_layer, activation=activation))
         model.add(layers.Dropout(0.2))
@@ -35,7 +34,6 @@ def load_data(sample_size=10000):
     (x_full, y_full), _ = keras.datasets.mnist.load_data()
     x_full = x_full.astype('float32') / 255
     
-    # Giới hạn số lượng mẫu theo sample_size
     if sample_size < len(x_full):
         indices = np.random.permutation(len(x_full))[:sample_size]
         x_full = x_full[indices]
@@ -60,21 +58,18 @@ def select_initial_data(x_train, y_train, percentage):
     return x_labeled, y_labeled, x_unlabeled, unlabeled_idx
 
 # Hiển thị mẫu dữ liệu được gán nhãn giả
-def show_pseudo_labeled_samples(model, samples, predictions, n_samples=10):
-    fig, axes = plt.subplots(2, n_samples, figsize=(15, 4))
+def show_pseudo_labeled_samples(model, samples, predictions, n_samples=5):
+    fig, axes = plt.subplots(2, n_samples, figsize=(n_samples * 3, 4))
     
-    # Chọn ngẫu nhiên n_samples từ các mẫu được gán nhãn giả
     if len(samples) <= n_samples:
         selected_indices = np.arange(len(samples))
     else:
         selected_indices = np.random.choice(len(samples), n_samples, replace=False)
     
     for i, idx in enumerate(selected_indices):
-        # Hiển thị ảnh
         axes[0, i].imshow(samples[idx], cmap='gray')
         axes[0, i].axis('off')
         
-        # Hiển thị dự đoán
         pred_idx = np.argmax(predictions[idx])
         confidence = np.max(predictions[idx])
         axes[1, i].axis('off')
@@ -85,9 +80,11 @@ def show_pseudo_labeled_samples(model, samples, predictions, n_samples=10):
     plt.tight_layout()
     return fig
 
-# Thuật toán Pseudo Labelling với MLflow và hiển thị kết quả sau mỗi vòng lặp
+# Thuật toán Pseudo Labelling với MLflow, thanh tiến trình và kết quả mỗi vòng lặp
 def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val, x_test, y_test, 
                                threshold, max_iterations, custom_model_name, model_params):
+    progress_bar = st.progress(0)
+    status_text = st.empty()
     results_container = st.empty()
     metrics_container = st.empty()
     samples_container = st.empty()
@@ -100,7 +97,6 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             learning_rate=model_params['learning_rate']
         )
         
-        # Log parameters
         mlflow.log_param("threshold", threshold)
         mlflow.log_param("max_iterations", max_iterations)
         mlflow.log_param("initial_labeled_percentage", percentage * 100)
@@ -111,7 +107,6 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
         y_train_current = y_labeled.copy()
         remaining_unlabeled = x_unlabeled.copy()
         
-        # Metrics tracking
         metrics_history = {
             'iteration': [],
             'labeled_samples_count': [],
@@ -127,11 +122,20 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
         metrics_history['val_accuracy'].append(0)
         metrics_history['test_accuracy'].append(0)
         
-        # Show initial results
-        results_container.markdown("### Kết quả trong quá trình huấn luyện")
+        # Thanh tiến trình: 0% ban đầu
+        progress_bar.progress(0)
+        status_text.text("Khởi tạo mô hình... (0%)")
+        
+        total_steps = max_iterations * 2  # Mỗi iteration có 2 bước chính: huấn luyện + dự đoán/gán nhãn
+        current_step = 0
         
         for iteration in range(max_iterations):
-            # Huấn luyện model với dữ liệu hiện tại
+            # Bước 1: Huấn luyện
+            current_step += 1
+            progress = min(100, int((current_step / total_steps) * 100))
+            progress_bar.progress(progress)
+            status_text.text(f"Iteration {iteration + 1}: Đang huấn luyện... ({progress}%)")
+            
             history = model.fit(
                 x_train_current, y_train_current,
                 epochs=model_params['epochs'],
@@ -140,26 +144,27 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
                 validation_data=(x_val, y_val)
             )
             
-            # Tính toán độ chính xác
             train_acc = history.history['accuracy'][-1]
             val_acc = history.history['val_accuracy'][-1]
             test_loss, test_acc = model.evaluate(x_test, y_test, verbose=0)
             
-            # Log metrics
             mlflow.log_metric("train_accuracy", train_acc, step=iteration)
             mlflow.log_metric("val_accuracy", val_acc, step=iteration)
             mlflow.log_metric("test_accuracy", test_acc, step=iteration)
             
-            # Dự đoán nhãn cho các mẫu unlabeled
+            # Bước 2: Dự đoán và gán nhãn
+            current_step += 1
+            progress = min(100, int((current_step / total_steps) * 100))
+            progress_bar.progress(progress)
+            status_text.text(f"Iteration {iteration + 1}: Đang gán nhãn... ({progress}%)")
+            
             if len(remaining_unlabeled) > 0:
                 predictions = model.predict(remaining_unlabeled, verbose=0)
                 max_probs = np.max(predictions, axis=1)
                 pseudo_labels = np.argmax(predictions, axis=1)
                 
-                # Lọc các mẫu vượt ngưỡng tin cậy
                 confident_idx = np.where(max_probs >= threshold)[0]
                 
-                # Hiển thị mẫu được gán nhãn giả
                 if len(confident_idx) > 0:
                     fig = show_pseudo_labeled_samples(
                         model, 
@@ -167,17 +172,15 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
                         predictions[confident_idx]
                     )
                     samples_container.pyplot(fig)
-                
-                # Cập nhật tập dữ liệu
-                if len(confident_idx) > 0:
+                    
                     x_train_current = np.concatenate([x_train_current, remaining_unlabeled[confident_idx]])
                     y_train_current = np.concatenate([y_train_current, pseudo_labels[confident_idx]])
                     remaining_unlabeled = np.delete(remaining_unlabeled, confident_idx, axis=0)
                     mlflow.log_metric("labeled_samples", len(confident_idx), step=iteration)
                 else:
-                    break  # Dừng nếu không có mẫu nào vượt ngưỡng
+                    break
             else:
-                break  # Dừng nếu không còn mẫu unlabeled
+                break
             
             # Cập nhật metrics history
             metrics_history['iteration'].append(iteration + 1)
@@ -186,26 +189,25 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             metrics_history['val_accuracy'].append(val_acc)
             metrics_history['test_accuracy'].append(test_acc)
             
-            # Hiển thị metrics sau mỗi lần lặp
+            # Hiển thị kết quả sau mỗi iteration
+            with results_container.container():
+                st.markdown(f"### Iteration {iteration + 1} kết thúc:")
+                st.write(f"- Số mẫu labeled hiện tại: {len(x_train_current)}")
+                st.write(f"- Số mẫu unlabeled còn lại: {len(remaining_unlabeled)}")
+                st.write(f"- Độ chính xác train: {train_acc:.4f}")
+                st.write(f"- Độ chính xác validation: {val_acc:.4f}")
+                st.write(f"- Độ chính xác test: {test_acc:.4f}")
+            
             metrics_df = pd.DataFrame(metrics_history)
             metrics_container.dataframe(metrics_df)
-            
-            # Hiển thị thông báo sau mỗi lần lặp
-            results_container.markdown(f"""
-            ### Iteration {iteration + 1} kết thúc:
-            - Số mẫu labeled hiện tại: {len(x_train_current)}
-            - Số mẫu unlabeled còn lại: {len(remaining_unlabeled)}
-            - Độ chính xác train: {train_acc:.4f}
-            - Độ chính xác validation: {val_acc:.4f}
-            - Độ chính xác test: {test_acc:.4f}
-            """)
         
-        # Log model cuối cùng
-        mlflow.keras.log_model(model, "final_model")
+        # Hoàn tất: 100%
+        progress_bar.progress(100)
+        status_text.text("Hoàn tất huấn luyện! (100%)")
         
-        # Đánh giá cuối cùng
         final_test_loss, final_test_accuracy = model.evaluate(x_test, y_test, verbose=0)
         mlflow.log_metric("final_test_accuracy", final_test_accuracy)
+        mlflow.keras.log_model(model, "final_model")
         
     return model, final_test_accuracy, metrics_history
 
@@ -243,50 +245,15 @@ def create_streamlit_app():
     
     tab1, tab2, tab3, tab4 = st.tabs(["📓 Giới thiệu", "📋 Huấn luyện", "🔮 Dự đoán", "⚡ MLflow"])
     
-    # Tab 1: Giới thiệu
     with tab1:
         st.write("##### Pseudo Labelling với Neural Network")
         st.write(""" 
-        **Pseudo Labelling** là một kỹ thuật học bán giám sát (semi-supervised learning) nhằm tận dụng cả dữ liệu có nhãn (labeled data) và dữ liệu không nhãn (unlabeled data) để cải thiện hiệu suất của mô hình học máy, đặc biệt khi lượng dữ liệu có nhãn ban đầu rất hạn chế. Phương pháp này dựa trên ý tưởng sử dụng mô hình để dự đoán nhãn cho dữ liệu không nhãn, sau đó chọn các dự đoán có độ tin cậy cao để bổ sung vào tập dữ liệu có nhãn, từ đó huấn luyện lại mô hình.
-        \n **Cơ chế hoạt động**
-        \n Phương pháp Pseudo Labelling với Neural Network bao gồm các bước chính sau:
-        
-        \n **(1) Chuẩn bị dữ liệu ban đầu**
-        \nTập dữ liệu có nhãn (Labeled Data): Một tập nhỏ dữ liệu đã được gán nhãn chính xác, thường chiếm tỉ lệ rất thấp (ví dụ: 1%) so với tổng dữ liệu.
-        \nTập dữ liệu không nhãn (Unlabeled Data): Phần lớn dữ liệu còn lại, không có nhãn ban đầu, chiếm tỉ lệ lớn (ví dụ: 99%).
-        \nTập kiểm tra (Test Data): Một tập dữ liệu riêng biệt để đánh giá hiệu suất cuối cùng của mô hình.
-        \nVí dụ: Với tập MNIST (60,000 ảnh chữ số viết tay):
-        
-        \n Chia 80% làm tập train (48,000 ảnh) và 20% làm tập test (12,000 ảnh).
-        \n Từ tập train, lấy 1% (~480 ảnh) làm tập labeled, 99% (~47,520 ảnh) làm tập unlabeled.
-        \n **(2) Huấn luyện mô hình ban đầu**
-        \n Sử dụng một mạng nơ-ron (NN) để huấn luyện trên tập labeled ban đầu.
-        \n **(3) Dự đoán nhãn cho dữ liệu không nhãn**
-        \n Sử dụng mô hình đã huấn luyện để dự đoán nhãn cho toàn bộ tập unlabeled.
-        \n Kết quả dự đoán là một phân phối xác suất cho mỗi mẫu dữ liệu (ví dụ: [0.05, 0.02, 0.90, ..., 0.01] cho 10 lớp).
-        \n **(4) Gán nhãn giả (Pseudo Label)**
-        \n Đặt một ngưỡng tin cậy (threshold), ví dụ 0.95, để lọc các dự đoán đáng tin cậy.
-        \n Quy tắc:
-        \n Nếu xác suất tối đa ≥ threshold, mẫu đó được gán nhãn giả dựa trên lớp có xác suất cao nhất.
-        \n Nếu xác suất tối đa < threshold, mẫu đó vẫn giữ trạng thái không nhãn.
-        \n Ví dụ: Một ảnh trong tập unlabeled được dự đoán với xác suất [0.02, 0.01, 0.96, ..., 0.01]. Nếu threshold = 0.95, ảnh này được gán nhãn giả là lớp 2 (vì 0.96 > 0.95).
-        \n **(5) Mở rộng tập labeled và huấn luyện lại**
-        \n Tập labeled mới = tập labeled ban đầu + các mẫu vừa được gán nhãn giả.
-        \n Huấn luyện lại mô hình NN trên tập labeled mở rộng này.
-        \n Quá trình dự đoán (bước 3) và gán nhãn giả (bước 4) được lặp lại trên phần unlabeled còn lại.
-        \n **(6) Lặp lại cho đến khi đạt điều kiện dừng**
-        \n Điều kiện dừng:
-        \n Toàn bộ tập unlabeled được gán nhãn giả và chuyển sang tập labeled.
-        \n Không còn mẫu nào trong tập unlabeled có dự đoán vượt ngưỡng tin cậy.
-        \n Đạt số vòng lặp tối đa do người dùng đặt (ví dụ: 5, 10, hoặc 20 vòng).
-        \n Sau mỗi vòng lặp, mô hình thường trở nên chính xác hơn do được huấn luyện trên tập labeled lớn hơn.
+        **Pseudo Labelling** là một kỹ thuật học bán giám sát (semi-supervised learning) nhằm tận dụng cả dữ liệu có nhãn và dữ liệu không nhãn để cải thiện hiệu suất của mô hình học máy.
         """)
     
-    # Tab 2: Huấn luyện
     with tab2:
         st.write("##### Chuẩn bị dữ liệu")
         
-        # Chọn số lượng mẫu
         sample_size = st.number_input("**Chọn cỡ mẫu để huấn luyện**", 1000, 70000, 10000, step=1000)
         X, y = load_data(sample_size=sample_size)
         st.write(f"**Số lượng mẫu của bộ dữ liệu: {X.shape[0]}**")
@@ -295,30 +262,21 @@ def create_streamlit_app():
         
         st.write("##### Chia tập dữ liệu")
         
-        # Chia dữ liệu train, validation và test
-        train_ratio = st.slider("Tỉ lệ dữ liệu train", 0.5, 0.8, 0.6, 0.05,
-                                help="Chọn tỉ lệ dữ liệu dùng để huấn luyện")
-        val_ratio = st.slider("Tỉ lệ dữ liệu validation", 0.1, 0.3, 0.2, 0.05,
-                             help="Chọn tỉ lệ dữ liệu dùng để validation trong quá trình huấn luyện")
-        
-        # Tính toán test_ratio
+        train_ratio = st.slider("Tỉ lệ dữ liệu train", 0.5, 0.8, 0.6, 0.05)
+        val_ratio = st.slider("Tỉ lệ dữ liệu validation", 0.1, 0.3, 0.2, 0.05)
         test_ratio = 1.0 - train_ratio - val_ratio
         
-        # Chia dữ liệu
         X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=test_ratio, random_state=42)
         X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, 
                                                         test_size=val_ratio/(train_ratio+val_ratio), 
                                                         random_state=42)
         
-        labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1,
-                                      help="Chọn phần trăm dữ liệu có nhãn ban đầu trong tập train.")
+        labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1)
         
-        # Chia dữ liệu labeled và unlabeled
         global percentage
         percentage = labeled_percentage / 100
         x_labeled, y_labeled, x_unlabeled, _ = select_initial_data(X_train, y_train, percentage)
         
-        # Tạo và hiển thị bảng dữ liệu
         total_samples = len(X)
         data = {
             "Tập dữ liệu": ["Tổng mẫu", "Tập train", "Tập validation", "Tập test", "Tập labeled ban đầu", "Tập unlabeled"],
@@ -337,7 +295,6 @@ def create_streamlit_app():
         st.table(df)
         
         st.write("##### Thiết lập tham số Neural Network")
-        # Tham số Neural Network
         params = {}
         params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
         params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 100)
@@ -346,9 +303,7 @@ def create_streamlit_app():
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, format="%.4f")
         
         st.write("##### Huấn luyện mô hình Pseudo Labelling")
-        custom_model_name = st.text_input("Nhập tên mô hình:")
-        if not custom_model_name:
-            custom_model_name = f"PseudoLabel_Model_{int(time.time())}"
+        custom_model_name = st.text_input("Nhập tên mô hình:", f"PseudoLabel_Model_{int(time.time())}")
         threshold = st.slider("Ngưỡng tin cậy", 0.5, 0.99, 0.95, 0.01)
         max_iterations = st.slider("Số vòng lặp tối đa", 1, 20, 5)
         
@@ -362,7 +317,6 @@ def create_streamlit_app():
             
             st.success(f"✅ Huấn luyện xong! Độ chính xác cuối cùng trên test: {test_accuracy:.4f}")
     
-    # Tab 3: Dự đoán
     with tab3:
         st.write("**🔮 Dự đoán chữ số**")
         if 'model' not in st.session_state:
@@ -400,7 +354,6 @@ def create_streamlit_app():
                         st.write(f"🎯 **Dự đoán: {predicted_digit}**")
                         st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
     
-    # Tab 4: MLflow Tracking
     with tab4:
         st.write("##### MLflow Tracking")
         
@@ -446,4 +399,5 @@ def create_streamlit_app():
             st.write("⚠️ Không có phiên làm việc nào được ghi lại.")
 
 if __name__ == "__main__":
+    mlflow.set_tracking_uri("http://localhost:5000")
     create_streamlit_app()
