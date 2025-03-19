@@ -361,15 +361,11 @@ def create_streamlit_app():
         test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=50, value=15, step=5)
         val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=50, value=15, step=5)
         
-        # Kiểm tra tổng tỉ lệ
         if test_size + val_size > 100:
             st.error(f"Tổng tỉ lệ Test ({test_size}%) và Validation ({val_size}%) không được vượt quá 100%!")
             return
         
-        # Chia tập test trước
         X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
-        
-        # Chia tập validation từ tổng dữ liệu còn lại sao cho val_size là % của tổng dữ liệu
         val_ratio = val_size / (100 - test_size)
         X_train, X_val, y_train, y_val = train_test_split(X_temp, y_temp, 
                                                          test_size=val_ratio, 
@@ -431,40 +427,51 @@ def create_streamlit_app():
     with tab3:
         st.write("**🔮 Dự đoán chữ số**")
         
+        # Hiển thị giao diện chọn mô hình
         if 'trained_models' not in st.session_state or not st.session_state.trained_models:
             st.warning("⚠️ Vui lòng huấn luyện ít nhất một mô hình trước khi dự đoán!")
+            selected_model = None
         else:
             model_names = list(st.session_state.trained_models.keys())
             selected_model_name = st.selectbox("📝 Chọn mô hình để dự đoán:", model_names)
             selected_model = st.session_state.trained_models[selected_model_name]
-            
-            option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
-            
-            if option == "📂 Tải ảnh lên":
-                uploaded_file = st.file_uploader("📤 Tải ảnh số viết tay (PNG, JPG)", type=["png", "jpg", "jpeg"])
-                if uploaded_file is not None:
-                    image = cv2.imdecode(np.frombuffer(uploaded_file.read(), np.uint8), cv2.IMREAD_COLOR)
-                    processed_image = preprocess_uploaded_image(image)
-                    st.image(image, caption="📷 Ảnh tải lên", width=200)
-                    
-                    if st.button("🔮 Dự đoán"):
-                        prediction = selected_model.predict(processed_image)
-                        predicted_digit = np.argmax(prediction)
-                        confidence = np.max(prediction)
-                        st.write(f"🎯 **Dự đoán: {predicted_digit}**")
-                        st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
-                        
-                        # Visualize mạng nơ-ron
-                        fig = visualize_neural_network_prediction(selected_model, processed_image[0], predicted_digit)
-                        st.pyplot(fig)
-            
-            elif option == "✏️ Vẽ số":
-                canvas_result = st_canvas(
-                    fill_color="white", stroke_width=15, stroke_color="black",
-                    background_color="white", width=280, height=280, drawing_mode="freedraw", key="canvas"
-                )
-                if st.button("🔮 Dự đoán"):
-                    if canvas_result.image_data is not None:
+        
+        # Luôn hiển thị tùy chọn nhập liệu
+        option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
+        
+        if option == "📂 Tải ảnh lên":
+            uploaded_file = st.file_uploader("📤 Tải ảnh số viết tay (PNG, JPG)", type=["png", "jpg", "jpeg"])
+            if uploaded_file is not None:
+                image = cv2.imdecode(np.frombuffer(uploaded_file.read(), np.uint8), cv2.IMREAD_COLOR)
+                processed_image = preprocess_uploaded_image(image)
+                st.image(image, caption="📷 Ảnh tải lên", width=200)
+                
+                # Chỉ cho phép dự đoán nếu đã chọn mô hình
+                if st.button("🔮 Dự đoán", disabled=selected_model is None):
+                    if selected_model is not None:
+                        try:
+                            prediction = selected_model.predict(processed_image)
+                            predicted_digit = np.argmax(prediction)
+                            confidence = np.max(prediction)
+                            st.write(f"🎯 **Dự đoán: {predicted_digit}**")
+                            st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
+                            
+                            # Visualize mạng nơ-ron
+                            fig = visualize_neural_network_prediction(selected_model, processed_image[0], predicted_digit)
+                            st.pyplot(fig)
+                        except Exception as e:
+                            st.error(f"Đã xảy ra lỗi khi dự đoán: {str(e)}")
+                    else:
+                        st.error("Không có mô hình nào được chọn!")
+        
+        elif option == "✏️ Vẽ số":
+            canvas_result = st_canvas(
+                fill_color="white", stroke_width=15, stroke_color="black",
+                background_color="white", width=280, height=280, drawing_mode="freedraw", key="canvas"
+            )
+            if st.button("🔮 Dự đoán", disabled=selected_model is None):
+                if canvas_result.image_data is not None and selected_model is not None:
+                    try:
                         processed_canvas = preprocess_canvas_image(canvas_result.image_data)
                         prediction = selected_model.predict(processed_canvas)
                         predicted_digit = np.argmax(prediction)
@@ -475,6 +482,12 @@ def create_streamlit_app():
                         # Visualize mạng nơ-ron
                         fig = visualize_neural_network_prediction(selected_model, processed_canvas[0], predicted_digit)
                         st.pyplot(fig)
+                    except Exception as e:
+                        st.error(f"Đã xảy ra lỗi khi dự đoán: {str(e)}")
+                elif selected_model is None:
+                    st.error("Không có mô hình nào được chọn!")
+                else:
+                    st.warning("Vui lòng vẽ một chữ số trước khi dự đoán!")
     
     with tab4:
         st.write("##### MLflow Tracking")
