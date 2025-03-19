@@ -451,7 +451,7 @@ def create_streamlit_app():
         params = {}
         params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
         params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 50, 200, 128)
-        params["epochs"] = st.slider("Epochs", 1, 50, 10)  # Adjusted min value to 1
+        params["epochs"] = st.slider("Epochs", 1, 50, 10)  
         params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "sigmoid"])
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, format="%.4f")
         
