@@ -222,7 +222,9 @@ def preprocess_uploaded_image(image):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     image = cv2.resize(image, (28, 28))
     image = image / 255.0
-    return image.reshape(1, 784)
+    processed = image.reshape(1, 784)
+    st.write(f"Debug: Shape ảnh tải lên sau xử lý: {processed.shape}")
+    return processed
 
 # Xử lý ảnh từ canvas
 def preprocess_canvas_image(canvas):
@@ -231,7 +233,9 @@ def preprocess_canvas_image(canvas):
     image = cv2.bitwise_not(image)
     image = cv2.resize(image, (28, 28))
     image = image / 255.0
-    return image.reshape(1, 784)
+    processed = image.reshape(1, 784)
+    st.write(f"Debug: Shape ảnh canvas sau xử lý: {processed.shape}")
+    return processed
 
 # Hiển thị mẫu dữ liệu
 def show_sample_images(X, y):
@@ -245,14 +249,10 @@ def show_sample_images(X, y):
         ax.axis('off')
     st.pyplot(fig)
 
-# Visualize mạng nơ-ron với kết quả dự đoán (điều chỉnh cho Keras)
+# Visualize mạng nơ-ron với kết quả dự đoán
 def visualize_neural_network_prediction(model, input_image, predicted_label):
     try:
-        # Lấy kích thước các tầng ẩn, bỏ qua layer Dropout
-        hidden_layer_sizes = []
-        for layer in model.layers:
-            if isinstance(layer, layers.Dense) and layer != model.layers[-1]:
-                hidden_layer_sizes.append(layer.units)  # Dùng .units thay vì .output_shape[-1]
+        hidden_layer_sizes = [layer.units for layer in model.layers if isinstance(layer, layers.Dense) and layer != model.layers[-1]]
         output_layer_size = model.layers[-1].units
         input_layer_size = 784
         layer_sizes = [input_layer_size] + hidden_layer_sizes + [output_layer_size]
@@ -330,7 +330,7 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
         ax2.set_facecolor('black')
 
         return fig
-    except AttributeError as e:
+    except Exception as e:
         st.error(f"Lỗi khi trực quan hóa mạng nơ-ron: {str(e)}")
         return None
 
@@ -427,7 +427,7 @@ def create_streamlit_app():
         else:
             model_names = list(st.session_state.trained_models.keys())
             selected_model_name = st.selectbox("📝 Chọn mô hình để dự đoán:", model_names)
-            selected_model = st.session_state.trained_models[selected_model_name]
+            selected_model = st.session_state.trained_models.get(selected_model_name)
             
             show_visualization = st.checkbox("Hiển thị biểu đồ mạng nơ-ron", value=True)
             
@@ -442,17 +442,23 @@ def create_streamlit_app():
                     
                     if st.button("🔮 Dự đoán"):
                         if selected_model is None:
-                            st.error("Mô hình không hợp lệ! Vui lòng chọn lại mô hình.")
+                            st.error("Mô hình không hợp lệ! Vui lòng huấn luyện và chọn lại mô hình.")
                         else:
-                            prediction = selected_model.predict(processed_image)
-                            predicted_digit = np.argmax(prediction)
-                            confidence = np.max(prediction)
-                            st.write(f"🎯 **Dự đoán: {predicted_digit}**")
-                            st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
-                            if show_visualization:
-                                fig = visualize_neural_network_prediction(selected_model, processed_image[0], predicted_digit)
-                                if fig is not None:
-                                    st.pyplot(fig)
+                            try:
+                                prediction = selected_model.predict(processed_image, verbose=0)
+                                predicted_digit = np.argmax(prediction)
+                                confidence = np.max(prediction)
+                                st.write(f"Debug: Dự đoán thô: {prediction}")
+                                st.write(f"🎯 **Dự đoán: {predicted_digit}**")
+                                st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
+                                if show_visualization:
+                                    fig = visualize_neural_network_prediction(selected_model, processed_image[0], predicted_digit)
+                                    if fig is not None:
+                                        st.pyplot(fig)
+                                    else:
+                                        st.warning("Không thể hiển thị biểu đồ mạng nơ-ron.")
+                            except Exception as e:
+                                st.error(f"Lỗi khi dự đoán: {str(e)}")
             
             elif option == "✏️ Vẽ số":
                 st.write("Vẽ chữ số của bạn dưới đây:")
@@ -469,18 +475,24 @@ def create_streamlit_app():
                 if st.button("🔮 Dự đoán"):
                     if canvas_result.image_data is not None:
                         if selected_model is None:
-                            st.error("Mô hình không hợp lệ! Vui lòng chọn lại mô hình.")
+                            st.error("Mô hình không hợp lệ! Vui lòng huấn luyện và chọn lại mô hình.")
                         else:
-                            processed_canvas = preprocess_canvas_image(canvas_result.image_data)
-                            prediction = selected_model.predict(processed_canvas)
-                            predicted_digit = np.argmax(prediction)
-                            confidence = np.max(prediction)
-                            st.write(f"🎯 **Dự đoán: {predicted_digit}**")
-                            st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
-                            if show_visualization:
-                                fig = visualize_neural_network_prediction(selected_model, processed_canvas[0], predicted_digit)
-                                if fig is not None:
-                                    st.pyplot(fig)
+                            try:
+                                processed_canvas = preprocess_canvas_image(canvas_result.image_data)
+                                prediction = selected_model.predict(processed_canvas, verbose=0)
+                                predicted_digit = np.argmax(prediction)
+                                confidence = np.max(prediction)
+                                st.write(f"Debug: Dự đoán thô: {prediction}")
+                                st.write(f"🎯 **Dự đoán: {predicted_digit}**")
+                                st.write(f"🔢 **Độ tin cậy: {confidence * 100:.2f}%**")
+                                if show_visualization:
+                                    fig = visualize_neural_network_prediction(selected_model, processed_canvas[0], predicted_digit)
+                                    if fig is not None:
+                                        st.pyplot(fig)
+                                    else:
+                                        st.warning("Không thể hiển thị biểu đồ mạng nơ-ron.")
+                            except Exception as e:
+                                st.error(f"Lỗi khi dự đoán: {str(e)}")
                     else:
                         st.warning("Vui lòng vẽ một chữ số trước khi dự đoán!")
     
