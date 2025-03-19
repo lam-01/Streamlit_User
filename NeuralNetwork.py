@@ -255,7 +255,6 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             
             # Cross-Validation
             cv_status = st.empty()
-            cv_status.info("⏳ Đang thực hiện Cross-Validation...")
             cv_model = MLPClassifier(
                 hidden_layer_sizes=hidden_layer_sizes,
                 max_iter=params["epochs"],
@@ -269,7 +268,6 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             cv = KFold(n_splits=cv_folds, shuffle=True, random_state=42)
             cv_scores = cross_val_score(cv_model, X_train, y_train, cv=cv, n_jobs=-1)
             cv_mean_accuracy = np.mean(cv_scores)
-            cv_status.success(f"✅ Cross-Validation hoàn tất: {cv_mean_accuracy:.4f}")
             
             # Log vào MLflow
             mlflow.log_param("model_name", "Neural Network")
@@ -282,9 +280,6 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             mlflow.log_metric("training_time", time.time() - train_start_time)
             mlflow.sklearn.log_model(model, "Neural Network")
             
-            # Hiển thị thông tin tổng quan
-            training_time = time.time() - train_start_time
-            st.success(f"✅ Huấn luyện hoàn tất trong {training_time:.2f} giây!")
             
     except Exception as e:
         st.error(f"❌ Lỗi trong quá trình huấn luyện: {str(e)}")
@@ -323,7 +318,7 @@ def show_sample_images(X, y):
 def display_training_results(model_name, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy):
     result_container = st.container()
     with result_container:
-        st.write("### 📊 Kết quả huấn luyện")
+        st.write("##### Kết quả huấn luyện")
         
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -406,7 +401,7 @@ def create_streamlit_app():
         X, y = load_data(n_samples=n_samples)
         st.write(f"**Số lượng mẫu được chọn để huấn luyện: {X.shape[0]}**")
         show_sample_images(X, y)
-        st.write("**📊 Tỷ lệ dữ liệu**")
+        st.write("**Tỷ lệ dữ liệu**")
         test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
         val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
         
@@ -434,7 +429,7 @@ def create_streamlit_app():
             st.table(data_ratios)
 
         st.write("**🚀 Huấn luyện mô hình Neural Network**")
-        st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
+        st.session_state.custom_model_name = st.text_input("Nhập tên mô hình :", st.session_state.custom_model_name)
         params = {}
         
         
@@ -445,7 +440,6 @@ def create_streamlit_app():
         params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, step=0.0001, format="%.4f")
         st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5)
         
-        st.write(f"Tốc độ học đã chọn: {params['learning_rate']:.4f}")
         
         if st.button("🚀 Huấn luyện mô hình"):
             if not st.session_state.custom_model_name:
