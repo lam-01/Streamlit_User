@@ -330,21 +330,21 @@ def display_training_results(model_name, train_accuracy, val_accuracy, test_accu
         with col4:
             st.metric(label="CV Accuracy", value=f"{cv_mean_accuracy:.4f}")
         
-        # Hiển thị biểu đồ tiến trình nếu có
-        if model_name in st.session_state.training_metrics:
-            train_history = st.session_state.training_metrics[model_name]['train_accuracy_history']
-            val_history = st.session_state.training_metrics[model_name]['val_accuracy_history']
+        # # Hiển thị biểu đồ tiến trình nếu có
+        # if model_name in st.session_state.training_metrics:
+        #     train_history = st.session_state.training_metrics[model_name]['train_accuracy_history']
+        #     val_history = st.session_state.training_metrics[model_name]['val_accuracy_history']
             
-            fig, ax = plt.subplots(figsize=(10, 4))
-            epochs_range = list(range(1, len(train_history) + 1))
-            ax.plot(epochs_range, train_history, 'b-', label='Train Accuracy')
-            ax.plot(epochs_range, val_history, 'r-', label='Validation Accuracy')
-            ax.set_xlabel('Epoch')
-            ax.set_ylabel('Accuracy')
-            ax.set_title('Training Progress')
-            ax.legend()
-            ax.grid(True)
-            st.pyplot(fig)
+        #     fig, ax = plt.subplots(figsize=(10, 4))
+        #     epochs_range = list(range(1, len(train_history) + 1))
+        #     ax.plot(epochs_range, train_history, 'b-', label='Train Accuracy')
+        #     ax.plot(epochs_range, val_history, 'r-', label='Validation Accuracy')
+        #     ax.set_xlabel('Epoch')
+        #     ax.set_ylabel('Accuracy')
+        #     ax.set_title('Training Progress')
+        #     ax.legend()
+        #     ax.grid(True)
+        #     st.pyplot(fig)
 
 # 📌 Giao diện Streamlit
 def create_streamlit_app():
