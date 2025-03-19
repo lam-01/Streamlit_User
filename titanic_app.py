@@ -385,64 +385,28 @@ def create_streamlit_app():
     with tab3:
         st.write("##### MLflow Tracking")
         runs = mlflow.search_runs(order_by=["start_time desc"])
-    
+
         if not runs.empty:
-            # Debug: Inspect the raw params and metrics for the first run
-            if "params" in runs.columns and "metrics" in runs.columns:
-                st.write("Debug - First run params:", runs["params"].iloc[0])
-                st.write("Debug - First run metrics:", runs["metrics"].iloc[0])
-    
-            # Extract model name from tags (safe access)
-            runs["model_name"] = runs.get("tags.mlflow.runName", pd.Series([None] * len(runs))).fillna("Unnamed Run")
-    
-            # Extract params (with debug check)
-            if "params" in runs.columns:
-                runs["regression_type"] = runs["params"].apply(
-                    lambda x: x.get("regression_type") if isinstance(x, dict) else "N/A"
-                )
-                runs["model_name_param"] = runs["params"].apply(
-                    lambda x: x.get("model_name") if isinstance(x, dict) else "N/A"
-                )  # Extract model_name from params for consistency
-            else:
-                runs["regression_type"] = "N/A"
-                runs["model_name_param"] = "N/A"
-    
-            # Extract metrics (with debug check)
-            if "metrics" in runs.columns:
-                runs["train_mse"] = runs["metrics"].apply(
-                    lambda x: x.get("train_mse") if isinstance(x, dict) else None
-                )
-                runs["valid_mse"] = runs["metrics"].apply(
-                    lambda x: x.get("valid_mse") if isinstance(x, dict) else None
-                )
-                runs["test_mse"] = runs["metrics"].apply(
-                    lambda x: x.get("test_mse") if isinstance(x, dict) else None
-                )
-                runs["cv_mse"] = runs["metrics"].apply(
-                    lambda x: x.get("cv_mse") if isinstance(x, dict) else None
-                )
-            else:
-                runs["train_mse"] = None
-                runs["valid_mse"] = None
-                runs["test_mse"] = None
-                runs["cv_mse"] = None
-    
-            # Search functionality
+            runs["model_name"] = runs["tags.mlflow.runName"]
+            runs["regression_type"] = runs["params.regression_type"]
+            runs["train_mse"] = runs["metrics.train_mse"]
+            runs["valid_mse"] = runs["metrics.valid_mse"]
+            runs["test_mse"] = runs["metrics.test_mse"]
+            runs["cv_mse"] = runs["metrics.cv_mse"]
+
             search_model_name = st.text_input("🔍 Nhập tên mô hình để tìm kiếm:", "")
             if search_model_name:
                 filtered_runs = runs[runs["model_name"].str.contains(search_model_name, case=False, na=False)]
             else:
                 filtered_runs = runs
-    
+
             if not filtered_runs.empty:
-                # Display table with extracted columns
                 display_df = filtered_runs[["model_name", "regression_type", "train_mse", "valid_mse", "test_mse", "cv_mse"]]
                 display_df = display_df.fillna("N/A")
                 for col in ["train_mse", "valid_mse", "test_mse", "cv_mse"]:
                     display_df[col] = display_df[col].apply(lambda x: round(x, 4) if isinstance(x, (int, float)) else x)
                 st.dataframe(display_df)
-    
-                # Detailed view of a selected model
+
                 selected_model_name = st.selectbox("📝 Chọn một mô hình để xem chi tiết:", filtered_runs["model_name"].tolist())
                 if selected_model_name:
                     selected_run_id = filtered_runs[filtered_runs["model_name"] == selected_model_name]["run_id"].iloc[0]
