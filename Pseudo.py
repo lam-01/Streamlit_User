@@ -9,12 +9,13 @@ from streamlit_drawable_canvas import st_canvas
 import matplotlib.pyplot as plt
 import time
 import pandas as pd
+from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
 
 # Hàm xây dựng model NN với tham số tùy chỉnh
 def create_model(num_hidden_layers=2, neurons_per_layer=128, activation='relu', learning_rate=0.001):
     model = keras.Sequential()
-    model.add(layers.Flatten(input_shape=(28, 28)))
+    model.add(layers.Input(shape=(784,)))  # Thay đổi từ Flatten sang Input vì dữ liệu là vector 784
     
     for _ in range(num_hidden_layers):
         model.add(layers.Dense(neurons_per_layer, activation=activation))
@@ -28,18 +29,15 @@ def create_model(num_hidden_layers=2, neurons_per_layer=128, activation='relu', 
                  metrics=['accuracy'])
     return model
 
-# Tải và xử lý dữ liệu MNIST với kích thước mẫu tùy chỉnh
+# Tải và xử lý dữ liệu MNIST từ OpenML
 @st.cache_data
-def load_data(sample_size=10000):
-    (x_full, y_full), _ = keras.datasets.mnist.load_data()
-    x_full = x_full.astype('float32') / 255
-    
-    if sample_size < len(x_full):
-        indices = np.random.permutation(len(x_full))[:sample_size]
-        x_full = x_full[indices]
-        y_full = y_full[indices]
-    
-    return x_full, y_full
+def load_data(sample_size=None):
+    mnist = fetch_openml("mnist_784", version=1, as_frame=False)
+    X, y = mnist.data, mnist.target.astype(int)
+    X = X / 255.0
+    if sample_size is not None and sample_size < len(X):
+        X, _, y, _ = train_test_split(X, y, train_size=sample_size, random_state=42)
+    return X, y
 
 # Chọn dữ liệu labeled ban đầu với tỉ lệ tùy chỉnh
 def select_initial_data(x_train, y_train, percentage):
@@ -67,7 +65,7 @@ def show_pseudo_labeled_samples(model, samples, predictions, n_samples=5):
         selected_indices = np.random.choice(len(samples), n_samples, replace=False)
     
     for i, idx in enumerate(selected_indices):
-        axes[0, i].imshow(samples[idx], cmap='gray')
+        axes[0, i].imshow(samples[idx].reshape(28, 28), cmap='gray')  # Chuyển vector 784 về 28x28
         axes[0, i].axis('off')
         
         pred_idx = np.argmax(predictions[idx])
@@ -115,22 +113,19 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             'test_accuracy': []
         }
         
-        # Initial metrics
         metrics_history['iteration'].append(0)
         metrics_history['labeled_samples_count'].append(len(x_labeled))
         metrics_history['train_accuracy'].append(0)
         metrics_history['val_accuracy'].append(0)
         metrics_history['test_accuracy'].append(0)
         
-        # Thanh tiến trình: 0% ban đầu
         progress_bar.progress(0)
         status_text.text("Khởi tạo mô hình... (0%)")
         
-        total_steps = max_iterations * 2  # Mỗi iteration có 2 bước chính: huấn luyện + dự đoán/gán nhãn
+        total_steps = max_iterations * 2
         current_step = 0
         
         for iteration in range(max_iterations):
-            # Bước 1: Huấn luyện
             current_step += 1
             progress = min(100, int((current_step / total_steps) * 100))
             progress_bar.progress(progress)
@@ -152,7 +147,6 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             mlflow.log_metric("val_accuracy", val_acc, step=iteration)
             mlflow.log_metric("test_accuracy", test_acc, step=iteration)
             
-            # Bước 2: Dự đoán và gán nhãn
             current_step += 1
             progress = min(100, int((current_step / total_steps) * 100))
             progress_bar.progress(progress)
@@ -182,14 +176,12 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             else:
                 break
             
-            # Cập nhật metrics history
             metrics_history['iteration'].append(iteration + 1)
             metrics_history['labeled_samples_count'].append(len(x_train_current))
             metrics_history['train_accuracy'].append(train_acc)
             metrics_history['val_accuracy'].append(val_acc)
             metrics_history['test_accuracy'].append(test_acc)
             
-            # Hiển thị kết quả sau mỗi iteration
             with results_container.container():
                 st.markdown(f"### Iteration {iteration + 1} kết thúc:")
                 st.write(f"- Số mẫu labeled hiện tại: {len(x_train_current)}")
@@ -201,7 +193,6 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
             metrics_df = pd.DataFrame(metrics_history)
             metrics_container.dataframe(metrics_df)
         
-        # Hoàn tất: 100%
         progress_bar.progress(100)
         status_text.text("Hoàn tất huấn luyện! (100%)")
         
@@ -216,7 +207,7 @@ def preprocess_uploaded_image(image):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     image = cv2.resize(image, (28, 28))
     image = image / 255.0
-    return image.reshape(1, 28, 28)
+    return image.reshape(1, 784)  # Chuyển về vector 784
 
 # Xử lý ảnh từ canvas
 def preprocess_canvas_image(canvas):
@@ -225,7 +216,7 @@ def preprocess_canvas_image(canvas):
     image = cv2.bitwise_not(image)
     image = cv2.resize(image, (28, 28))
     image = image / 255.0
-    return image.reshape(1, 28, 28)
+    return image.reshape(1, 784)  # Chuyển về vector 784
 
 # Hiển thị mẫu dữ liệu
 def show_sample_images(X, y):
@@ -234,7 +225,7 @@ def show_sample_images(X, y):
     for digit in range(10):
         idx = np.where(y == digit)[0][0]
         ax = axes[digit]
-        ax.imshow(X[idx], cmap='gray')
+        ax.imshow(X[idx].reshape(28, 28), cmap='gray')  # Chuyển vector 784 về 28x28
         ax.set_title(f"{digit}")
         ax.axis('off')
     st.pyplot(fig)
