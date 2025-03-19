@@ -20,7 +20,7 @@ if 'data_split' not in st.session_state:
 if 'params' not in st.session_state:
     st.session_state.params = None
 if 'cv_folds' not in st.session_state:
-    st.session_state.cv_folds = 5  # Mặc định 5 fold
+    st.session_state.cv_folds = 5
 if 'custom_model_name' not in st.session_state:
     st.session_state.custom_model_name = ""
 if 'trained_models' not in st.session_state:
@@ -131,7 +131,7 @@ def visualize_neural_network_prediction(model, input_image, predicted_label):
 
     return fig
 
-# 📌 Huấn luyện mô hình
+# 📌 Huấn luyện mô hình với tối ưu tốc độ
 @st.cache_resource
 def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_val, y_test, cv_folds):
     progress_bar = st.progress(0)
@@ -140,23 +140,24 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
     hidden_layer_sizes = tuple([params["neurons_per_layer"]] * params["num_hidden_layers"])
     model = MLPClassifier(
         hidden_layer_sizes=hidden_layer_sizes,
-        max_iter=1,
+        max_iter=params["epochs"],
         activation=params["activation"],
         learning_rate_init=params["learning_rate"],
         solver='adam',
         alpha=0.0001,
         random_state=42,
-        warm_start=True,
-        batch_size=min(200, len(X_train)//10),  # Thêm batch_size tối ưu
+        batch_size=min(500, len(X_train)//5),  # Tăng batch_size để tăng tốc
+        early_stopping=True,  # Thêm early stopping
+        validation_fraction=0.1,  # 10% dữ liệu dùng để validate
+        n_iter_no_change=5,  # Dừng nếu không cải thiện sau 5 epoch
     )
 
     try:
         with mlflow.start_run(run_name=custom_model_name):
-            for epoch in range(params["epochs"]):
-                model.fit(X_train, y_train)
-                progress = (epoch + 1) / params["epochs"]
-                progress_bar.progress(progress)
-                status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
+            # Huấn luyện một lần với early stopping
+            model.fit(X_train, y_train)
+            progress_bar.progress(1.0)
+            status_text.text(f"Đã hoàn thành huấn luyện tại epoch {model.n_iter_}/{params['epochs']}")
 
             y_train_pred = model.predict(X_train)
             y_test_pred = model.predict(X_test)
@@ -165,16 +166,19 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
             val_accuracy = accuracy_score(y_val, y_val_pred)
             test_accuracy = accuracy_score(y_test, y_test_pred)
 
-            # Cross-Validation với mô hình mới
+            # Cross-Validation với max_iter giảm để tăng tốc
             cv_model = MLPClassifier(
                 hidden_layer_sizes=hidden_layer_sizes,
-                max_iter=params["epochs"],
+                max_iter=min(params["epochs"], 50),  # Giới hạn max_iter cho CV
                 activation=params["activation"],
                 learning_rate_init=params["learning_rate"],
                 solver='adam',
                 alpha=0.0001,
                 random_state=42,
-                batch_size=min(200, len(X_train)//10),
+                batch_size=min(500, len(X_train)//5),
+                early_stopping=True,
+                validation_fraction=0.1,
+                n_iter_no_change=5,
             )
             cv = KFold(n_splits=cv_folds, shuffle=True, random_state=42)
             cv_scores = cross_val_score(cv_model, X_train, y_train, cv=cv, n_jobs=-1)
@@ -310,13 +314,13 @@ def create_streamlit_app():
         st.session_state.custom_model_name = st.text_input("Nhập tên mô hình để lưu vào MLflow:", st.session_state.custom_model_name)
         params = {}
         
-        # Tăng phạm vi điều chỉnh tham số
-        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)  # Từ 1-2 lên 1-5
-        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 20, 256, 128)  # Từ 20-100 lên 20-256
-        params["epochs"] = st.slider("Epochs", 5, 100, 20, step=5)  # Từ 5-50 lên 5-100
-        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic", "identity"])  # Thêm "identity"
-        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, step=0.0001)  # Bước nhảy nhỏ hơn
-        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5)  # Từ 2-5 lên 2-10
+        # Phạm vi điều chỉnh tham số như yêu cầu
+        params["num_hidden_layers"] = st.slider("Số lớp ẩn", 1, 5, 2)
+        params["neurons_per_layer"] = st.slider("Số neuron mỗi lớp", 20, 256, 128)
+        params["epochs"] = st.slider("Epochs", 5, 100, 20, step=5)
+        params["activation"] = st.selectbox("Hàm kích hoạt", ["relu", "tanh", "logistic", "identity"])
+        params["learning_rate"] = st.slider("Tốc độ học (learning rate)", 0.0001, 0.1, 0.001, step=0.0001)
+        st.session_state.cv_folds = st.slider("Số lượng fold cho Cross-Validation", 2, 10, 5)
         
         st.write(f"Tốc độ học đã chọn: {params['learning_rate']:.4f}")
     
@@ -328,78 +332,21 @@ def create_streamlit_app():
                     st.session_state.params = params
                     X_train, X_val, X_test, y_train, y_val, y_test = st.session_state.data_split
                     
-                    # Cải thiện tốc độ huấn luyện với batch_size
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
-                    
-                    hidden_layer_sizes = tuple([params["neurons_per_layer"]] * params["num_hidden_layers"])
-                    model = MLPClassifier(
-                        hidden_layer_sizes=hidden_layer_sizes,
-                        max_iter=1,
-                        activation=params["activation"],
-                        learning_rate_init=params["learning_rate"],
-                        solver='adam',
-                        alpha=0.0001,
-                        random_state=42,
-                        warm_start=True,
-                        batch_size=min(200, len(X_train)//10),  # Thêm batch_size tối ưu
+                    result = train_model(
+                        st.session_state.custom_model_name, params, X_train, X_val, X_test, 
+                        y_train, y_val, y_test, st.session_state.cv_folds
                     )
-                    
-                    try:
-                        with mlflow.start_run(run_name=st.session_state.custom_model_name):
-                            for epoch in range(params["epochs"]):
-                                model.fit(X_train, y_train)
-                                progress = (epoch + 1) / params["epochs"]
-                                progress_bar.progress(progress)
-                                status_text.text(f"Đang huấn luyện: {int(progress * 100)}%")
-
-                            y_train_pred = model.predict(X_train)
-                            y_test_pred = model.predict(X_test)
-                            y_val_pred = model.predict(X_val)
-                            train_accuracy = accuracy_score(y_train, y_train_pred)
-                            val_accuracy = accuracy_score(y_val, y_val_pred)
-                            test_accuracy = accuracy_score(y_test, y_test_pred)
-
-                            # Cross-Validation
-                            cv_model = MLPClassifier(
-                                hidden_layer_sizes=hidden_layer_sizes,
-                                max_iter=params["epochs"],
-                                activation=params["activation"],
-                                learning_rate_init=params["learning_rate"],
-                                solver='adam',
-                                alpha=0.0001,
-                                random_state=42,
-                                batch_size=min(200, len(X_train)//10),
-                            )
-                            cv = KFold(n_splits=st.session_state.cv_folds, shuffle=True, random_state=42)
-                            cv_scores = cross_val_score(cv_model, X_train, y_train, cv=cv, n_jobs=-1)
-                            cv_mean_accuracy = np.mean(cv_scores)
-
-                            mlflow.log_params(params)
-                            mlflow.log_param("cv_folds", st.session_state.cv_folds)
-                            mlflow.log_metrics({
-                                "train_accuracy": train_accuracy,
-                                "val_accuracy": val_accuracy,
-                                "test_accuracy": test_accuracy,
-                                "cv_mean_accuracy": cv_mean_accuracy
-                            })
-                            mlflow.sklearn.log_model(model, "Neural Network")
-
-                            st.session_state.model = model
-                            st.session_state.trained_models[st.session_state.custom_model_name] = model
-                            
-                            progress_bar.empty()
-                            status_text.empty()
-                            st.success(f"✅ Huấn luyện xong!")
-                            st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
-                            st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
-                            st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
-                            st.write(f"🎯 **Độ chính xác trung bình Cross-Validation: {cv_mean_accuracy:.4f}**")
-
-                    except Exception as e:
-                        st.error(f"Lỗi trong quá trình huấn luyện: {str(e)}")
-                        progress_bar.empty()
-                        status_text.empty()
+                    if result[0] is not None:
+                        model, train_accuracy, val_accuracy, test_accuracy, cv_mean_accuracy = result
+                        st.session_state.model = model
+                        st.session_state.trained_models[st.session_state.custom_model_name] = model
+                        st.success(f"✅ Huấn luyện xong!")
+                        st.write(f"🎯 **Độ chính xác trên tập train: {train_accuracy:.4f}**")
+                        st.write(f"🎯 **Độ chính xác trên tập validation: {val_accuracy:.4f}**")
+                        st.write(f"🎯 **Độ chính xác trên tập test: {test_accuracy:.4f}**")
+                        st.write(f"🎯 **Độ chính xác trung bình Cross-Validation: {cv_mean_accuracy:.4f}**")
+                    else:
+                        st.error("Huấn luyện thất bại. Vui lòng kiểm tra lỗi ở trên.")
 
     with tab3:
         if 'trained_models' not in st.session_state or not st.session_state.trained_models:
