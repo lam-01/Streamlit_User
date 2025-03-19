@@ -421,5 +421,4 @@ def create_streamlit_app():
             st.write("⚠️ Không có phiên làm việc nào được ghi lại.")
 
 if __name__ == "__main__":
-    mlflow.set_tracking_uri("http://localhost:5000")
     create_streamlit_app()
