@@ -191,21 +191,11 @@ def train_model(custom_model_name, params, X_train, X_val, X_test, y_train, y_va
                 progress = (epoch + 1) / epochs
                 progress_bar.progress(progress)
                 
-                # Tính thời gian trung bình mỗi epoch
-                epoch_time = time.time() - epoch_start_time
-                elapsed_time = time.time() - train_start_time
-                eta = (epochs - (epoch + 1)) * (elapsed_time / (epoch + 1))  # Dự đoán ETA chính xác hơn
-                
                 # Thanh tiến trình chi tiết với HTML
                 status_html = f"""
                 <div style="display: flex; justify-content: space-between; padding: 10px; background-color: #f0f2f6; border-radius: 5px; margin-bottom: 10px;">
                     <div>
                         <span style="font-weight: bold;">⏳ Epoch {epoch + 1}/{epochs}</span> 
-                        <span style="margin-left: 15px;">⏱️ {epoch_time:.2f}s/epoch</span>
-                    </div>
-                    <div>
-                        <span style="margin-right: 15px;">🕒 Đã trôi qua: {elapsed_time:.2f}s</span>
-                        <span>⌛ ETA: {eta:.2f}s</span>
                     </div>
                 </div>
                 """
