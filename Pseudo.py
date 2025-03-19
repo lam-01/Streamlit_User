@@ -89,7 +89,7 @@ def show_pseudo_labeled_samples(model, samples, predictions, n_samples=5):
     plt.tight_layout()
     return fig
 
-# Thuật toán Pseudo Labelling với MLflow, thanh tiến trình và kết quả mỗi vòng lặp
+# Thuật toán Pseudo Labelling với MLflow
 def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val, x_test, y_test, 
                                threshold, max_iterations, custom_model_name, model_params):
     progress_bar = st.progress(0)
@@ -213,11 +213,6 @@ def pseudo_labeling_with_mlflow(x_labeled, y_labeled, x_unlabeled, x_val, y_val,
         
     return model, final_test_accuracy, metrics_history
 
-# Tải mô hình từ MLflow
-def load_model_from_mlflow(run_id):
-    model_uri = f"runs:/{run_id}/final_model"
-    return mlflow.keras.load_model(model_uri)
-
 # Xử lý ảnh tải lên
 def preprocess_uploaded_image(image):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -255,7 +250,7 @@ def create_streamlit_app():
     with tab1:
         st.write("##### Pseudo Labelling với Neural Network")
         st.write(""" 
-        **Pseudo Labelling** là một kỹ thuật học bán giám sát nhằm tận dụng cả dữ liệu có nhãn và không nhãn để cải thiện hiệu suất của mô hình học máy.
+        **Pseudo Labelling** là một kỹ thuật học bán giám sát nhằm tận dụng cả dữ liệu có nhãn và không nhãn để cải thiện hiệu suất mô hình.
         """)
     
     with tab2:
@@ -269,15 +264,18 @@ def create_streamlit_app():
         
         st.write("##### Chia tập dữ liệu")
         
-        test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5) / 100
-        val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5) / 100
+        st.write("**📊 Tỷ lệ dữ liệu**")
+        test_size = st.slider("Tỷ lệ Test (%)", min_value=5, max_value=30, value=15, step=5)
+        val_size = st.slider("Tỷ lệ Validation (%)", min_value=5, max_value=30, value=15, step=5)
         
-        # Chia tập test trước
-        X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
-        # Chia tập validation từ tập train_val
+        # Chia tập test từ toàn bộ dữ liệu
+        X_train_val, X_test, y_train_val, y_test = train_test_split(X, y, test_size=test_size/100, random_state=42)
+        
+        # Chia tập validation từ tập train+val
+        val_size_relative = val_size / (100 - test_size)  # Tính tỉ lệ val so với tập train+val
         X_train, X_val, y_train, y_val = train_test_split(X_train_val, y_train_val, 
-                                                        test_size=val_size/(1-test_size), 
-                                                        random_state=42)
+                                                         test_size=val_size_relative, 
+                                                         random_state=42)
         
         labeled_percentage = st.slider("Tỉ lệ dữ liệu labeled ban đầu (%)", 0.1, 10.0, 1.0, 0.1)
         
@@ -322,30 +320,28 @@ def create_streamlit_app():
                     threshold, max_iterations, custom_model_name, params
                 )
                 st.session_state['model'] = model
-                st.session_state['model_name'] = custom_model_name
             
             st.success(f"✅ Huấn luyện xong! Độ chính xác cuối cùng trên test: {test_accuracy:.4f}")
     
     with tab3:
         st.write("**🔮 Dự đoán chữ số**")
         
-        # Lấy danh sách mô hình từ MLflow
         runs = mlflow.search_runs(order_by=["start_time desc"])
-        model_options = ["Mô hình vừa huấn luyện"] if 'model' in st.session_state else []
+        model_options = ["Mô hình vừa huấn luyện (nếu có)"]
         if not runs.empty:
             runs["model_custom_name"] = runs["tags.mlflow.runName"]
             model_options.extend(runs["model_custom_name"].tolist())
         
         selected_model_name = st.selectbox("Chọn mô hình để dự đoán:", model_options)
         
-        if not selected_model_name:
-            st.warning("Vui lòng huấn luyện hoặc chọn một mô hình!")
+        if selected_model_name == "Mô hình vừa huấn luyện (nếu có)" and 'model' not in st.session_state:
+            st.warning("Vui lòng huấn luyện mô hình trước ở tab Huấn luyện!")
         else:
-            if selected_model_name == "Mô hình vừa huấn luyện" and 'model' in st.session_state:
-                model = st.session_state['model']
-            else:
+            if selected_model_name != "Mô hình vừa huấn luyện (nếu có)":
                 selected_run = runs[runs["model_custom_name"] == selected_model_name].iloc[0]
-                model = load_model_from_mlflow(selected_run["run_id"])
+                model_path = f"runs:/{selected_run['run_id']}/final_model"
+                model = mlflow.keras.load_model(model_path)
+                st.session_state['model'] = model
             
             option = st.radio("🖼️ Chọn phương thức nhập:", ["📂 Tải ảnh lên", "✏️ Vẽ số"])
             
@@ -357,6 +353,7 @@ def create_streamlit_app():
                     st.image(image, caption="📷 Ảnh tải lên", width=200)
                     
                     if st.button("🔮 Dự đoán"):
+                        model = st.session_state['model']
                         prediction = model.predict(processed_image)
                         predicted_digit = np.argmax(prediction)
                         confidence = np.max(prediction)
@@ -371,6 +368,7 @@ def create_streamlit_app():
                 if st.button("🔮 Dự đoán"):
                     if canvas_result.image_data is not None:
                         processed_canvas = preprocess_canvas_image(canvas_result.image_data)
+                        model = st.session_state['model']
                         prediction = model.predict(processed_canvas)
                         predicted_digit = np.argmax(prediction)
                         confidence = np.max(prediction)
@@ -380,6 +378,7 @@ def create_streamlit_app():
     with tab4:
         st.write("##### MLflow Tracking")
         
+        runs = mlflow.search_runs(order_by=["start_time desc"])
         if not runs.empty:
             runs["model_custom_name"] = runs["tags.mlflow.runName"]
             
